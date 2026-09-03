@@ -1,0 +1,340 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { KeyRound, Link as LinkIcon, Plus, Store, UserPlus, X } from "lucide-react";
+import {
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  EmptyState,
+  ErrorText,
+  Input,
+  Label,
+  PageTitle,
+  Select,
+  SectionTitle,
+} from "@/components/ui";
+
+type Rol = "ADMIN" | "ENCARGADO" | "EMPLEADO";
+type Local = { id: string; nombre: string };
+type Categoria = { id: string; nombre: string };
+type Empleado = {
+  id: string;
+  usuario: string;
+  nombre: string;
+  email: string | null;
+  rol: Rol;
+  activo: boolean;
+  localId: string;
+  local: Local;
+  categoria: Categoria | null;
+  asignaciones: { local: Local }[];
+  credenciales: { id: string }[];
+  invitaciones: { token: string }[];
+};
+
+const ETIQUETA_ROL: Record<Rol, string> = {
+  ADMIN: "Admin",
+  ENCARGADO: "Encargado",
+  EMPLEADO: "Empleado",
+};
+
+export default function EmpleadosClient() {
+  const [empleados, setEmpleados] = useState<Empleado[]>([]);
+  const [locales, setLocales] = useState<Local[]>([]);
+  const [usuario, setUsuario] = useState("");
+  const [nombre, setNombre] = useState("");
+  const [email, setEmail] = useState("");
+  const [rol, setRol] = useState<Rol>("EMPLEADO");
+  const [localId, setLocalId] = useState("");
+  const [localesExtra, setLocalesExtra] = useState<string[]>([]);
+  const [categoriaId, setCategoriaId] = useState("");
+  const [categoriasPorLocal, setCategoriasPorLocal] = useState<Record<string, Categoria[]>>({});
+  const [error, setError] = useState("");
+  const [link, setLink] = useState("");
+  const [cargando, setCargando] = useState(false);
+  const [abierto, setAbierto] = useState(false);
+
+  async function cargar() {
+    const [resEmpleados, resLocales] = await Promise.all([
+      fetch("/api/empleados"),
+      fetch("/api/locales"),
+    ]);
+    const dataEmpleados = await resEmpleados.json();
+    const dataLocales = await resLocales.json();
+    const listaLocales: Local[] = dataLocales.locales ?? [];
+    setEmpleados(dataEmpleados.empleados ?? []);
+    setLocales(listaLocales);
+    if (!localId && listaLocales[0]) setLocalId(listaLocales[0].id);
+
+    // Las categorías son por local: se traen todas juntas para no pedirlas
+    // de a una por cada tarjeta de empleado.
+    const entradas = await Promise.all(
+      listaLocales.map(async (l) => {
+        const r = await fetch(`/api/locales/${l.id}/categorias`);
+        const d = await r.json();
+        return [l.id, d.categorias ?? []] as const;
+      })
+    );
+    setCategoriasPorLocal(Object.fromEntries(entradas));
+  }
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount, no data lib
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  async function crear(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    setLink("");
+    setCargando(true);
+    const res = await fetch("/api/empleados", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, nombre, email, rol, localId, localesExtra, categoriaId: categoriaId || null }),
+    });
+    const data = await res.json();
+    setCargando(false);
+    if (!res.ok) {
+      setError(data.error ?? "No se pudo crear el empleado");
+      return;
+    }
+    setLink(`${window.location.origin}/registro/${data.token}`);
+    setUsuario("");
+    setNombre("");
+    setEmail("");
+    setRol("EMPLEADO");
+    setLocalesExtra([]);
+    setCategoriaId("");
+    setAbierto(false);
+    cargar();
+  }
+
+  async function actualizar(id: string, cambios: Record<string, unknown>) {
+    setError("");
+    const res = await fetch(`/api/empleados/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(cambios),
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      setError(data.error ?? "No se pudo actualizar");
+      return;
+    }
+    if (data.token) setLink(`${window.location.origin}/registro/${data.token}`);
+    cargar();
+  }
+
+  function toggleExtra(id: string) {
+    setLocalesExtra((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
+  }
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex items-start justify-between gap-3">
+        <PageTitle subtitle="Alta de personal, roles y sucursales">Empleados</PageTitle>
+        <Button onClick={() => setAbierto((v) => !v)} className="mt-1 shrink-0">
+          {abierto ? <X size={16} /> : <Plus size={16} />}
+          {abierto ? "Cerrar" : "Nuevo"}
+        </Button>
+      </div>
+
+      {abierto && (
+        <Card>
+          <SectionTitle>Nuevo empleado</SectionTitle>
+          <form onSubmit={crear} className="flex flex-col gap-3">
+          <div>
+            <Label>Usuario</Label>
+            <Input value={usuario} onChange={(e) => setUsuario(e.target.value)} required />
+          </div>
+          <div>
+            <Label>Nombre</Label>
+            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} required />
+          </div>
+          <div>
+            <Label>Rol</Label>
+            <Select value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
+              <option value="EMPLEADO">Empleado — sólo ficha</option>
+              <option value="ENCARGADO">Encargado — turnos, presencia y aprobaciones</option>
+              <option value="ADMIN">Admin — todo, incluida la configuración</option>
+            </Select>
+          </div>
+          {rol !== "EMPLEADO" && (
+            <div>
+              <Label>Email para avisos</Label>
+              <Input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="encargado@restaurante.com"
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                Le llegan las alertas de tardanzas, faltas y salidas olvidadas.
+              </p>
+            </div>
+          )}
+          {locales.length > 1 && (
+            <>
+              <div>
+                <Label>Sucursal principal</Label>
+                <Select value={localId} onChange={(e) => setLocalId(e.target.value)}>
+                  {locales.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              <div>
+                <Label>También puede fichar en</Label>
+                <div className="flex flex-col gap-1.5">
+                  {locales
+                    .filter((l) => l.id !== localId)
+                    .map((l) => (
+                      <label key={l.id} className="flex items-center gap-2 text-sm">
+                        <Checkbox
+                          checked={localesExtra.includes(l.id)}
+                          onChange={() => toggleExtra(l.id)}
+                        />
+                        {l.nombre}
+                      </label>
+                    ))}
+                </div>
+              </div>
+            </>
+          )}
+          <div>
+            <Label>Categoría (puesto)</Label>
+            <Select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
+              <option value="">Sin categoría</option>
+              {(categoriasPorLocal[localId] ?? []).map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </Select>
+            <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+              Se administran desde Ajustes → la sucursal → Categorías de empleado.
+            </p>
+          </div>
+          <Button type="submit" disabled={cargando} className="mt-1">
+            <UserPlus size={16} />
+            {cargando ? "Creando…" : "Crear empleado"}
+          </Button>
+          <ErrorText>{error}</ErrorText>
+          </form>
+        </Card>
+      )}
+
+      {link && (
+        <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-[#2f6b55] dark:bg-[#122620]">
+          <LinkIcon size={16} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" />
+          <p>
+            Compartí este link para que registre su Face ID / huella:{" "}
+            <a href={link} className="break-all font-medium underline">
+              {link}
+            </a>
+          </p>
+        </div>
+      )}
+
+      <div>
+        <SectionTitle>Personal</SectionTitle>
+        {empleados.length === 0 ? (
+          <EmptyState>Todavía no hay empleados cargados</EmptyState>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {empleados.map((e) => (
+              <Card key={e.id} className="flex flex-col gap-3">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="truncate font-semibold">{e.nombre}</p>
+                    <p className="truncate text-sm text-slate-500 dark:text-[#94a19c]">@{e.usuario}</p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    onClick={() => actualizar(e.id, { activo: !e.activo })}
+                    className="shrink-0"
+                  >
+                    {e.activo ? "Desactivar" : "Activar"}
+                  </Button>
+                </div>
+
+                <div className="flex flex-wrap gap-1.5">
+                  <Badge tone={e.rol === "EMPLEADO" ? "slate" : "amber"}>{ETIQUETA_ROL[e.rol]}</Badge>
+                  {e.categoria && <Badge tone="slate">{e.categoria.nombre}</Badge>}
+                  <Badge tone={e.credenciales.length > 0 ? "emerald" : "amber"}>
+                    {e.credenciales.length > 0
+                      ? "Passkey registrada"
+                      : e.invitaciones[0]
+                        ? "Invitación pendiente"
+                        : "Sin invitación"}
+                  </Badge>
+                  <Badge tone={e.activo ? "emerald" : "slate"}>{e.activo ? "Activo" : "Inactivo"}</Badge>
+                  {locales.length > 1 && (
+                    <Badge tone="slate">
+                      <span className="inline-flex items-center gap-1">
+                        <Store size={11} />
+                        {[e.local.nombre, ...e.asignaciones.map((a) => a.local.nombre)].join(" · ")}
+                      </span>
+                    </Badge>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <Select
+                    value={e.rol}
+                    onChange={(ev) => actualizar(e.id, { rol: ev.target.value })}
+                    className="w-auto py-1.5 text-sm"
+                  >
+                    <option value="EMPLEADO">Empleado</option>
+                    <option value="ENCARGADO">Encargado</option>
+                    <option value="ADMIN">Admin</option>
+                  </Select>
+                  <Button
+                    variant="ghost"
+                    className="py-1.5 text-xs"
+                    onClick={() => actualizar(e.id, { reinvitar: true })}
+                  >
+                    <KeyRound size={14} />
+                    Regenerar passkey
+                  </Button>
+                  <Select
+                    value={e.categoria?.id ?? ""}
+                    onChange={(ev) => actualizar(e.id, { categoriaId: ev.target.value || null })}
+                    className="w-auto py-1.5 text-sm"
+                  >
+                    <option value="">Sin categoría</option>
+                    {(categoriasPorLocal[e.localId] ?? []).map((c) => (
+                      <option key={c.id} value={c.id}>
+                        {c.nombre}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+
+                {e.rol !== "EMPLEADO" && (
+                  <div>
+                    <Label>Email para avisos</Label>
+                    <Input
+                      type="email"
+                      defaultValue={e.email ?? ""}
+                      placeholder="Sin email: no recibe alertas"
+                      onBlur={(ev) => {
+                        if (ev.target.value !== (e.email ?? "")) actualizar(e.id, { email: ev.target.value });
+                      }}
+                    />
+                  </div>
+                )}
+              </Card>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

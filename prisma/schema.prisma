@@ -1,0 +1,338 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Rol {
+  ADMIN
+  ENCARGADO
+  EMPLEADO
+}
+
+enum TipoFichaje {
+  ENTRADA
+  SALIDA
+  DESCANSO_INICIO
+  DESCANSO_FIN
+}
+
+enum TipoAlerta {
+  NO_FICHO
+  LLEGADA_TARDE
+  SALIDA_OLVIDADA
+  EXCESO_HORARIO
+}
+
+enum EstadoSolicitud {
+  PENDIENTE
+  APROBADA
+  RECHAZADA
+}
+
+enum TipoCorreccion {
+  AGREGAR
+  MODIFICAR
+  ELIMINAR
+}
+
+enum TipoAusencia {
+  VACACIONES
+  ENFERMEDAD
+  FRANCO
+  LICENCIA
+  FALTA
+  OTRO
+}
+
+enum VerificacionRostro {
+  /// La cara coincidió con la registrada.
+  OK
+  /// Se detectó una cara pero no es la registrada.
+  NO_COINCIDE
+  /// La cámara no encontró ninguna cara.
+  SIN_ROSTRO
+  /// El empleado todavía no registró su cara.
+  NO_REGISTRADO
+  /// Sin cámara o permiso denegado: se fichó sin verificar.
+  OMITIDA
+}
+
+model Local {
+  id          String     @id @default(cuid())
+  nombre      String
+  lat         Float?
+  lng         Float?
+  radioMetros Int        @default(150)
+
+  /// Si el descanso se resta de las horas trabajadas o se paga igual.
+  descuentaDescanso Boolean @default(true)
+  /// Minutos de gracia antes de marcar una llegada como tardanza.
+  toleranciaMin     Int     @default(10)
+  /// Horas semanales a partir de las cuales el excedente es hora extra.
+  topeSemanalHoras  Float   @default(48)
+
+  /// Exigir control de rostro por cámara al fichar.
+  verificarRostro   Boolean @default(false)
+  /// Distancia euclídea máxima para dar por buena la cara. El estándar del
+  /// modelo es 0.6; más bajo es más estricto y rechaza más caras legítimas.
+  /// Es un botón de calibración: cocina con vapor y gorro necesita más margen.
+  rostroTolerancia  Float   @default(0.55)
+
+  empleados   Empleado[]        @relation("LocalPrincipal")
+  asignados   AsignacionLocal[]
+  turnos      Turno[]
+  fichajes    Fichaje[]
+  alertas     Alerta[]
+  horarios    HorarioLocal[]
+  categorias  Categoria[]
+}
+
+/// Horario de atención de un local, un renglón por día de la semana (0=domingo
+/// … 6=sábado). Define los límites del diagrama de Gantt semanal.
+model HorarioLocal {
+  id         String  @id @default(cuid())
+  local      Local   @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId    String
+  diaSemana  Int
+  cerrado    Boolean @default(false)
+  abre       String? // "09:00"
+  cierra     String? // "23:00"
+
+  @@unique([localId, diaSemana])
+}
+
+/// Puesto del empleado dentro de un local (mozo, cocinero, cajero...). Se
+/// arma a mano por local: no hay una lista fija de puestos posibles.
+model Categoria {
+  id        String     @id @default(cuid())
+  local     Local      @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId   String
+  nombre    String
+  createdAt DateTime   @default(now())
+  empleados Empleado[]
+
+  @@unique([localId, nombre])
+}
+
+model Empleado {
+  id           String               @id @default(cuid())
+  usuario      String               @unique
+  nombre       String
+  /// Sólo se usa para mandarle las alertas a admins y encargados.
+  email        String?
+
+  /// "scrypt:saltHex:hashHex". Null si todavía no se creó una contraseña
+  /// (puede fichar sólo con passkey hasta que la registre).
+  passwordHash String?
+
+  categoria    Categoria?           @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  categoriaId  String?
+
+  /// Vector de 128 floats del rostro (Float32Array serializado). NO es una
+  /// foto: es una huella matemática de la que no se puede reconstruir la cara.
+  rostroDescriptor Bytes?
+  /// Foto de referencia del alta, para que el encargado pueda auditar que la
+  /// cara registrada es la de esta persona.
+  rostroFoto       Bytes?
+  rostroFotoTipo   String?
+  rostroRegistradoEn DateTime?
+  /// Cuándo aceptó que se procese su dato biométrico (Ley 25.326).
+  consentimientoBiometrico DateTime?
+  rol          Rol                  @default(EMPLEADO)
+  activo       Boolean              @default(true)
+  createdAt    DateTime             @default(now())
+  /// Sucursal por defecto: se usa al fichar si no hay turno que indique otra.
+  local        Local                @relation("LocalPrincipal", fields: [localId], references: [id])
+  localId      String
+  asignaciones AsignacionLocal[]
+  credenciales Credential[]
+  invitaciones RegistroInvitacion[]
+  turnos       Turno[]
+  fichajes     Fichaje[]
+  alertas      Alerta[]             @relation("AlertasDelEmpleado")
+  alertasResueltas Alerta[]         @relation("AlertasResueltas")
+  correcciones SolicitudCorreccion[] @relation("CorreccionesDelEmpleado")
+  correccionesResueltas SolicitudCorreccion[] @relation("CorreccionesResueltas")
+  ausencias    Ausencia[]           @relation("AusenciasDelEmpleado")
+  ausenciasResueltas Ausencia[]     @relation("AusenciasResueltas")
+  auditorias   Auditoria[]
+}
+
+/// Bitácora de cambios sensibles: quién tocó qué, cuándo y por qué.
+/// Sólo se escribe, nunca se edita ni se borra.
+model Auditoria {
+  id        String   @id @default(cuid())
+  /// "Fichaje", "Ausencia", "Empleado"…
+  entidad   String
+  entidadId String
+  /// "CREAR", "MODIFICAR", "ELIMINAR", "APROBAR", "RECHAZAR"
+  accion    String
+  autor     Empleado @relation(fields: [autorId], references: [id])
+  autorId   String
+  antes     Json?
+  despues   Json?
+  motivo    String?
+  createdAt DateTime @default(now())
+
+  @@index([entidad, entidadId])
+  @@index([createdAt])
+}
+
+/// Pedido de un empleado para arreglar un fichaje mal cargado o faltante.
+/// Nada se aplica hasta que un encargado lo aprueba.
+model SolicitudCorreccion {
+  id          String          @id @default(cuid())
+  empleado    Empleado        @relation("CorreccionesDelEmpleado", fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId  String
+  /// Fichaje afectado. Null cuando se pide agregar uno que falta.
+  fichaje     Fichaje?        @relation(fields: [fichajeId], references: [id], onDelete: SetNull)
+  fichajeId   String?
+  tipo        TipoCorreccion
+  /// Valores propuestos (para AGREGAR y MODIFICAR).
+  tipoFichaje TipoFichaje?
+  fechaHora   DateTime?
+  motivo      String
+  estado      EstadoSolicitud @default(PENDIENTE)
+  resueltaPor Empleado?       @relation("CorreccionesResueltas", fields: [resueltaPorId], references: [id])
+  resueltaPorId String?
+  resueltaEn  DateTime?
+  comentario  String?
+  createdAt   DateTime        @default(now())
+
+  @@index([estado, createdAt])
+}
+
+/// Vacaciones, francos, enfermedad y demás. Las aprobadas evitan que el
+/// sistema marque a la persona como que no fichó.
+model Ausencia {
+  id            String          @id @default(cuid())
+  empleado      Empleado        @relation("AusenciasDelEmpleado", fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId    String
+  tipo          TipoAusencia
+  desde         DateTime        @db.Date
+  hasta         DateTime        @db.Date
+  motivo        String?
+  /// Foto del certificado, redimensionada en el navegador antes de subirla.
+  certificado     Bytes?
+  certificadoTipo String?
+  estado        EstadoSolicitud @default(PENDIENTE)
+  resueltaPor   Empleado?       @relation("AusenciasResueltas", fields: [resueltaPorId], references: [id])
+  resueltaPorId String?
+  resueltaEn    DateTime?
+  comentario    String?
+  createdAt     DateTime        @default(now())
+
+  @@index([empleadoId, desde, hasta])
+  @@index([estado])
+}
+
+/// Avisos generados a partir de los fichajes: no fichó, llegó tarde, se olvidó
+/// de salir, jornada excesiva. El índice único hace que regenerarlas sea
+/// idempotente: una sola alerta por empleado, día y tipo.
+model Alerta {
+  id            String     @id @default(cuid())
+  empleado      Empleado   @relation("AlertasDelEmpleado", fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId    String
+  local         Local      @relation(fields: [localId], references: [id])
+  localId       String
+  tipo          TipoAlerta
+  /// Día al que se refiere la alerta.
+  fecha         DateTime   @db.Date
+  detalle       String
+  resuelta      Boolean    @default(false)
+  resueltaPor   Empleado?  @relation("AlertasResueltas", fields: [resueltaPorId], references: [id])
+  resueltaPorId String?
+  resueltaEn    DateTime?
+  /// Cuándo se mandó por mail. Null = todavía no se notificó.
+  notificadaEn  DateTime?
+  createdAt     DateTime   @default(now())
+
+  @@unique([empleadoId, fecha, tipo])
+  @@index([resuelta, fecha])
+}
+
+/// Sucursales adicionales donde el empleado puede fichar (rotación).
+model AsignacionLocal {
+  id         String   @id @default(cuid())
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId String
+  local      Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId    String
+  createdAt  DateTime @default(now())
+
+  @@unique([empleadoId, localId])
+}
+
+model Credential {
+  id           String   @id @default(cuid())
+  empleado     Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId   String
+  credentialId String   @unique
+  publicKey    Bytes
+  counter      Int      @default(0)
+  deviceName   String?
+  createdAt    DateTime @default(now())
+}
+
+model RegistroInvitacion {
+  id         String   @id @default(cuid())
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId String
+  token      String   @unique
+  usado      Boolean  @default(false)
+  expiraEn   DateTime
+  createdAt  DateTime @default(now())
+}
+
+model Turno {
+  id         String   @id @default(cuid())
+  empleado   Empleado @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId String
+  local      Local    @relation(fields: [localId], references: [id])
+  localId    String
+  fecha      DateTime @db.Date
+  /// Wall-clock para mostrar ("09:00"). El cálculo usa inicioAt/finAt.
+  horaInicio String
+  horaFin    String
+  /// Instantes absolutos que resuelve el navegador al crear el turno, que ya
+  /// conoce la zona horaria del local. Evita lógica de timezone en el servidor.
+  /// ponytail: si algún día se cargan turnos desde otra zona horaria que el
+  /// local, mover la conversión al servidor con la tz guardada en Local.
+  inicioAt   DateTime
+  finAt      DateTime
+  createdAt  DateTime @default(now())
+
+  @@index([empleadoId, fecha])
+}
+
+model Fichaje {
+  id         String      @id @default(cuid())
+  empleado   Empleado    @relation(fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId String
+  local      Local       @relation(fields: [localId], references: [id])
+  localId    String
+  tipo       TipoFichaje
+  timestamp  DateTime    @default(now())
+  lat        Float?
+  lng        Float?
+  distanciaM Int?
+  /// Cargado o editado por una corrección aprobada, no fichado en el momento.
+  corregido  Boolean     @default(false)
+
+  /// Resultado del control por cámara.
+  rostro          VerificacionRostro @default(OMITIDA)
+  /// Distancia euclídea contra el rostro registrado: más chica, más parecido.
+  rostroDistancia Float?
+  /// Foto del momento del fichaje. Sólo se guarda cuando la verificación no
+  /// cerró, para que el encargado tenga evidencia del caso dudoso.
+  rostroFoto      Bytes?
+  rostroFotoTipo  String?
+
+  correcciones SolicitudCorreccion[]
+
+  @@index([empleadoId, timestamp])
+}
