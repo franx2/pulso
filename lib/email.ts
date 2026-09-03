@@ -57,13 +57,13 @@ export function plantillaAlertas(
 
   return `
   <div style="font-family:system-ui,-apple-system,sans-serif;max-width:640px;margin:0 auto;padding:24px">
-    <h1 style="font-size:20px;margin:0 0 4px">Control de personal</h1>
+    <h1 style="font-size:20px;margin:0 0 4px;color:#0f766e">Pulso Operativo</h1>
     <p style="color:#64748b;margin:0 0 20px">
       ${alertas.length === 1 ? "Hay 1 aviso nuevo" : `Hay ${alertas.length} avisos nuevos`}.
     </p>
     <table style="width:100%;border-collapse:collapse;font-size:14px">${filas}</table>
     <p style="margin:24px 0 0">
-      <a href="${urlPanel}" style="background:#059669;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">
+      <a href="${urlPanel}" style="background:#0f766e;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;display:inline-block">
         Ver el panel
       </a>
     </p>

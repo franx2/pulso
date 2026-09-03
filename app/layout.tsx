@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Jumbo — Control de personal",
-  description: "Fichaje, turnos y reportes de horas del restaurante",
+  title: "Pulso Operativo — Control de personal",
+  description: "Fichaje, turnos y reportes de horas para tu equipo",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -8,7 +8,9 @@ import {
   type InputHTMLAttributes,
   type ReactNode,
   type SelectHTMLAttributes,
+  type TextareaHTMLAttributes,
 } from "react";
+import { X } from "lucide-react";
 
 export function Button({
   variant = "primary",
@@ -18,14 +20,13 @@ export function Button({
   variant?: "primary" | "ghost" | "danger";
 }) {
   const base =
-    "inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition disabled:opacity-50 disabled:cursor-not-allowed";
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412]";
   const variants = {
     primary:
-      "bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-[#4ee6b0] dark:text-[#062419] dark:hover:bg-[#72efc1]",
-    ghost:
-      "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 dark:border-[#26312d] dark:bg-[#131816] dark:text-[#e0e7e3] dark:hover:bg-[#18201d]",
+      "bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-[#37e6b0] dark:text-[#062419] dark:hover:bg-[#7bf0ca]",
+    ghost: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#e0e7e3] dark:hover:bg-[#172724]",
     danger:
-      "bg-white text-red-600 border border-red-200 hover:bg-red-50 dark:border-[#5a2f35] dark:bg-[#131816] dark:hover:bg-red-950/30",
+      "bg-white text-red-600 border border-red-200 hover:bg-red-50 dark:border-[#5a2f35] dark:bg-[#101c19] dark:hover:bg-red-950/30",
   };
   return <button className={`${base} ${variants[variant]} ${className}`} {...props} />;
 }
@@ -33,7 +34,16 @@ export function Button({
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#26312d] dark:bg-[#131816] dark:text-[#f4f7f6] dark:focus:border-[#4ee6b0] dark:focus:ring-[#173e32] ${className}`}
+      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4] dark:focus:border-[#37e6b0] dark:focus:ring-[#1d4e48] ${className}`}
+      {...props}
+    />
+  );
+}
+
+export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return (
+    <textarea
+      className={`min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4] dark:focus:border-[#37e6b0] dark:focus:ring-[#1d4e48] ${className}`}
       {...props}
     />
   );
@@ -43,7 +53,7 @@ export function Checkbox({ className = "", ...props }: InputHTMLAttributes<HTMLI
   return (
     <input
       type="checkbox"
-      className={`h-4 w-4 shrink-0 cursor-pointer accent-emerald-600 dark:accent-[#4ee6b0] ${className}`}
+      className={`h-4 w-4 shrink-0 cursor-pointer accent-emerald-600 dark:accent-[#37e6b0] ${className}`}
       {...props}
     />
   );
@@ -52,7 +62,7 @@ export function Checkbox({ className = "", ...props }: InputHTMLAttributes<HTMLI
 export function Select({ className = "", children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#26312d] dark:bg-[#131816] dark:text-[#f4f7f6] dark:focus:border-[#4ee6b0] dark:focus:ring-[#173e32] ${className}`}
+      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4] dark:focus:border-[#37e6b0] dark:focus:ring-[#1d4e48] ${className}`}
       {...props}
     >
       {children}
@@ -67,7 +77,7 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
   return (
     <div
-      className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#26312d] dark:bg-[#131816] dark:shadow-none ${className}`}
+      className={`rounded-xl border border-slate-200 bg-white p-4 shadow-sm dark:border-[#29403b] dark:bg-[#101c19] dark:shadow-none ${className}`}
       {...props}
     >
       {children}
@@ -131,14 +141,14 @@ export function IconButton({
 }) {
   const tones = {
     danger: "text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400",
-    default: "text-slate-300 hover:text-emerald-600 dark:text-slate-600 dark:hover:text-emerald-400",
+    default: "text-slate-300 hover:text-emerald-600 dark:text-slate-600 dark:hover:text-[#37e6b0]",
   };
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
-      className={`shrink-0 transition ${tones[tone]} ${className}`}
+      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${tones[tone]} ${className}`}
       {...props}
     >
       {children}
@@ -176,17 +186,17 @@ export function Modal({
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 px-0 sm:items-center sm:px-4">
       <div
-        className={`max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-t-[28px] bg-white shadow-2xl dark:bg-[#0b0e0d] sm:rounded-[28px]`}
+        className={`max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-t-2xl bg-white shadow-2xl dark:bg-[#0b1412] sm:rounded-2xl`}
       >
-        <div className="sticky top-0 flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4 dark:border-[#26312d] dark:bg-[#0b0e0d]">
+        <div className="sticky top-0 flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4 dark:border-[#29403b] dark:bg-[#0b1412]">
           <h3 className="text-lg font-bold">{title}</h3>
           <button
             type="button"
             onClick={onClose}
-            className="text-2xl leading-none text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:text-[#b0c3bc] dark:hover:bg-[#172724] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412]"
             aria-label="Cerrar"
           >
-            ×
+            <X size={20} strokeWidth={2.3} />
           </button>
         </div>
         <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4">{children}</div>

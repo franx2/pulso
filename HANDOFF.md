@@ -4,9 +4,9 @@
 **Repo git:** local, branch `master`, **sin remoto configurado** (`git remote -v` vacío). No hay GitHub/GitLab detrás — todo vive en este directorio y en Railway.
 **App en producción:** https://web-production-e88dab.up.railway.app (Railway, real, con empleados fichando ya)
 
-## ⚠️ Estado de git — leer antes de tocar nada
+## Estado de git
 
-El repo tiene un solo commit real ("Initial commit from Create Next App"). Casi todo el código actual — `app/admin/`, `app/api/`, `app/fichar/`, `app/login/`, `app/registro/`, `components/`, `lib/`, `prisma/`, `public/models/`, `PRODUCT.md`, `.impeccable/` — aparece como **untracked** en `git status`, y `app/globals.css`, `app/layout.tsx`, `app/page.tsx`, `package.json`, `package-lock.json` como modificados sin commitear. O sea: todo el desarrollo de esta sesión (y de sesiones previas) nunca se commiteó. No asumas que `git log`/`git diff` reflejan el estado real del proyecto — reflejan sólo el scaffold inicial de `create-next-app`. Antes de que Codex empiece a tocar código, probablemente convenga hacer un primer commit real del estado actual (pedírselo al usuario, no asumirlo).
+Ya hay un primer commit real (`8eb17d7`, después del scaffold inicial de `create-next-app`) con todo el código de la app. Working tree limpio al momento de escribir esto. Seguía sin remoto configurado (`git remote -v` vacío) — sólo local, nada en GitHub/GitLab. Si Codex y Claude van a trabajar sobre el mismo directorio en paralelo, tenerlo en cuenta: sin remoto no hay forma de sincronizar entre sesiones más que compartiendo el mismo filesystem.
 
 ## Qué es esto
 

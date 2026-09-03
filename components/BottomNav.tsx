@@ -26,7 +26,7 @@ export function BottomNav({ active, rol = "EMPLEADO" }: { active: NavActivo; rol
   return (
     <nav className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom)+0.75rem)] z-50 px-3">
       <div
-        className="mx-auto grid max-w-lg gap-1 rounded-[1.75rem] border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_12px_35px_rgba(15,23,42,0.22)] backdrop-blur dark:border-[#26312d] dark:bg-[#111513]/95 dark:shadow-[0_14px_38px_rgba(0,0,0,0.5)]"
+        className="mx-auto grid max-w-lg gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_12px_35px_rgba(15,23,42,0.22)] backdrop-blur dark:border-[#29403b] dark:bg-[#101c19]/95 dark:shadow-[0_14px_38px_rgba(0,0,0,0.5)]"
         style={{ gridTemplateColumns: `repeat(${visibles.length}, minmax(0, 1fr))` }}
       >
         {visibles.map((i) => (
@@ -48,10 +48,10 @@ function NavItem({
   Icon: LucideIcon;
   label: string;
 }) {
-  const cls = `flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-[1.25rem] px-1 py-2 text-center transition ${
+  const cls = `flex min-h-[58px] flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${
     active
-      ? "bg-emerald-700 text-white shadow-sm dark:bg-[#173e32] dark:text-[#4ee6b0]"
-      : "text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-[#94a19c] dark:hover:bg-[#18201d] dark:hover:text-[#f4f7f6]"
+      ? "bg-emerald-700 text-white shadow-sm dark:bg-[#1d4e48] dark:text-[#37e6b0]"
+      : "text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-[#b0c3bc] dark:hover:bg-[#172724] dark:hover:text-[#f2f7f4]"
   }`;
 
   return (

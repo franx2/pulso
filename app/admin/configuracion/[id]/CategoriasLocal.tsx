@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { Button, Card, EmptyState, ErrorText, Input, SectionTitle } from "@/components/ui";
+import { Button, Card, EmptyState, ErrorText, Input, SectionTitle, useConfirm } from "@/components/ui";
 
 type Categoria = { id: string; nombre: string };
 
@@ -11,6 +11,7 @@ export default function CategoriasLocal({ localId }: { localId: string }) {
   const [nombre, setNombre] = useState("");
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
+  const { confirm, dialog } = useConfirm();
 
   async function cargar() {
     const res = await fetch(`/api/locales/${localId}/categorias`);
@@ -40,9 +41,28 @@ export default function CategoriasLocal({ localId }: { localId: string }) {
     cargar();
   }
 
-  async function eliminar(id: string) {
-    await fetch(`/api/categorias/${id}`, { method: "DELETE" });
-    cargar();
+  function eliminar(categoria: Categoria) {
+    confirm({
+      title: "Eliminar categoría",
+      message: (
+        <p>
+          ¿Seguro que querés borrar “{categoria.nombre}”? Los empleados que la usen quedan sin
+          categoría, pero siguen activos.
+        </p>
+      ),
+      confirmLabel: "Eliminar",
+      tone: "danger",
+      onConfirm: async () => {
+        setError("");
+        const res = await fetch(`/api/categorias/${categoria.id}`, { method: "DELETE" });
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          setError(data.error ?? "No se pudo eliminar la categoría");
+          return;
+        }
+        cargar();
+      },
+    });
   }
 
   return (
@@ -73,9 +93,9 @@ export default function CategoriasLocal({ localId }: { localId: string }) {
               {c.nombre}
               <button
                 type="button"
-                onClick={() => eliminar(c.id)}
+                onClick={() => eliminar(c)}
                 aria-label={`Eliminar ${c.nombre}`}
-                className="grid h-5 w-5 place-items-center rounded-full text-slate-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950/40"
+                className="-my-1 -mr-1 grid h-7 w-7 place-items-center rounded-full text-slate-500 transition hover:bg-slate-200 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#94a19c] dark:hover:bg-[#26312d] dark:hover:text-red-300 dark:focus-visible:ring-[#4ee6b0]"
               >
                 <Trash2 size={12} />
               </button>
@@ -83,6 +103,7 @@ export default function CategoriasLocal({ localId }: { localId: string }) {
           ))}
         </div>
       )}
+      {dialog}
     </Card>
   );
 }

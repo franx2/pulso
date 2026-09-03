@@ -5,6 +5,19 @@
 
 @theme inline {
   --font-sans: var(--font-geist-sans);
+  --color-emerald-50: #ecfdf5;
+  --color-emerald-100: #d1fae5;
+  --color-emerald-200: #a7f3d0;
+  --color-emerald-300: #79e6bc;
+  --color-emerald-400: #52d3a7;
+  --color-emerald-500: #25b98c;
+  --color-emerald-600: #159a78;
+  --color-emerald-700: #0f766e;
+  --color-emerald-800: #115e59;
+  --color-emerald-900: #134e4a;
+  --color-emerald-950: #0b2927;
+  --color-pulse-accent: #37e6b0;
+  --color-pulse-ink: #17211e;
 }
 
 html,
@@ -13,22 +26,27 @@ body {
 }
 
 body {
-  background: #ffffff;
-  color: #171717;
+  background: #f6f8f5;
+  color: #17211e;
 }
 
-/* Sistema visual del producto: fondo profundo, superficies verdes apagadas y acento menta. */
+::selection {
+  background: #b7f7dd;
+  color: #17211e;
+}
+
+/* Pulso Operativo: fondo profundo, superficies teal y acento menta. */
 .dark {
   color-scheme: dark;
-  background: #0b0e0d;
+  background: #0b1412;
 }
 
 .dark body {
-  background: #0b0e0d;
-  color: #f4f7f6;
+  background: #0b1412;
+  color: #f2f7f4;
 }
 
 .dark ::selection {
-  background: #173e32;
-  color: #f4f7f6;
+  background: #1d4e48;
+  color: #f2f7f4;
 }

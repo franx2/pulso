@@ -15,7 +15,18 @@ import {
   ScanFace,
   X,
 } from "lucide-react";
-import { Badge, Button, Card, EmptyState, Select, SectionTitle, Spinner } from "@/components/ui";
+import {
+  Badge,
+  Button,
+  Card,
+  EmptyState,
+  ErrorText,
+  Modal,
+  Select,
+  SectionTitle,
+  Spinner,
+  Textarea,
+} from "@/components/ui";
 import { formatearFechaSql } from "@/lib/fechas";
 
 type Local = { id: string; nombre: string };
@@ -123,6 +134,14 @@ export default function PresenciaClient() {
   const [rostros, setRostros] = useState<RostroDudoso[]>([]);
   const [cargando, setCargando] = useState(true);
   const [actualizado, setActualizado] = useState<Date | null>(null);
+  const [resolviendoId, setResolviendoId] = useState("");
+  const [errorAccion, setErrorAccion] = useState("");
+  const [rechazo, setRechazo] = useState<{
+    recurso: "correcciones" | "ausencias";
+    id: string;
+    empleado: string;
+  } | null>(null);
+  const [comentarioRechazo, setComentarioRechazo] = useState("");
 
   const cargar = useCallback(async (local: string) => {
     const params = local ? `?localId=${local}` : "";
@@ -156,21 +175,53 @@ export default function PresenciaClient() {
     await fetch(`/api/alertas/${id}`, { method: "PATCH" });
   }
 
-  async function resolver(recurso: "correcciones" | "ausencias", id: string, aprobar: boolean) {
-    let comentario: string | undefined;
-    if (!aprobar) {
-      const respuesta = window.prompt("¿Por qué se rechaza? (el empleado lo va a ver, opcional)");
-      if (respuesta === null) return; // canceló, no rechazar nada
-      comentario = respuesta.trim() || undefined;
+  async function resolver(
+    recurso: "correcciones" | "ausencias",
+    id: string,
+    aprobar: boolean,
+    comentario?: string
+  ) {
+    setErrorAccion("");
+    setResolviendoId(id);
+    try {
+      const res = await fetch(`/api/${recurso}/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ aprobar, comentario }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        setErrorAccion(data.error ?? "No se pudo resolver la solicitud");
+        return false;
+      }
+      if (recurso === "correcciones") setCorrecciones((p) => p.filter((c) => c.id !== id));
+      else setAusencias((p) => p.filter((a) => a.id !== id));
+      await cargar(localId).catch(() => undefined);
+      return true;
+    } catch {
+      setErrorAccion("No pudimos conectar con el servidor. Probá de nuevo.");
+      return false;
+    } finally {
+      setResolviendoId("");
     }
-    if (recurso === "correcciones") setCorrecciones((p) => p.filter((c) => c.id !== id));
-    else setAusencias((p) => p.filter((a) => a.id !== id));
-    await fetch(`/api/${recurso}/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ aprobar, comentario }),
-    });
-    cargar(localId);
+  }
+
+  function pedirRechazo(recurso: "correcciones" | "ausencias", id: string, empleado: string) {
+    setErrorAccion("");
+    setComentarioRechazo("");
+    setRechazo({ recurso, id, empleado });
+  }
+
+  async function confirmarRechazo(e: React.FormEvent) {
+    e.preventDefault();
+    if (!rechazo) return;
+    const listo = await resolver(
+      rechazo.recurso,
+      rechazo.id,
+      false,
+      comentarioRechazo.trim() || undefined
+    );
+    if (listo) setRechazo(null);
   }
 
   if (cargando) return <Spinner />;
@@ -194,6 +245,7 @@ export default function PresenciaClient() {
           Actualizar
         </Button>
       </div>
+      <ErrorText>{errorAccion}</ErrorText>
 
       {locales.length > 1 && (
         <Select value={localId} onChange={(e) => setLocalId(e.target.value)} className="max-w-xs">
@@ -310,11 +362,19 @@ export default function PresenciaClient() {
                   <p className="mt-1 text-sm italic text-slate-500 dark:text-[#94a19c]">“{c.motivo}”</p>
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => resolver("correcciones", c.id, true)} className="flex-1">
+                  <Button
+                    onClick={() => resolver("correcciones", c.id, true)}
+                    disabled={resolviendoId === c.id}
+                    className="flex-1"
+                  >
                     <Check size={15} />
-                    Aprobar
+                    {resolviendoId === c.id ? "Resolviendo…" : "Aprobar"}
                   </Button>
-                  <Button variant="danger" onClick={() => resolver("correcciones", c.id, false)}>
+                  <Button
+                    variant="danger"
+                    onClick={() => pedirRechazo("correcciones", c.id, c.empleado)}
+                    disabled={resolviendoId === c.id}
+                  >
                     <X size={15} />
                     Rechazar
                   </Button>
@@ -357,11 +417,19 @@ export default function PresenciaClient() {
                   )}
                 </div>
                 <div className="flex gap-2">
-                  <Button onClick={() => resolver("ausencias", a.id, true)} className="flex-1">
+                  <Button
+                    onClick={() => resolver("ausencias", a.id, true)}
+                    disabled={resolviendoId === a.id}
+                    className="flex-1"
+                  >
                     <Check size={15} />
-                    Aprobar
+                    {resolviendoId === a.id ? "Resolviendo…" : "Aprobar"}
                   </Button>
-                  <Button variant="danger" onClick={() => resolver("ausencias", a.id, false)}>
+                  <Button
+                    variant="danger"
+                    onClick={() => pedirRechazo("ausencias", a.id, a.empleado)}
+                    disabled={resolviendoId === a.id}
+                  >
                     <X size={15} />
                     Rechazar
                   </Button>
@@ -415,6 +483,37 @@ export default function PresenciaClient() {
             </div>
           );
         })
+      )}
+      {rechazo && (
+        <Modal title="Rechazar solicitud" onClose={() => (resolviendoId ? undefined : setRechazo(null))}>
+          <form onSubmit={confirmarRechazo} className="flex flex-col gap-4">
+            <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">
+              El motivo es opcional, pero si lo escribís {rechazo.empleado} lo va a ver en sus
+              solicitudes.
+            </p>
+            <Textarea
+              value={comentarioRechazo}
+              onChange={(e) => setComentarioRechazo(e.target.value)}
+              placeholder="Ej: Falta el certificado o la fecha no coincide"
+              autoFocus
+            />
+            <ErrorText>{errorAccion}</ErrorText>
+            <div className="flex justify-end gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setRechazo(null)}
+                disabled={Boolean(resolviendoId)}
+              >
+                Cancelar
+              </Button>
+              <Button type="submit" variant="danger" disabled={Boolean(resolviendoId)}>
+                <X size={15} />
+                {resolviendoId ? "Rechazando…" : "Rechazar"}
+              </Button>
+            </div>
+          </form>
+        </Modal>
       )}
     </div>
   );

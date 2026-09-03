@@ -69,7 +69,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-slate-50 px-6 dark:bg-[#0b0e0d]">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-[#f6f8f5] px-6 dark:bg-[#0b1412]">
       <Brand centered />
       <Card className="w-full max-w-xs">
         <Label>Usuario</Label>

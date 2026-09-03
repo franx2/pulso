@@ -16,10 +16,10 @@ export function Sidebar({ active, rol }: { active: NavActivo; rol: Rol }) {
         <Link
           key={i.key}
           href={i.href}
-          className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition ${
+          className={`flex min-h-11 items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${
             active === i.key
-              ? "bg-emerald-700 text-white shadow-sm dark:bg-[#173e32] dark:text-[#4ee6b0]"
-              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#94a19c] dark:hover:bg-[#18201d] dark:hover:text-[#f4f7f6]"
+              ? "bg-emerald-700 text-white shadow-sm dark:bg-[#1d4e48] dark:text-[#37e6b0]"
+              : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#b0c3bc] dark:hover:bg-[#172724] dark:hover:text-[#f2f7f4]"
           }`}
         >
           <i.Icon size={18} strokeWidth={2.3} />

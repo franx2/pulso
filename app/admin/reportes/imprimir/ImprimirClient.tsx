@@ -132,7 +132,7 @@ export default function ImprimirClient() {
           asignado) y el semanal (contra el tope del local). Nunca se suman las dos.
         </p>
         <p className="mt-1">
-          Emitido el {new Date().toLocaleString("es-AR")} · Jumbo
+          Emitido el {new Date().toLocaleString("es-AR")} · Pulso Operativo
         </p>
       </footer>
     </div>

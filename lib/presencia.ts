@@ -204,7 +204,7 @@ export async function notificarAlertasPendientes(ahora = new Date()) {
 
   const enviado = await enviarEmail({
     to,
-    subject: `Control de personal: ${sinNotificar.length} aviso${sinNotificar.length === 1 ? "" : "s"}`,
+    subject: `Pulso Operativo: ${sinNotificar.length} aviso${sinNotificar.length === 1 ? "" : "s"}`,
     html: plantillaAlertas(
       sinNotificar.map((a) => ({
         empleado: a.empleado.nombre,

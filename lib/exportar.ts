@@ -1,7 +1,7 @@
 import ExcelJS from "exceljs";
 import type { FilaReporte } from "@/app/api/reportes/route";
 
-const VERDE = "FF059669";
+const VERDE = "FF0F766E";
 
 /** Planilla lista para pasarle a quien liquida sueldos. */
 export async function reporteAExcel({
@@ -14,7 +14,7 @@ export async function reporteAExcel({
   hasta: string;
 }): Promise<Uint8Array<ArrayBuffer>> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = "Control de personal";
+  wb.creator = "Pulso Operativo";
   wb.created = new Date();
 
   const ws = wb.addWorksheet("Horas", {

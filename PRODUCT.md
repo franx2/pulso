@@ -45,7 +45,7 @@ No es un reloj fichador genérico de SaaS por asiento: el login es biometría na
 
 ## Brand Commitments
 
-Nombre del negocio: **Jumbo**. Sin logo, paleta de colores ni identidad visual formal todavía — abierto para definir en el próximo trabajo de diseño visual. (La base de datos todavía tiene la sucursal principal cargada como "Mi restaurante", nombre de arranque a renombrar.)
+Nombre del software: **Pulso Operativo**. Es una herramienta para vender a negocios gastronómicos; cada cliente mantiene su propia identidad y sus sucursales, como Jumbo o Las Cañas. La identidad usa teal operativo (`#0F766E`) como color principal, menta de actividad (`#37E6B0`), fondo claro `#F6F8F5`, tinta `#17211E` y superficie oscura `#0B1412`. El logotipo es una P compacta con un punto menta de estado.
 
 ## Evidence on Hand
 

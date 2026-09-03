@@ -1,4 +1,4 @@
-export const rpName = "Control de personal";
+export const rpName = "Pulso Operativo";
 export const rpID = process.env.RP_ID ?? "localhost";
 export const origin = process.env.ORIGIN ?? `http://${rpID}:3000`;
 

@@ -39,3 +39,6 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# estado temporal de las revisiones visuales locales
+.impeccable/build/

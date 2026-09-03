@@ -25,7 +25,7 @@ export function PageShell({
 
   return (
     <>
-      <Header nombre={nombre} />
+      <Header nombre={nombre} wide={conSidebar} />
       <div
         className={`mx-auto flex w-full flex-1 gap-6 px-4 pt-5 sm:pt-6 ${conSidebar ? "max-w-5xl" : "max-w-3xl"}`}
       >
