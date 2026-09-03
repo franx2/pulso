@@ -39,6 +39,40 @@ function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
+const ALTO_CURVA = 36;
+
+/**
+ * Curva de demanda de un día como paths SVG, en la misma escala horizontal
+ * que las barras de turnos (posicionBarra) y una escala vertical COMPARTIDA
+ * entre los 7 días (`maxVal`), para que la altura de la curva sea comparable
+ * entre un domingo tranquilo y un viernes a full.
+ */
+function curvaDemanda(
+  abre: string,
+  cierra: string,
+  porHora: Map<number, number>,
+  maxVal: number
+): { area: string; linea: string; pico: { xPct: number; valor: number } | null } {
+  const puntos: { x: number; y: number; valor: number }[] = [];
+  for (let h = 0; h < 24; h++) {
+    const pos = posicionBarra(abre, cierra, `${String(h).padStart(2, "0")}:00`, `${String((h + 1) % 24).padStart(2, "0")}:00`);
+    if (!pos) continue;
+    const valor = porHora.get(h) ?? 0;
+    const y = ALTO_CURVA - (valor / maxVal) * ALTO_CURVA;
+    puntos.push({ x: pos.leftPct, y, valor });
+    // Último tramo del día: cierra la curva en el borde derecho de la ventana.
+    if (pos.leftPct + pos.widthPct >= 100 - 0.01) {
+      puntos.push({ x: pos.leftPct + pos.widthPct, y, valor });
+    }
+  }
+  if (puntos.length === 0) return { area: "", linea: "", pico: null };
+
+  const linea = puntos.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+  const area = `${linea} L ${puntos[puntos.length - 1].x} ${ALTO_CURVA} L ${puntos[0].x} ${ALTO_CURVA} Z`;
+  const pico = puntos.reduce((max, p) => (p.valor > max.valor ? p : max), puntos[0]);
+  return { area, linea, pico: { xPct: pico.x, valor: pico.valor } };
+}
+
 export default function SemanaGantt({ locales }: { locales: Local[] }) {
   const [localId, setLocalId] = useState(locales[0]?.id ?? "");
   const [inicioSemana, setInicioSemana] = useState(() => inicioDeSemana(new Date()));
@@ -86,11 +120,23 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
     return new Map(nombres.map((n, i) => [n, COLORES[i % COLORES.length]]));
   }, [turnos]);
 
+  // Por día: mapa hora -> ventasProm, para la curva; y total del día, para
+  // comparar de un vistazo si conviene más gente el domingo o el martes.
   const demandaPorDia = useMemo(() => {
-    const m = new Map<number, Demanda[]>();
-    for (const d of demanda) (m.get(d.diaSemana) ?? m.set(d.diaSemana, []).get(d.diaSemana)!).push(d);
+    const m = new Map<number, Map<number, number>>();
+    for (const d of demanda) {
+      const dia = m.get(d.diaSemana) ?? m.set(d.diaSemana, new Map()).get(d.diaSemana)!;
+      dia.set(d.hora, d.ventasProm);
+    }
     return m;
   }, [demanda]);
+  const totalPorDia = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const d of demanda) m.set(d.diaSemana, (m.get(d.diaSemana) ?? 0) + d.ventasProm);
+    return m;
+  }, [demanda]);
+  // Escala vertical ÚNICA para las 7 curvas: si cada una tuviera su propio
+  // máximo, un martes flojo se vería tan "lleno" como un viernes a full.
   const demandaMaxima = Math.max(1, ...demanda.map((d) => d.ventasProm));
 
   if (locales.length === 0) return <EmptyState>Todavía no hay sucursales cargadas</EmptyState>;
@@ -135,10 +181,16 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
       ) : (
         <div className="flex flex-col gap-2">
           {demanda.length > 0 && (
-            <p className="flex items-center gap-1.5 text-xs text-slate-400">
-              <span className="inline-block h-2 w-4 rounded bg-amber-500/70" />
-              Franja ámbar = intensidad de demanda histórica (ventas/hora promedio de los últimos 3
-              meses)
+            <p className="text-xs text-slate-400">
+              <span className="inline-flex items-center gap-1.5">
+                <svg width="16" height="10" viewBox="0 0 16 10" className="shrink-0">
+                  <path d="M0 8 Q4 1 8 5 T16 2" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
+                </svg>
+                Curva ámbar = demanda histórica (ventas/hora promedio, últimos 3 meses)
+              </span>
+              {" · misma escala vertical los 7 días (0 a "}
+              {demandaMaxima.toFixed(1)}
+              {" ventas/hora) — compará la altura entre días, no sólo la forma"}
             </p>
           )}
           {/* Los 7 días en una sola tarjeta continua (en vez de 7 tarjetas separadas)
@@ -152,15 +204,20 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
 
             return (
               <div key={clave} className="flex flex-col gap-2 p-3">
-                <div className="flex items-baseline justify-between">
-                  <p className="text-sm font-semibold">
+                <div className="flex items-baseline justify-between gap-2">
+                  <p className="flex items-center gap-2 text-sm font-semibold">
                     {NOMBRE_DIA[dia.getDay()]}{" "}
                     <span className="font-normal text-slate-400">
                       {dia.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })}
                     </span>
+                    {totalPorDia.has(dia.getDay()) && (
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                        ≈{totalPorDia.get(dia.getDay())!.toFixed(0)} ventas/día
+                      </span>
+                    )}
                   </p>
                   {horario && !horario.cerrado && (
-                    <p className="text-xs text-slate-400">
+                    <p className="shrink-0 text-xs text-slate-400">
                       {horario.abre}–{horario.cierra}
                     </p>
                   )}
@@ -170,36 +227,42 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                   <p className="text-xs text-slate-400">Cerrado</p>
                 ) : (
                   <>
-                    {(demandaPorDia.get(dia.getDay()) ?? []).length > 0 && (
-                      <div className="flex items-center gap-2">
-                        <span className="w-20 shrink-0" />
-                        <div className="relative h-2 flex-1 overflow-hidden rounded bg-slate-100 dark:bg-[#18201d]">
-                          {(demandaPorDia.get(dia.getDay()) ?? []).map((d) => {
-                            const pos = posicionBarra(
-                              horario.abre!,
-                              horario.cierra!,
-                              `${String(d.hora).padStart(2, "0")}:00`,
-                              `${String((d.hora + 1) % 24).padStart(2, "0")}:00`
-                            );
-                            if (!pos) return null;
-                            const intensidad = 0.15 + (d.ventasProm / demandaMaxima) * 0.75;
-                            return (
-                              <div
-                                key={d.hora}
-                                className="absolute inset-y-0 bg-amber-500"
-                                style={{
-                                  left: `${pos.leftPct}%`,
-                                  width: `${pos.widthPct}%`,
-                                  opacity: intensidad,
-                                }}
-                                title={`${d.hora}:00–${d.hora + 1}:00 · ${d.ventasProm.toFixed(1)} ventas/hora en promedio`}
-                              />
-                            );
-                          })}
-                        </div>
-                        <span className="w-24 shrink-0" />
-                      </div>
-                    )}
+                    {demandaPorDia.has(dia.getDay()) &&
+                      (() => {
+                        const { area, linea, pico } = curvaDemanda(
+                          horario.abre!,
+                          horario.cierra!,
+                          demandaPorDia.get(dia.getDay())!,
+                          demandaMaxima
+                        );
+                        if (!linea) return null;
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="w-20 shrink-0" />
+                            <div className="relative flex-1 overflow-hidden rounded bg-slate-50 dark:bg-[#18201d]" style={{ height: ALTO_CURVA }}>
+                              <svg
+                                viewBox={`0 0 100 ${ALTO_CURVA}`}
+                                preserveAspectRatio="none"
+                                className="absolute inset-0 h-full w-full"
+                              >
+                                {/* Grilla de referencia: 50% y 100% de la escala compartida. */}
+                                <line x1="0" y1={ALTO_CURVA / 2} x2="100" y2={ALTO_CURVA / 2} stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-[#26312d]" vectorEffect="non-scaling-stroke" />
+                                <path d={area} fill="#f59e0b" fillOpacity="0.18" />
+                                <path d={linea} fill="none" stroke="#f59e0b" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                              </svg>
+                              {pico && pico.valor > 0 && (
+                                <span
+                                  className="absolute top-0.5 -translate-x-1/2 whitespace-nowrap rounded bg-amber-700 px-1 py-0.5 text-[10px] font-semibold leading-none text-white dark:bg-amber-600"
+                                  style={{ left: `${Math.min(Math.max(pico.xPct, 8), 92)}%` }}
+                                >
+                                  pico {pico.valor.toFixed(1)}/h
+                                </span>
+                              )}
+                            </div>
+                            <span className="w-24 shrink-0" />
+                          </div>
+                        );
+                      })()}
                     {delDia.length === 0 ? (
                       <p className="text-xs text-slate-400">Sin turnos</p>
                     ) : (
