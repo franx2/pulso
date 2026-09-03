@@ -15,6 +15,7 @@ type Turno = {
   empleado?: { nombre: string };
 };
 type DiaHorario = { diaSemana: number; cerrado: boolean; abre: string | null; cierra: string | null };
+type Demanda = { diaSemana: number; hora: number; ventasProm: number };
 
 const NOMBRE_DIA = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 const COLORES = [
@@ -43,6 +44,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
   const [inicioSemana, setInicioSemana] = useState(() => inicioDeSemana(new Date()));
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [horarios, setHorarios] = useState<DiaHorario[]>([]);
+  const [demanda, setDemanda] = useState<Demanda[]>([]);
   const [cargando, setCargando] = useState(true);
 
   const dias = useMemo(
@@ -59,9 +61,11 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
     Promise.all([
       fetch(`/api/turnos?desde=${desde}&hasta=${hasta}&localId=${localId}`).then((r) => r.json()),
       fetch(`/api/locales/${localId}/horarios`).then((r) => r.json()),
-    ]).then(([t, h]) => {
+      fetch(`/api/locales/${localId}/demanda`).then((r) => r.json()),
+    ]).then(([t, h, dem]) => {
       setTurnos(t.turnos ?? []);
       setHorarios(h.horarios ?? []);
+      setDemanda(dem.demanda ?? []);
       setCargando(false);
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `dias` se deriva de inicioSemana, no hace falta como dep propia
@@ -81,6 +85,13 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
     const nombres = [...new Set(turnos.map((t) => t.empleado?.nombre ?? ""))].sort();
     return new Map(nombres.map((n, i) => [n, COLORES[i % COLORES.length]]));
   }, [turnos]);
+
+  const demandaPorDia = useMemo(() => {
+    const m = new Map<number, Demanda[]>();
+    for (const d of demanda) (m.get(d.diaSemana) ?? m.set(d.diaSemana, []).get(d.diaSemana)!).push(d);
+    return m;
+  }, [demanda]);
+  const demandaMaxima = Math.max(1, ...demanda.map((d) => d.ventasProm));
 
   if (locales.length === 0) return <EmptyState>Todavía no hay sucursales cargadas</EmptyState>;
 
@@ -122,10 +133,18 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
       {cargando ? (
         <Spinner />
       ) : (
-        // Los 7 días en una sola tarjeta continua (en vez de 7 tarjetas separadas)
-        // para ver las superposiciones de la semana de un vistazo, sin scrollear
-        // tarjeta por tarjeta.
-        <Card className="flex flex-col divide-y divide-slate-100 p-0 dark:divide-[#26312d]">
+        <div className="flex flex-col gap-2">
+          {demanda.length > 0 && (
+            <p className="flex items-center gap-1.5 text-xs text-slate-400">
+              <span className="inline-block h-2 w-4 rounded bg-amber-500/70" />
+              Franja ámbar = intensidad de demanda histórica (ventas/hora promedio de los últimos 3
+              meses)
+            </p>
+          )}
+          {/* Los 7 días en una sola tarjeta continua (en vez de 7 tarjetas separadas)
+              para ver las superposiciones de la semana de un vistazo, sin scrollear
+              tarjeta por tarjeta. */}
+          <Card className="flex flex-col divide-y divide-slate-100 p-0 dark:divide-[#26312d]">
           {dias.map((dia) => {
             const clave = iso(dia);
             const horario = horarios.find((h) => h.diaSemana === dia.getDay());
@@ -149,9 +168,41 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
 
                 {!horario || horario.cerrado ? (
                   <p className="text-xs text-slate-400">Cerrado</p>
-                ) : delDia.length === 0 ? (
-                  <p className="text-xs text-slate-400">Sin turnos</p>
                 ) : (
+                  <>
+                    {(demandaPorDia.get(dia.getDay()) ?? []).length > 0 && (
+                      <div className="flex items-center gap-2">
+                        <span className="w-20 shrink-0" />
+                        <div className="relative h-2 flex-1 overflow-hidden rounded bg-slate-100 dark:bg-[#18201d]">
+                          {(demandaPorDia.get(dia.getDay()) ?? []).map((d) => {
+                            const pos = posicionBarra(
+                              horario.abre!,
+                              horario.cierra!,
+                              `${String(d.hora).padStart(2, "0")}:00`,
+                              `${String((d.hora + 1) % 24).padStart(2, "0")}:00`
+                            );
+                            if (!pos) return null;
+                            const intensidad = 0.15 + (d.ventasProm / demandaMaxima) * 0.75;
+                            return (
+                              <div
+                                key={d.hora}
+                                className="absolute inset-y-0 bg-amber-500"
+                                style={{
+                                  left: `${pos.leftPct}%`,
+                                  width: `${pos.widthPct}%`,
+                                  opacity: intensidad,
+                                }}
+                                title={`${d.hora}:00–${d.hora + 1}:00 · ${d.ventasProm.toFixed(1)} ventas/hora en promedio`}
+                              />
+                            );
+                          })}
+                        </div>
+                        <span className="w-24 shrink-0" />
+                      </div>
+                    )}
+                    {delDia.length === 0 ? (
+                      <p className="text-xs text-slate-400">Sin turnos</p>
+                    ) : (
                   <div className="flex flex-col gap-1">
                     {delDia.map((t) => {
                       const pos = posicionBarra(horario.abre!, horario.cierra!, t.horaInicio, t.horaFin);
@@ -176,11 +227,14 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                       );
                     })}
                   </div>
+                    )}
+                  </>
                 )}
               </div>
             );
           })}
-        </Card>
+          </Card>
+        </div>
       )}
     </div>
   );

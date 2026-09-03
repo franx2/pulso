@@ -97,6 +97,24 @@ model Local {
   alertas     Alerta[]
   horarios    HorarioLocal[]
   categorias  Categoria[]
+  demandas    DemandaHoraria[]
+}
+
+/// Patrón histórico de demanda (ventas promedio por día de semana y hora),
+/// cargado a mano desde un análisis de ventas del punto de venta. Se
+/// superpone al Gantt semanal de turnos para ayudar a planificar dotación.
+/// No se sincroniza en vivo con ningún POS.
+model DemandaHoraria {
+  id         String @id @default(cuid())
+  local      Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId    String
+  diaSemana  Int
+  hora       Int
+  /// Promedio de ventas cerradas en esa franja, sobre las semanas de la
+  /// muestra (no es un total acumulado).
+  ventasProm Float
+
+  @@unique([localId, diaSemana, hora])
 }
 
 /// Calendario nacional de feriados, único para todo el negocio (cada local
