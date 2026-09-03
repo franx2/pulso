@@ -16,6 +16,7 @@ type Fila = {
   minutosSalidaTemprana: number;
   diasTrabajados: number;
   diasSinFichar: number;
+  montoAPagar: number | null;
 };
 
 const n2 = (n: number) => n.toFixed(2);
@@ -94,7 +95,8 @@ export default function ImprimirClient() {
               <th className="py-2 pr-3 text-right">Min. tarde</th>
               <th className="py-2 pr-3 text-right">Min. antes</th>
               <th className="py-2 pr-3 text-right">Días</th>
-              <th className="py-2 text-right">Sin fichar</th>
+              <th className="py-2 pr-3 text-right">Sin fichar</th>
+              <th className="py-2 text-right">Monto a pagar</th>
             </tr>
           </thead>
           <tbody>
@@ -107,7 +109,8 @@ export default function ImprimirClient() {
                 <td className="py-2 pr-3 text-right">{f.minutosTarde || "—"}</td>
                 <td className="py-2 pr-3 text-right">{f.minutosSalidaTemprana || "—"}</td>
                 <td className="py-2 pr-3 text-right">{f.diasTrabajados}</td>
-                <td className="py-2 text-right">{f.diasSinFichar || "—"}</td>
+                <td className="py-2 pr-3 text-right">{f.diasSinFichar || "—"}</td>
+                <td className="py-2 text-right">{f.montoAPagar != null ? `$${n2(f.montoAPagar)}` : "—"}</td>
               </tr>
             ))}
           </tbody>
@@ -120,7 +123,12 @@ export default function ImprimirClient() {
               <td className="py-2 pr-3 text-right">{total((f) => f.minutosTarde) || "—"}</td>
               <td className="py-2 pr-3 text-right">{total((f) => f.minutosSalidaTemprana) || "—"}</td>
               <td className="py-2 pr-3 text-right">{total((f) => f.diasTrabajados)}</td>
-              <td className="py-2 text-right">{total((f) => f.diasSinFichar) || "—"}</td>
+              <td className="py-2 pr-3 text-right">{total((f) => f.diasSinFichar) || "—"}</td>
+              <td className="py-2 text-right">
+                {filas.some((f) => f.montoAPagar != null)
+                  ? `$${n2(total((f) => f.montoAPagar ?? 0))}`
+                  : "—"}
+              </td>
             </tr>
           </tfoot>
         </table>

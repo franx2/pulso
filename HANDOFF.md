@@ -38,6 +38,18 @@ No apagarlo todavia sin:
 2. Arreglar el problema de `TZ` arriba.
 3. Rotar la password de Postgres de Railway.
 
+## Liquidacion de sueldos y turnos semanales (2026-09-03, commit posterior a `9c8b058`)
+
+- **Precio/hora**: un valor por empleado (no varia por sucursal, decision del usuario), editable individual o en masa (checkboxes en Equipo + barra "Aplicar a seleccionados"). `Empleado.precioHora`, endpoints `PATCH /api/empleados/[id]` y `PATCH /api/empleados/precio-masivo`.
+- **Feriados**: calendario unico para todo el negocio (`Feriado.fecha` + `nombre`), administrado en Ajustes → Feriados. Seed en `prisma/seed.ts` carga solo los feriados nacionales de **fecha fija** de 2026 (Año Nuevo, 24/3, 2/4, 1/5, 25/5, 20/6, 9/7, 8/12, 25/12) — **los trasladables (Carnaval, Semana Santa, los que el gobierno mueve al lunes mas cercano, o "puentes turisticos") no estan cargados** porque sus fechas exactas dependen de un decreto anual que no se puede asumir; cargarlos a mano en Ajustes cuando se confirmen.
+- **Multiplicador de feriado**: por sucursal (`Local.multiplicadorFeriado`, default 2), en Ajustes → la sucursal → Calculo de horas. El monto no se inventa sin overtime: solo dobla (o lo que diga el multiplicador) las horas de dias que caen en el calendario de feriados; **no hay una tasa distinta para horas extra**, eso quedo fuera de alcance de este pedido.
+- **Monto a pagar** en Reportes (pantalla, CSV, Excel, PDF imprimible): `horas × precioHora`, con el multiplicador de feriado del local aplicado dia por dia. Null (se muestra "—" o vacio) para empleados sin precio/hora cargado — nunca inventa un valor. Logica en `lib/pago.ts` (con test) mas el calculo dia-por-dia en `app/api/reportes/route.ts` (necesario porque un empleado puede rotar de local a mitad de periodo, y cada local tiene su propio multiplicador).
+- **Contraseña puesta por el admin**: ademas del passkey, el admin puede generarle una contraseña a cualquier empleado desde Equipo ("Poner contraseña") — `POST /api/empleados/[id]/password`, la genera el sistema (`generarPasswordTemporal` en `lib/password.ts`) y se muestra una sola vez en pantalla.
+- **Equipo agrupado por sucursal**: la lista de empleados ahora se agrupa por `local` (sucursal de origen); un empleado con sucursales asignadas ademas de la principal se ve con un badge "tambien en...". El usuario sigue siendo unico en toda la app (`Empleado.usuario` `@unique`), no hay un alta por sucursal.
+- **Turnos: un empleado, toda la semana**: nuevo modo en Turnos → Nuevo turno ("Un empleado, la semana") ademas del existente ("Varios empleados, un dia"). Elegis un empleado, una fecha de inicio, y marcas/editas hasta 7 dias con su propio horario — crea hasta 7 turnos de una con el mismo endpoint batch que ya existia (`POST /api/turnos` con `{turnos: [...]}`), sin cambios de backend.
+- Migracion aplicada a Neon a mano (`prisma/migrations/20260903192929_precio_hora_feriados/migration.sql`) porque `prisma migrate dev` colgo con un advisory lock stale (`pg_advisory_lock`) — quedo resuelto solo despues de un rato, sin necesitar terminar la conexion a mano (esa accion la bloqueo el sistema de permisos, correctamente: es destructiva).
+- **Nota de entorno**: si corres `prisma generate` con el dev server (`npm run dev`) ya corriendo en esta carpeta, vas a pegar un `EPERM` al renombrar el motor nativo — es el binario bloqueado por el proceso vivo, no un error real; los tipos TS igual se regeneran bien. Si otra sesion tiene el dev server abierto hace rato, ese proceso puede tener el Prisma Client VIEJO en memoria (no se entera de columnas/tablas nuevas hasta que se reinicia) — no lo mates sin avisar, esta corriendo por otra sesion en paralelo. Para verificar cambios de schema con confianza, `npm run build` + deploy a Vercel (cada build ahi regenera el cliente desde cero).
+
 ## Que es la app
 
 - Next.js 16 (App Router), React 19, TypeScript y Tailwind CSS v4.
@@ -85,6 +97,7 @@ app/api/                             Rutas API
 ## Pendientes no bloqueantes
 
 - Probar en dispositivo real el flujo facial, GPS, y el sidebar de escritorio — ahora en `https://pulso-t572.vercel.app`.
-- No hay usuario de prueba con contrasena en la base real para automatizar pantallas admin.
 - Conectar el repo de GitHub al proyecto Vercel para auto-deploy por push (ver nota arriba).
 - Decidir dominio propio final para `RP_ID`/`ORIGIN` antes de que se registren mas passkeys, para no forzar un tercer re-registro.
+- Cargar los feriados trasladables de 2026 en Ajustes → Feriados en cuanto se confirmen las fechas oficiales (ver seccion de arriba).
+- El admin (`usuario: admin`) tiene contraseña propia generada en esta sesion para pruebas — pedisela al usuario si haces falta, no quedo en este archivo.

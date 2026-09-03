@@ -26,6 +26,7 @@ type Local = {
   topeSemanalHoras: number;
   verificarRostro: boolean;
   rostroTolerancia: number;
+  multiplicadorFeriado: number;
 };
 
 export default function LocalDetalleClient({ localId }: { localId: string }) {
@@ -39,6 +40,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
   const [topeSemanalHoras, setTopeSemanalHoras] = useState("48");
   const [verificarRostro, setVerificarRostro] = useState(false);
   const [rostroTolerancia, setRostroTolerancia] = useState("0.55");
+  const [multiplicadorFeriado, setMultiplicadorFeriado] = useState("2");
   const [ubicando, setUbicando] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState("");
@@ -60,6 +62,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
         setTopeSemanalHoras(String(l.topeSemanalHoras));
         setVerificarRostro(l.verificarRostro);
         setRostroTolerancia(String(l.rostroTolerancia));
+        setMultiplicadorFeriado(String(l.multiplicadorFeriado));
       });
   }, [localId]);
 
@@ -98,6 +101,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
         topeSemanalHoras: Number(topeSemanalHoras),
         verificarRostro,
         rostroTolerancia: Number(rostroTolerancia),
+        multiplicadorFeriado: Number(multiplicadorFeriado),
       }),
     });
     const data = await res.json();
@@ -200,6 +204,21 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
               <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
                 Lo que exceda este total en la semana cuenta como hora extra. Se liquida la mayor
                 entre las extras diarias y este excedente, nunca las dos sumadas.
+              </p>
+            </div>
+
+            <div>
+              <Label>Multiplicador en feriado</Label>
+              <Input
+                type="number"
+                min={1}
+                step="0.5"
+                value={multiplicadorFeriado}
+                onChange={(e) => setMultiplicadorFeriado(e.target.value)}
+              />
+              <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                Con cuánto se multiplica el precio/hora en los días del calendario de feriados
+                (Ajustes → Feriados). 2 = paga doble.
               </p>
             </div>
           </div>

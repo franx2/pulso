@@ -46,6 +46,16 @@ function instante(fecha: string, hhmm: string, sumarDia = false): string {
   return new Date(y, m - 1, d + (sumarDia ? 1 : 0), hh, mm, 0, 0).toISOString();
 }
 
+/** N días después de `base` ("YYYY-MM-DD"), como fecha local (no UTC). */
+function fechaMasDias(base: string, dias: number): string {
+  const [y, m, d] = base.split("-").map(Number);
+  const dt = new Date(y, m - 1, d + dias);
+  return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+}
+
+type DiaIndividual = { activo: boolean; horaInicio: string; horaFin: string };
+const DIA_INICIAL = (): DiaIndividual => ({ activo: true, horaInicio: "09:00", horaFin: "17:00" });
+
 export default function TurnosClient() {
   const [vista, setVista] = useState<"lista" | "semana">("lista");
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
@@ -60,6 +70,16 @@ export default function TurnosClient() {
   const [error, setError] = useState("");
   const [cargando, setCargando] = useState(false);
   const { confirm, dialog } = useConfirm();
+
+  // Modo individual: un empleado, toda la semana de una vez.
+  const [modo, setModo] = useState<"grupo" | "individual">("grupo");
+  const [empIndividualId, setEmpIndividualId] = useState("");
+  const [desdeIndividual, setDesdeIndividual] = useState("");
+  const [diasIndividual, setDiasIndividual] = useState<DiaIndividual[]>(
+    Array.from({ length: 7 }, DIA_INICIAL)
+  );
+  const [errorIndividual, setErrorIndividual] = useState("");
+  const [cargandoIndividual, setCargandoIndividual] = useState(false);
 
   async function cargar() {
     const [resEmpleados, resTurnos, resLocales] = await Promise.all([
@@ -155,7 +175,53 @@ export default function TurnosClient() {
     });
   }
 
+  function actualizarDiaIndividual(offset: number, cambios: Partial<DiaIndividual>) {
+    setDiasIndividual((prev) => prev.map((d, i) => (i === offset ? { ...d, ...cambios } : d)));
+  }
+
+  async function crearIndividual(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorIndividual("");
+    if (!empIndividualId) return setErrorIndividual("Elegí un empleado");
+    if (!desdeIndividual) return setErrorIndividual("Elegí desde qué día arranca la semana");
+    const activos = diasIndividual
+      .map((d, offset) => ({ ...d, offset }))
+      .filter((d) => d.activo);
+    if (activos.length === 0) return setErrorIndividual("Marcá al menos un día");
+
+    setCargandoIndividual(true);
+    const turnosACrear = activos.map((d) => {
+      const fecha = fechaMasDias(desdeIndividual, d.offset);
+      const cruzaMedianoche = d.horaFin <= d.horaInicio;
+      return {
+        empleadoId: empIndividualId,
+        localId,
+        fecha,
+        horaInicio: d.horaInicio,
+        horaFin: d.horaFin,
+        inicioAt: instante(fecha, d.horaInicio),
+        finAt: instante(fecha, d.horaFin, cruzaMedianoche),
+      };
+    });
+
+    const res = await fetch("/api/turnos", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ turnos: turnosACrear }),
+    });
+    const data = await res.json();
+    setCargandoIndividual(false);
+    if (!res.ok) {
+      setErrorIndividual(data.error ?? "No se pudieron crear los turnos");
+      return;
+    }
+    setDesdeIndividual("");
+    setDiasIndividual(Array.from({ length: 7 }, DIA_INICIAL));
+    cargar();
+  }
+
   const seleccionados = Object.keys(seleccion);
+  const NOMBRE_DIA_CORTO = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
   return (
     <div className="flex flex-col gap-6">
@@ -194,6 +260,134 @@ export default function TurnosClient() {
         <>
           <Card>
         <SectionTitle>Nuevo turno</SectionTitle>
+        <div className="mb-3 flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-[#18201d]">
+          <button
+            type="button"
+            onClick={() => setModo("grupo")}
+            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${
+              modo === "grupo" ? "bg-white shadow-sm dark:bg-[#131816]" : "text-slate-500 dark:text-[#94a19c]"
+            }`}
+          >
+            Varios empleados, un día
+          </button>
+          <button
+            type="button"
+            onClick={() => setModo("individual")}
+            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${
+              modo === "individual"
+                ? "bg-white shadow-sm dark:bg-[#131816]"
+                : "text-slate-500 dark:text-[#94a19c]"
+            }`}
+          >
+            Un empleado, la semana
+          </button>
+        </div>
+
+        {modo === "individual" ? (
+          <form onSubmit={crearIndividual} className="flex flex-col gap-3">
+            {locales.length > 1 && (
+              <div>
+                <Label>Sucursal</Label>
+                <Select
+                  value={localId}
+                  onChange={(e) => {
+                    setLocalId(e.target.value);
+                    setEmpIndividualId("");
+                  }}
+                >
+                  {locales.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.nombre}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
+            <div>
+              <Label>Empleado</Label>
+              {empleadosDelLocal.length === 0 ? (
+                <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+                  No hay empleados asignados a esta sucursal.
+                </p>
+              ) : (
+                <Select value={empIndividualId} onChange={(e) => setEmpIndividualId(e.target.value)}>
+                  <option value="">Elegí un empleado</option>
+                  {empleadosDelLocal.map((emp) => (
+                    <option key={emp.id} value={emp.id}>
+                      {emp.nombre}
+                    </option>
+                  ))}
+                </Select>
+              )}
+            </div>
+            <div>
+              <Label>La semana arranca el</Label>
+              <Input
+                type="date"
+                value={desdeIndividual}
+                onChange={(e) => setDesdeIndividual(e.target.value)}
+                required
+              />
+            </div>
+            <div>
+              <Label>Días y horario</Label>
+              <div className="flex flex-col gap-1.5">
+                {diasIndividual.map((d, offset) => {
+                  const fecha = desdeIndividual ? fechaMasDias(desdeIndividual, offset) : "";
+                  const [, mm, dd] = fecha ? fecha.split("-") : ["", "", ""];
+                  const nombreDia = fecha
+                    ? new Date(fecha + "T12:00:00").toLocaleDateString("es-AR", { weekday: "short" })
+                    : NOMBRE_DIA_CORTO[offset].slice(0, 3);
+                  const cruza = d.horaFin <= d.horaInicio;
+                  return (
+                    <div
+                      key={offset}
+                      className={`flex flex-wrap items-center gap-2 rounded-xl border p-2 dark:border-[#26312d] ${
+                        d.activo ? "border-slate-200" : "border-slate-100 opacity-60 dark:border-[#1c2521]"
+                      }`}
+                    >
+                      <label className="flex w-24 shrink-0 items-center gap-2 text-sm font-medium capitalize">
+                        <Checkbox
+                          checked={d.activo}
+                          onChange={(e) => actualizarDiaIndividual(offset, { activo: e.target.checked })}
+                        />
+                        {nombreDia}
+                        {dd && <span className="text-xs font-normal text-slate-400">{dd}/{mm}</span>}
+                      </label>
+                      <Input
+                        type="time"
+                        value={d.horaInicio}
+                        disabled={!d.activo}
+                        onChange={(e) => actualizarDiaIndividual(offset, { horaInicio: e.target.value })}
+                        className="w-auto! py-1.5"
+                      />
+                      <span className="text-slate-400">a</span>
+                      <Input
+                        type="time"
+                        value={d.horaFin}
+                        disabled={!d.activo}
+                        onChange={(e) => actualizarDiaIndividual(offset, { horaFin: e.target.value })}
+                        className="w-auto! py-1.5"
+                      />
+                      {d.activo && cruza && (
+                        <span className="w-full text-xs text-amber-700 dark:text-amber-300">
+                          Termina al día siguiente
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+            <Button type="submit" disabled={cargandoIndividual} className="mt-1">
+              <CalendarPlus size={16} />
+              {cargandoIndividual
+                ? "Creando…"
+                : `Crear ${diasIndividual.filter((d) => d.activo).length} turnos`}
+            </Button>
+            <ErrorText>{errorIndividual}</ErrorText>
+          </form>
+        ) : (
         <form onSubmit={crear} className="flex flex-col gap-3">
           {locales.length > 1 && (
             <div>
@@ -307,6 +501,7 @@ export default function TurnosClient() {
           </Button>
           <ErrorText>{error}</ErrorText>
         </form>
+        )}
       </Card>
 
       <div>

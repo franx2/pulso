@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/session";
 import { evaluarJornada, extrasDelPeriodo } from "@/lib/jornada";
-import { claveDia, claveSemana, comoFechaSql, desdeISO, finDelDia } from "@/lib/fechas";
+import { claveDia, claveFechaSql, claveSemana, comoFechaSql, desdeISO, finDelDia } from "@/lib/fechas";
 import type { FichajeSimple } from "@/lib/horas";
 
 export type FilaReporte = {
@@ -20,6 +20,10 @@ export type FilaReporte = {
   minutosSalidaTemprana: number;
   diasTrabajados: number;
   diasSinFichar: number;
+  /** Horas × precio/hora, doblado en los días del calendario de feriados
+   * según el multiplicador del local. Null si el empleado no tiene precio/hora
+   * cargado — no se inventa un monto. */
+  montoAPagar: number | null;
 };
 
 export async function GET(request: Request) {
@@ -48,10 +52,10 @@ export async function GET(request: Request) {
   // empleado: alguien que rota entre locales puede trabajar en cualquiera.
   const filtroLocal = localId ? { localId } : {};
 
-  const [fichajes, turnos, locales] = await Promise.all([
+  const [fichajes, turnos, locales, feriados] = await Promise.all([
     db.fichaje.findMany({
       where: { timestamp: { gte: fechaDesde, lte: fechaHasta }, ...filtroEmpleado, ...filtroLocal },
-      include: { empleado: { select: { id: true, nombre: true, localId: true } } },
+      include: { empleado: { select: { id: true, nombre: true, localId: true, precioHora: true } } },
       orderBy: { timestamp: "asc" },
     }),
     db.turno.findMany({
@@ -61,24 +65,36 @@ export async function GET(request: Request) {
         ...filtroEmpleado,
         ...filtroLocal,
       },
-      include: { empleado: { select: { id: true, nombre: true, localId: true } } },
+      include: { empleado: { select: { id: true, nombre: true, localId: true, precioHora: true } } },
     }),
     db.local.findMany(),
+    db.feriado.findMany(),
   ]);
 
   const localPorId = new Map(locales.map((l) => [l.id, l]));
+  const feriadosSet = new Set(feriados.map((f) => claveFechaSql(f.fecha)));
 
   // Agrupa fichajes y turnos por empleado y día: la jornada es la unidad de
   // cálculo, porque tardanzas y extras sólo tienen sentido contra un turno.
   // Cada día guarda también EN QUÉ LOCAL ocurrió, que puede no ser la
   // sucursal de origen del empleado si ese día rotó a otra.
   type Dia = { fichajes: FichajeSimple[]; turno?: { inicioAt: Date; finAt: Date }; localId: string };
-  const porEmpleado = new Map<string, { nombre: string; localIdHogar: string; dias: Map<string, Dia> }>();
+  const porEmpleado = new Map<
+    string,
+    { nombre: string; localIdHogar: string; precioHora: number | null; dias: Map<string, Dia> }
+  >();
 
-  function bucket(id: string, nombre: string, localIdHogar: string, dia: string, localId: string): Dia {
+  function bucket(
+    id: string,
+    nombre: string,
+    localIdHogar: string,
+    precioHora: number | null,
+    dia: string,
+    localId: string
+  ): Dia {
     let emp = porEmpleado.get(id);
     if (!emp) {
-      emp = { nombre, localIdHogar, dias: new Map() };
+      emp = { nombre, localIdHogar, precioHora, dias: new Map() };
       porEmpleado.set(id, emp);
     }
     let d = emp.dias.get(dia);
@@ -90,15 +106,26 @@ export async function GET(request: Request) {
   }
 
   for (const f of fichajes) {
-    bucket(f.empleadoId, f.empleado.nombre, f.empleado.localId, claveDia(f.timestamp), f.localId).fichajes.push({
-      tipo: f.tipo,
-      timestamp: f.timestamp,
-    });
+    bucket(
+      f.empleadoId,
+      f.empleado.nombre,
+      f.empleado.localId,
+      f.empleado.precioHora,
+      claveDia(f.timestamp),
+      f.localId
+    ).fichajes.push({ tipo: f.tipo, timestamp: f.timestamp });
   }
   for (const t of turnos) {
     // El turno manda sobre qué local aplica ese día: es la fuente de la
     // política (tolerancia, descanso) del lugar donde se lo citó a trabajar.
-    const d = bucket(t.empleadoId, t.empleado.nombre, t.empleado.localId, claveDia(t.inicioAt), t.localId);
+    const d = bucket(
+      t.empleadoId,
+      t.empleado.nombre,
+      t.empleado.localId,
+      t.empleado.precioHora,
+      claveDia(t.inicioAt),
+      t.localId
+    );
     d.turno = { inicioAt: t.inicioAt, finAt: t.finAt };
     d.localId = t.localId;
   }
@@ -112,6 +139,8 @@ export async function GET(request: Request) {
     let minutosSalidaTemprana = 0;
     let diasTrabajados = 0;
     let diasSinFichar = 0;
+    // Null hasta que el empleado tenga precio/hora: no se inventa un monto.
+    let montoAPagar: number | null = emp.precioHora != null ? 0 : null;
 
     for (const [clave, dia] of emp.dias) {
       const local = localPorId.get(dia.localId) ?? localPorId.get(emp.localIdHogar);
@@ -131,6 +160,11 @@ export async function GET(request: Request) {
       minutosSalidaTemprana += j.minutosSalidaTemprana;
       if (j.estado === "SIN_FICHAR") diasSinFichar++;
       else if (j.horasTrabajadas > 0) diasTrabajados++;
+
+      if (emp.precioHora != null) {
+        const factor = feriadosSet.has(clave) ? (local?.multiplicadorFeriado ?? 2) : 1;
+        montoAPagar = (montoAPagar ?? 0) + j.horasTrabajadas * emp.precioHora * factor;
+      }
     }
 
     // El tope semanal es uno solo por período: se toma el de la sucursal de
@@ -151,6 +185,7 @@ export async function GET(request: Request) {
       minutosSalidaTemprana,
       diasTrabajados,
       diasSinFichar,
+      montoAPagar,
     };
   });
 
@@ -168,6 +203,7 @@ export async function GET(request: Request) {
       "Minutos salida temprana",
       "Dias trabajados",
       "Dias sin fichar",
+      "Monto a pagar",
     ];
     const cuerpo = filas
       .map((f) =>
@@ -182,6 +218,7 @@ export async function GET(request: Request) {
           f.minutosSalidaTemprana,
           f.diasTrabajados,
           f.diasSinFichar,
+          f.montoAPagar != null ? f.montoAPagar.toFixed(2) : "",
         ].join(",")
       )
       .join("\n");

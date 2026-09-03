@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, EmptyState, Select, Spinner } from "@/components/ui";
 import { posicionBarra } from "@/lib/ganttBarra";
+import { claveFechaSql } from "@/lib/fechas";
 
 type Local = { id: string; nombre: string };
 type Turno = {
@@ -35,12 +36,6 @@ function inicioDeSemana(d: Date): Date {
 
 function iso(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-}
-
-/** Clave YYYY-MM-DD del campo `fecha` (@db.Date, llega como medianoche UTC). */
-function claveFechaSql(fechaIso: string): string {
-  const d = new Date(fechaIso);
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
 }
 
 export default function SemanaGantt({ locales }: { locales: Local[] }) {
@@ -75,7 +70,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
   const turnosPorDia = useMemo(() => {
     const m = new Map<string, Turno[]>();
     for (const t of turnos) {
-      const k = claveFechaSql(t.fecha);
+      const k = claveFechaSql(new Date(t.fecha));
       (m.get(k) ?? m.set(k, []).get(k)!).push(t);
     }
     return m;

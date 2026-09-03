@@ -29,6 +29,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     topeSemanalHoras?: number;
     verificarRostro?: boolean;
     rostroTolerancia?: number;
+    multiplicadorFeriado?: number;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
@@ -53,6 +54,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       { status: 400 }
     );
   }
+  if (body.multiplicadorFeriado !== undefined && body.multiplicadorFeriado < 1) {
+    return NextResponse.json({ error: "El multiplicador debe ser al menos 1" }, { status: 400 });
+  }
 
   const local = await db.local.update({
     where: { id },
@@ -66,6 +70,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(body.topeSemanalHoras !== undefined ? { topeSemanalHoras: body.topeSemanalHoras } : {}),
       ...(body.verificarRostro !== undefined ? { verificarRostro: body.verificarRostro } : {}),
       ...(body.rostroTolerancia !== undefined ? { rostroTolerancia: body.rostroTolerancia } : {}),
+      ...(body.multiplicadorFeriado !== undefined
+        ? { multiplicadorFeriado: body.multiplicadorFeriado }
+        : {}),
     },
   });
 

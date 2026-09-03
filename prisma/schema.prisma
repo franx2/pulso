@@ -3,8 +3,12 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  // Migraciones, no la app: la pooled (PgBouncer) no soporta el estado de
+  // sesión que Prisma Migrate necesita. Sólo existe en Vercel/Neon; en
+  // Railway (túnel SSH local) no está seteada y Prisma cae de nuevo a `url`.
+  directUrl = env("DATABASE_URL_UNPOOLED")
 }
 
 enum Rol {
@@ -82,6 +86,10 @@ model Local {
   /// Es un botón de calibración: cocina con vapor y gorro necesita más margen.
   rostroTolerancia  Float   @default(0.55)
 
+  /// Multiplicador de precio/hora en un día feriado (el calendario es único
+  /// para todo el negocio, pero cada local puede pagarlo distinto).
+  multiplicadorFeriado Float @default(2)
+
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
   turnos      Turno[]
@@ -89,6 +97,16 @@ model Local {
   alertas     Alerta[]
   horarios    HorarioLocal[]
   categorias  Categoria[]
+}
+
+/// Calendario nacional de feriados, único para todo el negocio (cada local
+/// paga su multiplicador propio sobre estos días, ver `Local.multiplicadorFeriado`).
+model Feriado {
+  id     String   @id @default(cuid())
+  fecha  DateTime @unique @db.Date
+  nombre String
+
+  @@index([fecha])
 }
 
 /// Horario de atención de un local, un renglón por día de la semana (0=domingo
@@ -128,6 +146,10 @@ model Empleado {
   /// "scrypt:saltHex:hashHex". Null si todavía no se creó una contraseña
   /// (puede fichar sólo con passkey hasta que la registre).
   passwordHash String?
+
+  /// Para liquidar sueldos: null hasta que el admin lo carga (individual o en
+  /// masa). Un solo valor por empleado, vale en cualquier sucursal donde fiche.
+  precioHora   Float?
 
   categoria    Categoria?           @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
   categoriaId  String?

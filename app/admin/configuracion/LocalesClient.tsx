@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Plus, Store, Users } from "lucide-react";
 import { Button, Card, EmptyState, ErrorText, Input, Label, PageTitle, SectionTitle } from "@/components/ui";
+import Feriados from "./Feriados";
 
 type Local = { id: string; nombre: string; _count: { empleados: number } };
 
@@ -87,6 +88,8 @@ export default function LocalesClient() {
           </div>
         )}
       </div>
+
+      <Feriados />
     </div>
   );
 }

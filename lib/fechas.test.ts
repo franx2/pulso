@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import {
   claveDia,
+  claveFechaSql,
   claveSemana,
   comoFechaSql,
   desdeISO,
@@ -69,6 +70,11 @@ assert.strictEqual(
   formatearFechaSql(guardado, soloDia),
   new Date(2026, 7, 28).toLocaleDateString("es-AR", soloDia)
 );
+
+// claveFechaSql lee el día calendario de un @db.Date con getters UTC: no lo
+// corre un día en una zona al oeste de Greenwich (Argentina, UTC-3).
+assert.strictEqual(claveFechaSql(new Date("2026-05-01T00:00:00.000Z")), "2026-05-01");
+assert.strictEqual(claveFechaSql(new Date("2026-01-01T00:00:00.000Z")), "2026-01-01");
 
 // --- Semana ISO ---
 

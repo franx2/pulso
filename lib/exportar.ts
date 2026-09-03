@@ -32,11 +32,12 @@ export async function reporteAExcel({
     { key: "temprano", width: 16 },
     { key: "dias", width: 12 },
     { key: "sinFichar", width: 14 },
+    { key: "monto", width: 16 },
   ];
 
   const titulo = ws.addRow([`Reporte de horas — ${desde} a ${hasta}`]);
   titulo.font = { bold: true, size: 14 };
-  ws.mergeCells(titulo.number, 1, titulo.number, 10);
+  ws.mergeCells(titulo.number, 1, titulo.number, 11);
   ws.addRow([]);
 
   const encabezado = ws.addRow([
@@ -50,6 +51,7 @@ export async function reporteAExcel({
     "Min. salida antes",
     "Días trabajados",
     "Días sin fichar",
+    "Monto a pagar",
   ]);
   encabezado.font = { bold: true, color: { argb: "FFFFFFFF" } };
   encabezado.fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERDE } };
@@ -67,6 +69,7 @@ export async function reporteAExcel({
       f.minutosSalidaTemprana,
       f.diasTrabajados,
       f.diasSinFichar,
+      f.montoAPagar != null ? redondear(f.montoAPagar) : null,
     ]);
   }
 
@@ -82,13 +85,14 @@ export async function reporteAExcel({
       sumar(filas, (f) => f.minutosSalidaTemprana),
       sumar(filas, (f) => f.diasTrabajados),
       sumar(filas, (f) => f.diasSinFichar),
+      redondear(sumar(filas, (f) => f.montoAPagar ?? 0)),
     ]);
     total.font = { bold: true };
     total.border = { top: { style: "thin" } };
   }
 
-  // Dos decimales en las columnas de horas.
-  ["B", "C", "D", "E", "F"].forEach((col) => {
+  // Dos decimales en las columnas de horas y en el monto.
+  ["B", "C", "D", "E", "F", "K"].forEach((col) => {
     ws.getColumn(col).numFmt = "0.00";
   });
 

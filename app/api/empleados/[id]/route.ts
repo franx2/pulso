@@ -19,8 +19,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     localesExtra?: string[];
     categoriaId?: string | null;
     reinvitar?: boolean;
+    precioHora?: number | null;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+
+  if (body.precioHora !== undefined && body.precioHora !== null && !(Number(body.precioHora) >= 0)) {
+    return NextResponse.json({ error: "Precio/hora inválido" }, { status: 400 });
+  }
 
   const objetivo = await db.empleado.findUnique({ where: { id } });
   if (!objetivo) return NextResponse.json({ error: "Empleado no encontrado" }, { status: 404 });
@@ -62,6 +67,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(body.rol !== undefined && (ROLES as readonly string[]).includes(body.rol)
         ? { rol: body.rol as (typeof ROLES)[number] }
         : {}),
+      ...(body.precioHora !== undefined ? { precioHora: body.precioHora } : {}),
     },
   });
 

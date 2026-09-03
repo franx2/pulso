@@ -18,6 +18,7 @@ type Fila = {
   minutosSalidaTemprana: number;
   diasTrabajados: number;
   diasSinFichar: number;
+  montoAPagar: number | null;
 };
 
 function hoyISO() {
@@ -75,6 +76,8 @@ export default function ReportesClient() {
 
   const totalHoras = filas.reduce((sum, f) => sum + f.horasTrabajadas, 0);
   const totalExtra = filas.reduce((sum, f) => sum + f.horasExtra, 0);
+  const totalMonto = filas.reduce((sum, f) => sum + (f.montoAPagar ?? 0), 0);
+  const hayMonto = filas.some((f) => f.montoAPagar != null);
 
   return (
     <div className="flex flex-col gap-6">
@@ -159,8 +162,15 @@ export default function ReportesClient() {
             >
               <div className="flex items-baseline justify-between gap-3">
                 <span className="font-semibold">{f.nombre}</span>
-                <span className="shrink-0 text-slate-600 dark:text-[#c1cbc6]">
-                  {f.horasTrabajadas.toFixed(2)} h
+                <span className="shrink-0 text-right">
+                  <span className="text-slate-600 dark:text-[#c1cbc6]">
+                    {f.horasTrabajadas.toFixed(2)} h
+                  </span>
+                  {f.montoAPagar != null && (
+                    <span className="ml-2 font-semibold text-emerald-700 dark:text-[#4ee6b0]">
+                      ${f.montoAPagar.toFixed(2)}
+                    </span>
+                  )}
                 </span>
               </div>
               <div className="mt-1.5 flex flex-wrap gap-1.5">
@@ -196,6 +206,11 @@ export default function ReportesClient() {
               {totalExtra > 0 && (
                 <span className="ml-2 font-semibold text-emerald-700 dark:text-[#4ee6b0]">
                   (+{totalExtra.toFixed(2)} extra)
+                </span>
+              )}
+              {hayMonto && (
+                <span className="ml-2 text-emerald-700 dark:text-[#4ee6b0]">
+                  · ${totalMonto.toFixed(2)}
                 </span>
               )}
             </span>

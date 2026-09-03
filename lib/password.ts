@@ -50,3 +50,12 @@ export function verificarPassword(password: string, guardado: string | null): bo
 export function passwordValida(password: string): boolean {
   return typeof password === "string" && password.length >= 8;
 }
+
+const ALFABETO_TEMPORAL = "ABCDEFGHJKMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789";
+
+/** Contraseña temporal legible (sin 0/O/1/l/I, fáciles de confundir al dictarla). */
+export function generarPasswordTemporal(largo = 14): string {
+  return Array.from(randomBytes(largo))
+    .map((b) => ALFABETO_TEMPORAL[b % ALFABETO_TEMPORAL.length])
+    .join("");
+}

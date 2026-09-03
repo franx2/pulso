@@ -38,6 +38,15 @@ export function claveDia(d: Date): string {
 }
 
 /**
+ * Clave YYYY-MM-DD de un campo `@db.Date` (llega como medianoche UTC).
+ * Usar `claveDia` acá lo correría un día en cualquier zona al oeste de
+ * Greenwich, como Argentina.
+ */
+export function claveFechaSql(d: Date): string {
+  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
+/**
  * Clave de semana ISO ("2026-W35"), con la semana arrancando el lunes.
  *
  * Necesaria para las horas extra: el tope semanal se compara contra cada
