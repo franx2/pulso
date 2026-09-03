@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, CalendarPlus, List, Trash2 } from "lucide-react";
+import { CalendarDays, CalendarPlus, List, Trash2, X } from "lucide-react";
 import {
   Button,
   Card,
@@ -62,7 +62,8 @@ export default function TurnosClient() {
   const [locales, setLocales] = useState<Local[]>([]);
   const [turnos, setTurnos] = useState<Turno[]>([]);
   const [localId, setLocalId] = useState("");
-  const [fecha, setFecha] = useState("");
+  const [fechas, setFechas] = useState<string[]>([]);
+  const [fechaNueva, setFechaNueva] = useState("");
   const [horaInicioDefault, setHoraInicioDefault] = useState("09:00");
   const [horaFinDefault, setHoraFinDefault] = useState("17:00");
   // Empleado -> su horario propio para este turno (puede diferir del default).
@@ -124,27 +125,39 @@ export default function TurnosClient() {
     setSeleccion((prev) => ({ ...prev, [id]: { ...prev[id], ...cambios } }));
   }
 
+  function agregarFecha() {
+    if (!fechaNueva || fechas.includes(fechaNueva)) return;
+    setFechas((prev) => [...prev, fechaNueva].sort());
+    setFechaNueva("");
+  }
+
+  function quitarFecha(f: string) {
+    setFechas((prev) => prev.filter((x) => x !== f));
+  }
+
   async function crear(e: React.FormEvent) {
     e.preventDefault();
     setError("");
     const ids = Object.keys(seleccion);
     if (ids.length === 0) return setError("Elegí al menos un empleado");
-    if (!fecha) return setError("Elegí la fecha");
+    if (fechas.length === 0) return setError("Agregá al menos una fecha");
 
     setCargando(true);
-    const turnosACrear = ids.map((empleadoId) => {
-      const { horaInicio, horaFin } = seleccion[empleadoId];
-      const cruzaMedianoche = horaFin <= horaInicio;
-      return {
-        empleadoId,
-        localId,
-        fecha,
-        horaInicio,
-        horaFin,
-        inicioAt: instante(fecha, horaInicio),
-        finAt: instante(fecha, horaFin, cruzaMedianoche),
-      };
-    });
+    const turnosACrear = fechas.flatMap((fecha) =>
+      ids.map((empleadoId) => {
+        const { horaInicio, horaFin } = seleccion[empleadoId];
+        const cruzaMedianoche = horaFin <= horaInicio;
+        return {
+          empleadoId,
+          localId,
+          fecha,
+          horaInicio,
+          horaFin,
+          inicioAt: instante(fecha, horaInicio),
+          finAt: instante(fecha, horaFin, cruzaMedianoche),
+        };
+      })
+    );
 
     const res = await fetch("/api/turnos", {
       method: "POST",
@@ -157,7 +170,7 @@ export default function TurnosClient() {
       setError(data.error ?? "No se pudo crear el turno");
       return;
     }
-    setFecha("");
+    setFechas([]);
     setSeleccion({});
     cargar();
   }
@@ -268,7 +281,7 @@ export default function TurnosClient() {
               modo === "grupo" ? "bg-white shadow-sm dark:bg-[#131816]" : "text-slate-500 dark:text-[#94a19c]"
             }`}
           >
-            Varios empleados, un día
+            Varios empleados, una o más fechas
           </button>
           <button
             type="button"
@@ -408,8 +421,43 @@ export default function TurnosClient() {
             </div>
           )}
           <div>
-            <Label>Fecha</Label>
-            <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
+            <Label>Fechas</Label>
+            <div className="flex gap-2">
+              <Input
+                type="date"
+                value={fechaNueva}
+                onChange={(e) => setFechaNueva(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    agregarFecha();
+                  }
+                }}
+              />
+              <Button type="button" variant="ghost" onClick={agregarFecha} disabled={!fechaNueva} className="shrink-0">
+                Agregar
+              </Button>
+            </div>
+            {fechas.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-1.5">
+                {fechas.map((f) => (
+                  <span
+                    key={f}
+                    className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm dark:bg-[#18201d]"
+                  >
+                    {formatearFechaSql(f, { weekday: "short", day: "2-digit", month: "short" })}
+                    <button
+                      type="button"
+                      onClick={() => quitarFecha(f)}
+                      aria-label={`Quitar ${f}`}
+                      className="grid h-5 w-5 place-items-center rounded-full text-slate-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950/40"
+                    >
+                      <X size={12} />
+                    </button>
+                  </span>
+                ))}
+              </div>
+            )}
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
@@ -495,8 +543,8 @@ export default function TurnosClient() {
             <CalendarPlus size={16} />
             {cargando
               ? "Creando…"
-              : seleccionados.length > 1
-                ? `Crear ${seleccionados.length} turnos`
+              : seleccionados.length * fechas.length > 1
+                ? `Crear ${seleccionados.length * fechas.length} turnos`
                 : "Crear turno"}
           </Button>
           <ErrorText>{error}</ErrorText>
