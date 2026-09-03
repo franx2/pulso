@@ -135,13 +135,17 @@ export default function EmpleadosClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <PageTitle subtitle="Alta de personal, roles y sucursales">Empleados</PageTitle>
-        <Button onClick={() => setAbierto((v) => !v)} className="mt-1 shrink-0">
-          {abierto ? <X size={16} /> : <Plus size={16} />}
-          {abierto ? "Cerrar" : "Nuevo"}
-        </Button>
-      </div>
+      <PageTitle
+        subtitle="Alta de personal, roles y sucursales"
+        actions={
+          <Button onClick={() => setAbierto((v) => !v)}>
+            {abierto ? <X size={16} /> : <Plus size={16} />}
+            {abierto ? "Cerrar" : "Nuevo"}
+          </Button>
+        }
+      >
+        Empleados
+      </PageTitle>
 
       {abierto && (
         <Card>
@@ -247,9 +251,9 @@ export default function EmpleadosClient() {
         {empleados.length === 0 ? (
           <EmptyState>Todavía no hay empleados cargados</EmptyState>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 md:gap-1.5">
             {empleados.map((e) => (
-              <Card key={e.id} className="flex flex-col gap-3">
+              <Card key={e.id} className="flex flex-col gap-3 md:p-3">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     <p className="truncate font-semibold">{e.nombre}</p>
@@ -289,7 +293,7 @@ export default function EmpleadosClient() {
                   <Select
                     value={e.rol}
                     onChange={(ev) => actualizar(e.id, { rol: ev.target.value })}
-                    className="w-auto py-1.5 text-sm"
+                    className="w-auto! py-1.5 text-sm"
                   >
                     <option value="EMPLEADO">Empleado</option>
                     <option value="ENCARGADO">Encargado</option>
@@ -306,7 +310,7 @@ export default function EmpleadosClient() {
                   <Select
                     value={e.categoria?.id ?? ""}
                     onChange={(ev) => actualizar(e.id, { categoriaId: ev.target.value || null })}
-                    className="w-auto py-1.5 text-sm"
+                    className="w-auto! py-1.5 text-sm"
                   >
                     <option value="">Sin categoría</option>
                     {(categoriasPorLocal[e.localId] ?? []).map((c) => (

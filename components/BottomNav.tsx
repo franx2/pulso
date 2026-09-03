@@ -6,15 +6,15 @@ import type { Rol } from "@/lib/session";
 
 export type NavActivo = "fichar" | "presencia" | "empleados" | "turnos" | "reportes" | "configuracion";
 
-type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol };
+type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol; grupo: string };
 
 export const ITEMS: Item[] = [
-  { key: "fichar", href: "/fichar", Icon: Clock, label: "Fichar", minimo: "EMPLEADO" },
-  { key: "presencia", href: "/admin/presencia", Icon: Activity, label: "Presencia", minimo: "ENCARGADO" },
-  { key: "turnos", href: "/admin/turnos", Icon: CalendarDays, label: "Turnos", minimo: "ENCARGADO" },
-  { key: "empleados", href: "/admin/empleados", Icon: Users, label: "Equipo", minimo: "ADMIN" },
-  { key: "reportes", href: "/admin/reportes", Icon: BarChart3, label: "Reportes", minimo: "ADMIN" },
-  { key: "configuracion", href: "/admin/configuracion", Icon: Settings, label: "Ajustes", minimo: "ADMIN" },
+  { key: "fichar", href: "/fichar", Icon: Clock, label: "Fichar", minimo: "EMPLEADO", grupo: "" },
+  { key: "presencia", href: "/admin/presencia", Icon: Activity, label: "Presencia", minimo: "ENCARGADO", grupo: "Operación" },
+  { key: "turnos", href: "/admin/turnos", Icon: CalendarDays, label: "Turnos", minimo: "ENCARGADO", grupo: "Operación" },
+  { key: "reportes", href: "/admin/reportes", Icon: BarChart3, label: "Reportes", minimo: "ADMIN", grupo: "Análisis" },
+  { key: "empleados", href: "/admin/empleados", Icon: Users, label: "Equipo", minimo: "ADMIN", grupo: "Gestión" },
+  { key: "configuracion", href: "/admin/configuracion", Icon: Settings, label: "Ajustes", minimo: "ADMIN", grupo: "Gestión" },
 ];
 
 export const RANGO: Record<Rol, number> = { EMPLEADO: 0, ENCARGADO: 1, ADMIN: 2 };

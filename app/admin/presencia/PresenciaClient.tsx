@@ -22,6 +22,7 @@ import {
   EmptyState,
   ErrorText,
   Modal,
+  PageTitle,
   Select,
   SectionTitle,
   Spinner,
@@ -231,38 +232,38 @@ export default function PresenciaClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-bold">Presencia</h1>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
-            {actualizado
-              ? `Actualizado ${actualizado.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
-              : "Hoy en tiempo real"}
-          </p>
-        </div>
-        <Button variant="ghost" onClick={() => cargar(localId)} className="shrink-0">
-          <RefreshCw size={15} />
-          Actualizar
-        </Button>
-      </div>
+      <PageTitle
+        subtitle={
+          actualizado
+            ? `Actualizado ${actualizado.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}`
+            : "Hoy en tiempo real"
+        }
+        actions={
+          <Button variant="ghost" onClick={() => cargar(localId)}>
+            <RefreshCw size={15} />
+            Actualizar
+          </Button>
+        }
+      >
+        Presencia
+      </PageTitle>
       <ErrorText>{errorAccion}</ErrorText>
 
-      {locales.length > 1 && (
-        <Select value={localId} onChange={(e) => setLocalId(e.target.value)} className="max-w-xs">
-          <option value="">Todas las sucursales</option>
-          {locales.map((l) => (
-            <option key={l.id} value={l.id}>
-              {l.nombre}
-            </option>
-          ))}
-        </Select>
-      )}
-
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-        <Resumen titulo="Trabajando" valor={conteo("TRABAJANDO")} tono="emerald" />
-        <Resumen titulo="En descanso" valor={conteo("EN_DESCANSO")} tono="amber" />
-        <Resumen titulo="Sin fichar" valor={conteo("FALTA")} tono="red" />
-        <Resumen titulo="Pendientes" valor={pendientes} tono={pendientes > 0 ? "amber" : "slate"} />
+      <div className="flex flex-wrap items-center gap-2">
+        {locales.length > 1 && (
+          <Select value={localId} onChange={(e) => setLocalId(e.target.value)} className="w-auto! max-w-xs py-1.5 text-sm">
+            <option value="">Todas las sucursales</option>
+            {locales.map((l) => (
+              <option key={l.id} value={l.id}>
+                {l.nombre}
+              </option>
+            ))}
+          </Select>
+        )}
+        <StatPill label="Trabajando" valor={conteo("TRABAJANDO")} tono="emerald" />
+        <StatPill label="En descanso" valor={conteo("EN_DESCANSO")} tono="amber" />
+        <StatPill label="Sin fichar" valor={conteo("FALTA")} tono="red" />
+        <StatPill label="Pendientes" valor={pendientes} tono={pendientes > 0 ? "amber" : "slate"} />
       </div>
 
       {alertas.length > 0 && (
@@ -454,9 +455,9 @@ export default function PresenciaClient() {
                   {titulo} ({delGrupo.length})
                 </span>
               </SectionTitle>
-              <div className="flex flex-col gap-2">
+              <div className="flex flex-col gap-2 md:gap-1.5">
                 {delGrupo.map((f) => (
-                  <Card key={f.empleadoId} className="flex items-center justify-between gap-3">
+                  <Card key={f.empleadoId} className="flex items-center justify-between gap-3 md:p-3">
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{f.nombre}</p>
                       <p className="truncate text-sm text-slate-500 dark:text-[#94a19c]">
@@ -519,25 +520,33 @@ export default function PresenciaClient() {
   );
 }
 
-function Resumen({
-  titulo,
+/** Conteo en pastilla, como los contadores de estado de la barra de contexto
+ * de un panel operativo: se lee de un vistazo, sin el peso visual de una
+ * tarjeta por número. */
+function StatPill({
+  label,
   valor,
   tono,
 }: {
-  titulo: string;
+  label: string;
   valor: number;
   tono: "emerald" | "amber" | "red" | "slate";
 }) {
-  const colores = {
-    emerald: "text-emerald-700 dark:text-[#4ee6b0]",
-    amber: "text-amber-600 dark:text-amber-400",
-    red: "text-red-600 dark:text-red-400",
-    slate: "text-slate-500",
+  const estilos = {
+    emerald:
+      "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-[#1d4e48] dark:bg-[#0f2620] dark:text-[#6ff5c9]",
+    amber:
+      "border-amber-200 bg-amber-50 text-amber-800 dark:border-[#5a4a2f] dark:bg-[#241f14] dark:text-amber-200",
+    red: "border-red-200 bg-red-50 text-red-800 dark:border-[#5a2f35] dark:bg-[#241419] dark:text-red-200",
+    slate:
+      "border-slate-200 bg-slate-50 text-slate-700 dark:border-[#26312d] dark:bg-[#131816] dark:text-[#c1cbc6]",
   };
   return (
-    <Card className="text-center">
-      <p className={`text-2xl font-bold ${colores[tono]}`}>{valor}</p>
-      <p className="mt-0.5 text-xs font-medium text-slate-500 dark:text-[#94a19c]">{titulo}</p>
-    </Card>
+    <span
+      className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm font-semibold ${estilos[tono]}`}
+    >
+      {label}
+      <span className="font-bold tabular-nums">{valor}</span>
+    </span>
   );
 }

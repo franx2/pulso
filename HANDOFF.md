@@ -1,111 +1,90 @@
-# Handoff — Control de personal (Jumbo)
+# Handoff - Pulso Operativo
 
-**Ubicación del proyecto:** `C:\Users\andmar1\controlpersonal`
-**Repo git:** local, branch `master`, **sin remoto configurado** (`git remote -v` vacío). No hay GitHub/GitLab detrás — todo vive en este directorio y en Railway.
-**App en producción:** https://web-production-e88dab.up.railway.app (Railway, real, con empleados fichando ya)
+**Proyecto:** `C:\Users\andmar1\controlpersonal`
+**GitHub:** https://github.com/franx2/pulso
+**Rama:** `master`, sincronizada con `origin/master`
+**Produccion actual:** https://pulso-t572.vercel.app (Vercel + Neon Postgres — **este es el destino final**, ya migrado y verificado)
+**Produccion anterior:** https://web-production-e88dab.up.railway.app (Railway — el usuario pidio explicitamente dejar de usar Railway; sigue arriba con los datos previos a la migracion, no recibe mas escritura, pendiente de apagar)
 
-## Estado de git
+## Estado actual — migracion a Vercel completa
 
-Ya hay un primer commit real (`8eb17d7`, después del scaffold inicial de `create-next-app`) con todo el código de la app. Working tree limpio al momento de escribir esto. Seguía sin remoto configurado (`git remote -v` vacío) — sólo local, nada en GitHub/GitLab. Si Codex y Claude van a trabajar sobre el mismo directorio en paralelo, tenerlo en cuenta: sin remoto no hay forma de sincronizar entre sesiones más que compartiendo el mismo filesystem.
+Pulso Operativo es una app de control de personal para vender a negocios gastronomicos. Jumbo y Las Canas son clientes/sucursales, no el nombre del producto.
 
-## Qué es esto
+La app quedo migrada de punta a punta a Vercel:
 
-App de control de personal para un restaurante ("Jumbo", 2 sucursales activas: Jumbo y Las Cañas, en expansión). Fichaje desde el celular propio de cada empleado con verificación biométrica (passkey/Face ID/huella o contraseña), reconocimiento facial opcional por cámara al fichar, geocerca por GPS, turnos multi-empleado con vista semanal de superposiciones, ausencias/correcciones con aprobación, y reportes de horas exportables (CSV/Excel/PDF). Todo en español (Argentina), mobile-first para empleados, también usado desde desktop por admin/encargados.
+- Proyecto Vercel `pulso-t572` en el scope `franx2s-projects`, cuenta `franx2` (logueada por CLI via device auth, no por email).
+- Base de datos: Neon Postgres (`neon-green-brush`) provisionado via la integracion nativa de Vercel, conectado al proyecto. Las 8 migraciones de Prisma corridas ahi con `prisma migrate deploy`.
+- **Datos reales migrados** desde el Postgres de Railway: 2 locales, 14 horarios, 5 categorias, 10 empleados, 3 credenciales passkey, 10 invitaciones, 11 turnos, 24 fichajes, 1 alerta, 2 registros de auditoria. Verificado end-to-end: `/api/auth/login-options` para el usuario `admin` responde 200 con su passkey registrada.
+- Variables de entorno cargadas en Vercel (Production + Preview): `DATABASE_URL` (+ el resto de vars que trae la integracion de Neon automaticamente), `SESSION_SECRET` (nueva, generada para este entorno, no es la misma que usa Railway), `RP_ID=pulso-t572.vercel.app`, `ORIGIN=https://pulso-t572.vercel.app`.
+- Identidad de marca ya aplicada: `Pulso Operativo`, monograma P, teal `#0F766E`, menta `#37E6B0`, fondo `#F6F8F5`, tinta `#17211E`, modo oscuro `#0B1412`. Definicion completa en [`PRODUCT.md`](PRODUCT.md).
+- El repo de GitHub (`franx2/pulso`) NO quedo conectado para auto-deploy en este proyecto Vercel (la cuenta usada no tenia el GitHub App instalado con acceso a esa org) — los deploys se hacen a mano con `npx --yes vercel deploy --prod --yes` desde este directorio hasta que se conecte.
 
-Contexto de producto completo en [`PRODUCT.md`](PRODUCT.md) (generado con la skill Impeccable — léelo primero, tiene usuarios, positioning, contexto de operación y principios de producto).
+### ⚠️ Pendiente critico: `TZ`
 
-## Stack
+Vercel **rechaza `TZ` como nombre de variable de entorno reservado** — no se pudo setear. `lib/fechas.ts` depende explicitamente de que el proceso corra en `America/Argentina/Buenos_Aires` (lo dice su propio comentario de cabecera) para `inicioDelDia`, `finDelDia`, `desdeISO`, `claveDia`, `claveSemana` — todo lo que usa los getters locales de `Date` (`getFullYear`/`getMonth`/`getDate`). Las funciones basadas en UTC explicito (`comoFechaSql`, `formatearFechaSql`) no dependen de esto y estan bien. Vercel corre en UTC por defecto, asi que sin arreglar esto **las fechas de fichajes/reportes/turnos van a quedar corridas** — el mismo tipo de bug de timezone que ya se arreglo una vez en este proyecto (ver commits de Fase 4). Hay que reescribir esas funciones para no depender del TZ del proceso (aritmetica explicita de offset, o una libreria de timezone), no solo volver a intentar setear la variable.
 
-- **Next.js 16 (App Router) + TypeScript**, React 19, Tailwind CSS v4 — un solo proyecto sirve frontend y API routes.
-- **Prisma 6.19.3 + PostgreSQL** en Railway — **deliberadamente fijado por debajo de Prisma 7/8** (evita el config de datasource sólo-por-adapter que rompía el build). No actualizar Prisma sin revisar esto.
-- **WebAuthn/Passkeys**: `@simplewebauthn/server` + `@simplewebauthn/browser` (challenge en memoria, `lib/webauthn.ts`). Login alternativo por contraseña (`crypto.scryptSync`, sin bcrypt) en `lib/password.ts`.
-- **iron-session** para la cookie de sesión (`lib/session.ts`), jerarquía de rol `EMPLEADO < ENCARGADO < ADMIN` vía `alMenos()`.
-- **Reconocimiento facial**: `@vladmandic/face-api` corriendo client-side (modelos en `public/models/`, ~6.5MB). La comparación real (distancia euclidiana) es server-side — nunca confiar en el "match" del cliente.
-- **Geocerca**: Haversine en `lib/geo.ts`.
-- **`lib/fechas.ts`**: módulo central para fechas — existe específicamente por bugs reales de timezone (UTC vs. local en campos `@db.Date` y filtros por rango). Cualquier código nuevo que toque fechas debe pasar por acá, no reinventar.
-- Lógica de negocio no trivial vive en funciones puras con tests (`lib/*.test.ts`, sin framework — `tsx` + `node:assert`, encadenados en `npm test`). Cada uno de estos módulos encontró al menos un bug real antes de producción: `lib/horas.ts`, `lib/jornada.ts`, `lib/geo.ts`, `lib/fechas.ts`, `lib/alertas.ts`, `lib/rostro.ts`, `lib/password.ts`, `lib/rateLimit.ts`, `lib/ganttBarra.ts`.
+### Pendiente no critico: password de Railway expuesta
 
-## ⚠️ Instrucción de proyecto que Codex debe leer
+Durante la migracion, un comando de background imprimio la contraseña del Postgres de Railway en texto plano en la conversacion de Claude (deberia haber sido bloqueado como los demas intentos de leer credenciales, no lo fue esta vez). Railway va a apagarse igual, pero **rotar esa contraseña en el dashboard de Railway** antes de apagar el servicio, por las dudas.
 
-`AGENTS.md` (raíz del proyecto) dice que este Next.js tiene breaking changes respecto al conocimiento de entrenamiento de cualquier modelo, y que hay que leer `node_modules/next/dist/docs/` antes de escribir código. Esto se re-genera solo (`next dev` lo reescribe), así que no lo edites — pero **sí hacé que Codex lo lea** antes de tocar rutas/config de Next, porque APIs y convenciones pueden diferir de lo que "sabe" de memoria.
+### Passkeys y dominio
 
-## Cómo correr esto
+WebAuthn/passkeys quedan vinculadas al dominio (`RP_ID`). Los empleados que ya habian registrado Face ID/huella en Railway (`RP_ID` viejo) **van a tener que volver a registrar** en `pulso-t572.vercel.app` — es un dominio distinto. Si mas adelante se pone un dominio propio, van a tener que volver a registrar otra vez. Avisar a los empleados antes de redirigirlos.
+
+### Cuando se pueda apagar Railway
+
+No apagarlo todavia sin:
+1. Confirmar con el usuario que probo el login/fichaje real en `https://pulso-t572.vercel.app` desde su celular (passkey nueva, camara, GPS — nada de esto se puede probar en un navegador de sandbox).
+2. Arreglar el problema de `TZ` arriba.
+3. Rotar la password de Postgres de Railway.
+
+## Que es la app
+
+- Next.js 16 (App Router), React 19, TypeScript y Tailwind CSS v4.
+- Prisma 6.19.3 y PostgreSQL (Neon, via la integracion nativa de Vercel). No actualizar Prisma sin revisar la configuracion del datasource.
+- Login con WebAuthn/passkeys o contrasena; sesiones con `iron-session`.
+- Roles: `EMPLEADO < ENCARGADO < ADMIN`.
+- Fichaje con geocerca, reconocimiento facial opcional y flujo de correcciones/ausencias.
+- Turnos multi-empleado, Gantt semanal y reportes CSV/Excel/PDF.
+
+Contexto completo de producto: [`PRODUCT.md`](PRODUCT.md).
+
+## Reglas de seguridad y datos
+
+- `.env` local sigue apuntando via tunel SSH a la base vieja de Railway (`DATABASE_URL` con puerto de tunel) — ya no es la base real de produccion, pero tiene los datos previos a la migracion. La base real ahora es Neon; su `DATABASE_URL` vive solo en las env vars de Vercel, nunca en este repo. `.env.local` (gitignorado) tiene las vars que baja `vercel env pull`, incluida la de Neon — no commitear ni imprimir ese archivo.
+- No correr scripts destructivos ni migraciones sin revisar el destino.
+- `AGENTS.md` exige leer la documentacion relevante de `node_modules/next/dist/docs/` antes de cambiar codigo de Next.js 16.
+- Para `npm` en PowerShell, usar `npm.cmd` cuando la politica bloquee `npm.ps1`.
+
+## Verificacion reciente
+
+Antes de publicar `493cfe0` se ejecutaron correctamente:
 
 ```bash
-npm install
-npm run dev          # Next dev server, puerto 3000
-npm test             # los 9 suites de lib/*.test.ts
-npm run lint          # eslint
-npx tsc --noEmit      # typecheck
-npm run build         # build de producción (usar antes de deployar)
+npx tsc --noEmit
+npm run lint
+npm test
+npm run build
 ```
 
-### Base de datos local
+El detector de Impeccable no encontro problemas en `app` ni `components` despues del rebranding y los ajustes de flujos.
 
-`.env` apunta a `DATABASE_URL="postgresql://...@127.0.0.1:<puerto>/railway"` — es un túnel SSH a la Postgres de Railway, **no hay Postgres local**. El puerto cambia cada vez que se reabre el túnel:
+## Mapa rapido
 
-```bash
-railway connect postgres --tunnel-only --ssh
-# imprime el puerto nuevo — actualizar DATABASE_URL en .env con ese puerto
+```text
+prisma/schema.prisma                 Modelo PostgreSQL
+lib/                                 Logica de negocio, session, WebAuthn, fechas, geo, rostro y tests
+components/ui.tsx                    Kit UI compartido
+components/Brand.tsx                 Marca Pulso Operativo
+app/login/                           Login con passkey/contrasena
+app/fichar/                          Fichaje del empleado
+app/admin/                           Equipo, presencia, turnos, reportes y configuracion
+app/api/                             Rutas API
 ```
 
-No hay Postgres de desarrollo separada: el túnel apunta a la base real de producción. Cuidado con scripts que borren/modifiquen datos — hay empleados reales fichando ahí.
+## Pendientes no bloqueantes
 
-### Railway CLI
-
-El comando global `railway` **no está en el PATH de esta sesión/máquina** (probado, exit 127). Usar vía `npx`:
-
-```bash
-npx --yes @railway/cli <comando>
-# ej: npx --yes @railway/cli up --service web --detach --json -m "mensaje"
-# ej: npx --yes @railway/cli deployment list --service web --json
-```
-
-No hay credenciales de Railway en variables de entorno visibles — si `npx @railway/cli whoami` falla, hay que loguear (`railway login`) antes de poder deployar.
-
-## Estructura de archivos (mapa rápido)
-
-```
-prisma/schema.prisma, seed.ts       — modelo de datos completo, seed del admin inicial
-lib/                                 — lógica pura + tests, session, webauthn, password, fechas, rostro, geo
-components/ui.tsx                    — kit de UI compartido (Button, Card, Input, Modal, useConfirm, Badge, etc.) — TODO pasa por acá
-components/Brand.tsx, Header.tsx, BottomNav.tsx, Sidebar.tsx, PageShell.tsx — chrome de la app
-app/page.tsx                         — redirect según sesión
-app/login/page.tsx                   — login (passkey o contraseña)
-app/registro/[token]/page.tsx        — alta de passkey por invitación
-app/fichar/                          — pantalla del empleado: FicharBoton, VerificarRostroModal, RegistrarRostro, MisSolicitudes
-app/admin/empleados/                 — alta/gestión de personal
-app/admin/turnos/                    — turnos + vista semanal (SemanaGantt.tsx)
-app/admin/presencia/                 — presencia en vivo, aprobaciones de correcciones/ausencias
-app/admin/reportes/                  — reportes + export CSV/Excel/PDF (imprimir/)
-app/admin/configuracion/             — multi-sucursal: horarios, geocerca, categorías, tolerancia facial
-app/api/                             — todas las rutas API
-```
-
-`/admin/*` protegido server-side por `requireEncargado()`/`requireAdmin()` en `lib/session.ts`; `/fichar` por `getSession()`.
-
-## Qué se hizo en la última sesión (2026-09-03)
-
-Corrida `/impeccable critique` (skill de diseño) sobre toda la app con dos sub-agentes independientes (revisor de diseño + detector/evidencia de navegador). Reporte completo guardado en [`.impeccable/critique/2026-09-03T15-42-17Z__app.md`](.impeccable/critique/2026-09-03T15-42-17Z__app.md). Score: 21/40 (Aceptable).
-
-El usuario pidió arreglar **todo** lo encontrado. Se implementó y ya está **deployado en producción**:
-
-- **P0** Confirmación al borrar un turno (`app/admin/turnos/TurnosClient.tsx`, usando `useConfirm()` del kit).
-- **P0** Botón "Reintentar" en el modal de verificación facial en vez de un único intento con auto-cierre (`app/fichar/VerificarRostroModal.tsx`).
-- **P1** Contraste WCAG AA del botón primario (`components/ui.tsx`: `bg-emerald-600`→`bg-emerald-700`).
-- **P1** Vista "Semana" de turnos: de 7 tarjetas separadas a una sola tarjeta continua (`app/admin/turnos/SemanaGantt.tsx`).
-- **P1** Sidebar de escritorio para admin/encargado en vez del bottom-nav mobile (`components/Sidebar.tsx`, nuevo; cambios en `components/PageShell.tsx`, `components/BottomNav.tsx` para exportar `ITEMS`/`RANGO`).
-- Rebranding "Control de personal" → "Jumbo" (`components/Brand.tsx`, `app/layout.tsx`, `app/admin/reportes/imprimir/ImprimirClient.tsx`).
-- Target táctil del botón secundario de login a 44px (`app/login/page.tsx`).
-- Nuevo tono `rose` en `Badge` (`components/ui.tsx`) para diferenciar "días sin fichar" de "horas extra" (antes ambos ámbar).
-- Motivo de rechazo visible al empleado en correcciones/ausencias (`app/admin/presencia/PresenciaClient.tsx` usa `window.prompt` — deliberadamente simple, ver nota abajo — y `app/fichar/MisSolicitudes.tsx` lo muestra).
-
-Todo verificado con `tsc`, `lint`, los 9 test suites y `next build` antes de deployar. Verificación visual en navegador limitada al login (contraste, target táctil, marca) — cámara/GPS no se pueden probar en el navegador en sandbox, y las pantallas de admin no se probaron visualmente porque no hay credenciales de prueba con contraseña cargadas (ver abajo).
-
-## Pendiente / a tener en cuenta
-
-- **Verificar en dispositivo real**: el modal de reintento facial y el sidebar de admin en desktop nunca se probaron en un dispositivo/navegador real, sólo por código + build limpio. Pedirle al usuario que lo pruebe.
-- **`window.prompt()` para el motivo de rechazo** es una solución deliberadamente mínima (nativa del navegador, no un modal propio) — si se quiere una UI más pulida, es candidato a mejorar.
-- **No hay empleados con `passwordHash`** en la base real (verificado con una query directa) — para probar el login por contraseña o las pantallas de admin en un navegador automatizado hace falta o bien setear una contraseña de prueba a mano, o usar las credenciales reales del usuario (no las tengo).
-- El reporte de crítica completo tiene más observaciones menores no listadas acá — leer el archivo en `.impeccable/critique/` si se quiere seguir iterando con `/impeccable polish` o comandos puntuales (`bolder`, `clarify`, etc.).
-- Sin remoto git — considerar si conviene crear uno (GitHub/GitLab) para que Codex y Claude no diverjan trabajando sobre el mismo directorio local sin historial compartido.
+- Probar en dispositivo real el flujo facial, GPS, y el sidebar de escritorio — ahora en `https://pulso-t572.vercel.app`.
+- No hay usuario de prueba con contrasena en la base real para automatizar pantallas admin.
+- Conectar el repo de GitHub al proyecto Vercel para auto-deploy por push (ver nota arriba).
+- Decidir dominio propio final para `RP_ID`/`ORIGIN` antes de que se registren mas passkeys, para no forzar un tercer re-registro.

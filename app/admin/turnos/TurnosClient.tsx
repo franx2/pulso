@@ -276,14 +276,14 @@ export default function TurnosClient() {
                         type="time"
                         value={h.horaInicio}
                         onChange={(e) => actualizarHorario(id, { horaInicio: e.target.value })}
-                        className="w-auto py-1.5"
+                        className="w-auto! py-1.5"
                       />
                       <span className="text-slate-400">a</span>
                       <Input
                         type="time"
                         value={h.horaFin}
                         onChange={(e) => actualizarHorario(id, { horaFin: e.target.value })}
-                        className="w-auto py-1.5"
+                        className="w-auto! py-1.5"
                       />
                       {cruza && (
                         <span className="w-full text-xs text-amber-700 dark:text-amber-300">
@@ -314,9 +314,9 @@ export default function TurnosClient() {
         {turnos.length === 0 ? (
           <EmptyState>No hay turnos programados</EmptyState>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-2 md:gap-1.5">
             {turnos.map((t) => (
-              <Card key={t.id} className="flex items-center justify-between gap-3">
+              <Card key={t.id} className="flex items-center justify-between gap-3 md:p-3">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{t.empleado?.nombre}</p>
                   <p className="text-sm text-slate-500 dark:text-[#94a19c]">
