@@ -8,7 +8,7 @@ import { comoFechaSql, inicioDelDia } from "@/lib/fechas";
 import { bytesADescriptor, descriptorDesdeJson, distanciaRostros } from "@/lib/rostro";
 import { leerDataUrl, type ImagenSubida } from "@/lib/dataUrl";
 import type { VerificacionRostro } from "@prisma/client";
-import { obtenerEfectivoCobrado, obtenerTokenFudo } from "@/lib/fudo";
+import { obtenerEfectivoCobrado, obtenerEfectivoCobradoDeCaja, obtenerTokenFudo } from "@/lib/fudo";
 
 const inicioDeHoy = () => inicioDelDia();
 
@@ -116,10 +116,14 @@ export async function POST(request: Request) {
       ? "DESCANSO_INICIO"
       : automatico;
 
-  const efectivoEsperado =
-    tipo === "SALIDA" && estado.entrada
-      ? await calcularEfectivoEsperado(local, estado.entrada)
-      : null;
+  let efectivoEsperado: number | null = null;
+  if (tipo === "SALIDA" && estado.entrada && local.fudoApiKey) {
+    const empleado = await db.empleado.findUnique({
+      where: { id: session.empleadoId! },
+      select: { fudoCajaId: true },
+    });
+    efectivoEsperado = await calcularEfectivoEsperado(local, estado.entrada, empleado?.fudoCajaId ?? null);
+  }
 
   const fichaje = await db.fichaje.create({
     data: {
@@ -203,14 +207,23 @@ async function verificarRostro({
  * arqueo de caja. Sólo corre si el local tiene Fudo configurado; si la
  * consulta falla (Fudo caído, credenciales vencidas) no bloquea el fichaje,
  * simplemente no se arma el arqueo de esta salida.
+ *
+ * Si el empleado tiene su caja de Fudo vinculada (`fudoCajaId`), se suma
+ * SÓLO lo que pasó por esa caja — mucho más preciso que sumar todo el
+ * efectivo del local mientras estuvo fichado, que es el respaldo cuando
+ * todavía no se vinculó.
  */
 async function calcularEfectivoEsperado(
   local: { fudoApiKey: string | null; fudoApiSecret: string | null },
-  entrada: Date
+  entrada: Date,
+  fudoCajaId: string | null
 ): Promise<number | null> {
   if (!local.fudoApiKey || !local.fudoApiSecret) return null;
   try {
     const token = await obtenerTokenFudo(local.fudoApiKey, local.fudoApiSecret);
+    if (fudoCajaId) {
+      return await obtenerEfectivoCobradoDeCaja(token, entrada, new Date(), fudoCajaId);
+    }
     return await obtenerEfectivoCobrado(token, entrada, new Date());
   } catch {
     return null;

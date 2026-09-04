@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { sumarPagosEnEfectivo, resumirVentas } from "./fudo";
+import { sumarPagosEnEfectivo, resumirVentas, sumarEfectivoDeCaja } from "./fudo";
 
 const metodos = [
   { id: "1", attributes: { name: "Efectivo" } },
@@ -36,5 +36,35 @@ assert.strictEqual(resumen.porMozo[0].fudoUsuarioId, "25");
 assert.strictEqual(resumen.porMozo[0].nombreFudo, "Nicolas");
 assert.strictEqual(resumen.porMozo[0].cantidadVentas, 2);
 assert.strictEqual(resumen.porMozo[0].totalVentas, 25700 + 6800);
+
+// sumarEfectivoDeCaja: la caja vive en la venta, no en el pago — payments
+// no expone su origen, hay que ir vía sales.payments.
+const ventasConCaja = [
+  {
+    relationships: {
+      cashRegister: { data: { id: "12" } }, // Antonella
+      payments: { data: [{ id: "p1" }, { id: "p2" }] },
+    },
+  },
+  {
+    relationships: {
+      cashRegister: { data: { id: "9" } }, // Maria: no debe sumar
+      payments: { data: [{ id: "p3" }] },
+    },
+  },
+  { relationships: { payments: { data: [{ id: "p4" }] } } }, // sin caja
+];
+const pagosConId = [
+  { id: "p1", attributes: { amount: 5000, canceled: null }, relationships: { paymentMethod: { data: { id: "1" } } } },
+  { id: "p2", attributes: { amount: 2000, canceled: null }, relationships: { paymentMethod: { data: { id: "3" } } } }, // tarjeta
+  { id: "p3", attributes: { amount: 9999, canceled: null }, relationships: { paymentMethod: { data: { id: "1" } } } }, // otra caja
+  { id: "p4", attributes: { amount: 100, canceled: null }, relationships: { paymentMethod: { data: { id: "1" } } } },
+];
+assert.strictEqual(
+  sumarEfectivoDeCaja(ventasConCaja, pagosConId, metodos, "12"),
+  5000,
+  "sólo efectivo de ventas de ESA caja, ignora otra caja/tarjeta/sin caja"
+);
+assert.strictEqual(sumarEfectivoDeCaja(ventasConCaja, pagosConId, metodos, "999"), 0, "caja sin ventas, total 0");
 
 console.log("fudo.test.ts OK");

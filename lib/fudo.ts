@@ -223,3 +223,104 @@ export async function obtenerResumenVentas(token: string, desde: Date, hasta: Da
 
   return resumirVentas(ventas, [...usuariosVistos.values()]);
 }
+
+/** Las "Cajas" de la cuenta de Fudo: en este negocio cada una es una persona
+ * (no un canal fijo como mesas/delivery), por eso es la fuente correcta del
+ * efectivo esperado en el arqueo — a diferencia del mozo, no todas las
+ * personas tienen caja propia, ni toda caja es un mozo. */
+export async function obtenerCajas(token: string): Promise<{ id: string; nombre: string }[]> {
+  const res = await fetch(`${API_URL}/cash-registers?page[size]=100&fields[cashRegister]=name`, {
+    headers: { Authorization: `Bearer ${token}`, Accept: "application/json" },
+  });
+  if (!res.ok) throw new FudoError(`Fudo devolvió un error al listar cajas (HTTP ${res.status})`);
+  const data = await res.json();
+  return ((data.data ?? []) as { id: string; attributes: { name: string } }[]).map((c) => ({
+    id: c.id,
+    nombre: c.attributes.name,
+  }));
+}
+
+type VentaConCajaJson = {
+  relationships?: {
+    cashRegister?: { data?: { id: string } | null };
+    payments?: { data?: { id: string }[] };
+  };
+};
+type PagoConIdJson = {
+  id: string;
+  attributes: { amount: number; canceled: boolean | null };
+  relationships?: { paymentMethod?: { data?: { id: string } | null } };
+};
+
+/** Efectivo cobrado en las ventas de UNA caja puntual, entre las ventas del
+ * rango dado. `/payments` no expone la caja de origen — sólo `/sales` la
+ * tiene, así que acá se arma la suma desde el lado de la venta. */
+export function sumarEfectivoDeCaja(
+  ventas: VentaConCajaJson[],
+  pagos: PagoConIdJson[],
+  metodos: MetodoPagoJson[],
+  cajaId: string
+): number {
+  const nombrePorId = new Map(metodos.map((m) => [m.id, m.attributes.name]));
+  const pagoPorId = new Map(pagos.map((p) => [p.id, p]));
+  let total = 0;
+  for (const v of ventas) {
+    if (v.relationships?.cashRegister?.data?.id !== cajaId) continue;
+    for (const ref of v.relationships?.payments?.data ?? []) {
+      const p = pagoPorId.get(ref.id);
+      if (!p || p.attributes.canceled) continue;
+      const metodoId = p.relationships?.paymentMethod?.data?.id;
+      const nombre = metodoId ? nombrePorId.get(metodoId) : undefined;
+      if (nombre && NOMBRES_EFECTIVO.has(nombre)) total += p.attributes.amount;
+    }
+  }
+  return total;
+}
+
+/** Efectivo cobrado por una caja/persona puntual entre `desde` y `hasta`,
+ * para el arqueo de caja al fichar salida — reemplaza a
+ * `obtenerEfectivoCobrado` cuando el empleado tiene su caja de Fudo vinculada
+ * (`Empleado.fudoCajaId`), porque suma sólo lo que pasó por SU caja en vez de
+ * todo el efectivo del local mientras estuvo fichado. */
+export async function obtenerEfectivoCobradoDeCaja(
+  token: string,
+  desde: Date,
+  hasta: Date,
+  cajaId: string
+): Promise<number> {
+  const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+  const filtroFecha = `and(gte.${isoSinMilisegundos(desde)},lte.${isoSinMilisegundos(hasta)})`;
+  const ventas: VentaConCajaJson[] = [];
+  const pagos: PagoConIdJson[] = [];
+  const metodosVistos = new Map<string, MetodoPagoJson>();
+  let pagina = 1;
+
+  for (;;) {
+    const params = new URLSearchParams({
+      "filter[createdAt]": filtroFecha,
+      "filter[saleState]": "in.(CLOSED)",
+      "fields[sale]": "createdAt,cashRegister,payments",
+      include: "cashRegister,payments.paymentMethod",
+      "fields[cashRegister]": "name",
+      "page[size]": String(TAMANO_PAGINA),
+      "page[number]": String(pagina),
+      sort: "id",
+    });
+    const res = await fetch(`${API_URL}/sales?${params}`, { headers });
+    if (!res.ok) {
+      throw new FudoError(`Fudo devolvió un error al listar ventas (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    ventas.push(...((data.data ?? []) as VentaConCajaJson[]));
+    for (const inc of (data.included ?? []) as { type: string; id: string; attributes: Record<string, unknown> }[]) {
+      if (inc.type === "Payment") pagos.push(inc as unknown as PagoConIdJson);
+      else if (inc.type === "PaymentMethod") metodosVistos.set(inc.id, inc as unknown as MetodoPagoJson);
+    }
+
+    if ((data.data ?? []).length < TAMANO_PAGINA) break;
+    pagina++;
+    if (pagina > 200) break;
+  }
+
+  return sumarEfectivoDeCaja(ventas, pagos, [...metodosVistos.values()], cajaId);
+}

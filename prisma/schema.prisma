@@ -184,6 +184,11 @@ model Empleado {
   /// para atribuirle sus ventas como mozo sin depender de que el nombre
   /// coincida. Elegido a mano por el admin, no se re-adivina después.
   fudoUsuarioId String?
+  /// Id de "Caja" en Fudo: en la cuenta de Fudo del negocio, cada caja es una
+  /// persona (no un canal fijo), así que es la fuente correcta del efectivo
+  /// esperado en el arqueo — no todos los mozos tienen caja propia, ni todas
+  /// las cajas son mozos.
+  fudoCajaId    String?
 
   /// Vector de 128 floats del rostro (Float32Array serializado). NO es una
   /// foto: es una huella matemática de la que no se puede reconstruir la cara.

@@ -21,6 +21,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     reinvitar?: boolean;
     precioHora?: number | null;
     fudoUsuarioId?: string | null;
+    fudoCajaId?: string | null;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
@@ -70,6 +71,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         : {}),
       ...(body.precioHora !== undefined ? { precioHora: body.precioHora } : {}),
       ...(body.fudoUsuarioId !== undefined ? { fudoUsuarioId: body.fudoUsuarioId || null } : {}),
+      ...(body.fudoCajaId !== undefined ? { fudoCajaId: body.fudoCajaId || null } : {}),
     },
   });
 

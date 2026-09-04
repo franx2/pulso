@@ -17,6 +17,7 @@ import {
 import HorarioSemanal from "./HorarioSemanal";
 import CategoriasLocal from "./CategoriasLocal";
 import VentasFudo from "./VentasFudo";
+import CajasFudo from "./CajasFudo";
 
 type Local = {
   nombre: string;
@@ -449,6 +450,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
             </form>
           </Card>
 
+          {local.fudoConfigurado && <CajasFudo localId={localId} />}
           {local.fudoConfigurado && <VentasFudo localId={localId} />}
         </div>
       )}
