@@ -26,15 +26,27 @@ export async function obtenerTokenFudo(apiKey: string, apiSecret: string): Promi
 }
 
 /**
- * Todas las ventas cerradas creadas en [desde, hasta), paginando hasta
+ * Todas las ventas cerradas creadas en [desde, hasta], paginando hasta
  * agotar los resultados. `desde`/`hasta` van en ISO UTC.
+ *
+ * El filtro `createdAt` de Fudo sólo acepta `lte` (inclusive), a diferencia
+ * de `closedAt` que acepta `lt`. El borde exacto en `hasta` no importa acá:
+ * `agregarPorDiaHora` (lib/demanda.ts) vuelve a filtrar con `< hasta` antes
+ * de contar, así que una venta justo en el instante límite nunca se cuenta
+ * dos veces aunque Fudo la incluya.
  */
+/** Fudo exige "YYYY-MM-DDTHH:MM:SSZ": Date#toISOString() siempre agrega
+ * milisegundos (".123Z"), que su patrón no acepta. */
+function isoSinMilisegundos(d: Date): string {
+  return d.toISOString().replace(/\.\d{3}Z$/, "Z");
+}
+
 export async function obtenerVentasCerradas(
   token: string,
   desde: Date,
   hasta: Date
 ): Promise<{ createdAt: string }[]> {
-  const filtroFecha = `and(gte.${desde.toISOString()},lt.${hasta.toISOString()})`;
+  const filtroFecha = `and(gte.${isoSinMilisegundos(desde)},lte.${isoSinMilisegundos(hasta)})`;
   const ventas: { createdAt: string }[] = [];
   let pagina = 1;
 
