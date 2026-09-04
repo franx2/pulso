@@ -148,7 +148,7 @@ export type ResumenVentas = {
   cantidadVentas: number;
   totalVentas: number;
   personasAtendidas: number;
-  porMozo: { nombreFudo: string; cantidadVentas: number; totalVentas: number }[];
+  porMozo: { fudoUsuarioId: string; nombreFudo: string; cantidadVentas: number; totalVentas: number }[];
 };
 
 /** Agrega ventas cerradas para el panel "Ventas y mozos": personas atendidas
@@ -157,7 +157,10 @@ export type ResumenVentas = {
  * atendió, que en la práctica es una minoría. */
 export function resumirVentas(ventas: VentaJson[], usuarios: UsuarioJson[]): ResumenVentas {
   const nombrePorId = new Map(usuarios.map((u) => [u.id, u.attributes.name]));
-  const porMozoId = new Map<string, { nombreFudo: string; cantidadVentas: number; totalVentas: number }>();
+  const porMozoId = new Map<
+    string,
+    { fudoUsuarioId: string; nombreFudo: string; cantidadVentas: number; totalVentas: number }
+  >();
 
   let cantidadVentas = 0;
   let totalVentas = 0;
@@ -171,7 +174,7 @@ export function resumirVentas(ventas: VentaJson[], usuarios: UsuarioJson[]): Res
     const mozoId = v.relationships?.waiter?.data?.id;
     if (!mozoId) continue;
     const nombreFudo = nombrePorId.get(mozoId) ?? `Usuario ${mozoId}`;
-    const acc = porMozoId.get(mozoId) ?? { nombreFudo, cantidadVentas: 0, totalVentas: 0 };
+    const acc = porMozoId.get(mozoId) ?? { fudoUsuarioId: mozoId, nombreFudo, cantidadVentas: 0, totalVentas: 0 };
     acc.cantidadVentas++;
     acc.totalVentas += v.attributes.total;
     porMozoId.set(mozoId, acc);

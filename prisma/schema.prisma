@@ -180,6 +180,11 @@ model Empleado {
   categoria    Categoria?           @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
   categoriaId  String?
 
+  /// Id de usuario en Fudo (por sucursal, cada Fudo es una cuenta separada),
+  /// para atribuirle sus ventas como mozo sin depender de que el nombre
+  /// coincida. Elegido a mano por el admin, no se re-adivina después.
+  fudoUsuarioId String?
+
   /// Vector de 128 floats del rostro (Float32Array serializado). NO es una
   /// foto: es una huella matemática de la que no se puede reconstruir la cara.
   rostroDescriptor Bytes?

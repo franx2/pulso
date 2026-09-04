@@ -32,6 +32,7 @@ assert.strictEqual(resumen.cantidadVentas, 4);
 assert.strictEqual(resumen.totalVentas, 25700 + 40000 + 6800 + 6800);
 assert.strictEqual(resumen.personasAtendidas, 4, "suma people, ignora null (takeaway)");
 assert.strictEqual(resumen.porMozo.length, 1, "sólo mozos con dato en Fudo");
+assert.strictEqual(resumen.porMozo[0].fudoUsuarioId, "25");
 assert.strictEqual(resumen.porMozo[0].nombreFudo, "Nicolas");
 assert.strictEqual(resumen.porMozo[0].cantidadVentas, 2);
 assert.strictEqual(resumen.porMozo[0].totalVentas, 25700 + 6800);

@@ -2,14 +2,22 @@
 
 import { useState } from "react";
 import { RefreshCw, Users } from "lucide-react";
-import { Badge, Button, Card, ErrorText, SectionTitle } from "@/components/ui";
+import { Badge, Button, Card, ErrorText, Select, SectionTitle } from "@/components/ui";
 
-type Mozo = { nombreFudo: string; cantidadVentas: number; totalVentas: number; empleadoId: string | null };
+type Mozo = {
+  fudoUsuarioId: string;
+  nombreFudo: string;
+  cantidadVentas: number;
+  totalVentas: number;
+  empleadoId: string | null;
+};
+type Empleado = { id: string; nombre: string };
 type Resumen = {
   cantidadVentas: number;
   totalVentas: number;
   personasAtendidas: number;
   porMozo: Mozo[];
+  empleadosLocal: Empleado[];
 };
 
 const PERIODOS = [
@@ -21,6 +29,14 @@ function fechaISO(hace: number) {
   return new Date(Date.now() - hace * 86400000).toISOString().slice(0, 10);
 }
 
+async function ponerFudoUsuarioId(empleadoId: string, fudoUsuarioId: string | null) {
+  await fetch(`/api/empleados/${empleadoId}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ fudoUsuarioId }),
+  });
+}
+
 /** Ventas y mozos de la sucursal, leído en vivo de Fudo: cuántas personas
  * atendió (EAT-IN), y qué mozo cerró cuántas ventas — sólo cuando Fudo
  * registró quién fue, que en la práctica es una minoría de las ventas. */
@@ -28,6 +44,7 @@ export default function VentasFudo({ localId }: { localId: string }) {
   const [dias, setDias] = useState(7);
   const [resumen, setResumen] = useState<Resumen | null>(null);
   const [cargando, setCargando] = useState(false);
+  const [vinculando, setVinculando] = useState<string | null>(null);
   const [error, setError] = useState("");
 
   async function buscar(diasElegidos: number) {
@@ -44,6 +61,17 @@ export default function VentasFudo({ localId }: { localId: string }) {
       setResumen(data);
     }
     setCargando(false);
+  }
+
+  async function vincular(mozo: Mozo, nuevoEmpleadoId: string) {
+    if (nuevoEmpleadoId === (mozo.empleadoId ?? "")) return;
+    setVinculando(mozo.fudoUsuarioId);
+    // Un empleado sólo puede estar linkeado a un usuario de Fudo a la vez:
+    // si ya había otro empleado con este id, se lo saca antes de asignarlo.
+    if (mozo.empleadoId) await ponerFudoUsuarioId(mozo.empleadoId, null);
+    if (nuevoEmpleadoId) await ponerFudoUsuarioId(nuevoEmpleadoId, mozo.fudoUsuarioId);
+    await buscar(dias);
+    setVinculando(null);
   }
 
   return (
@@ -69,7 +97,8 @@ export default function VentasFudo({ localId }: { localId: string }) {
       </SectionTitle>
       <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
         Personas atendidas y desglose por mozo, según Fudo. El mozo sólo aparece en las ventas
-        donde Fudo lo registró — es habitual que sea una parte, no todas.
+        donde Fudo lo registró — es habitual que sea una parte, no todas. Si el nombre no matchea
+        solo, elegí a mano qué empleado de Pulso es cada uno: queda guardado para la próxima vez.
       </p>
 
       {cargando && <p className="text-sm text-slate-400 dark:text-[#74817b]">Consultando Fudo…</p>}
@@ -100,16 +129,31 @@ export default function VentasFudo({ localId }: { localId: string }) {
             <ul className="flex flex-col gap-2">
               {resumen.porMozo.map((m) => (
                 <li
-                  key={m.nombreFudo}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
+                  key={m.fudoUsuarioId}
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
                 >
                   <span className="flex items-center gap-2">
                     <Users size={14} />
                     {m.nombreFudo}
                     {!m.empleadoId && <Badge tone="slate">sin vincular en Pulso</Badge>}
                   </span>
-                  <span className="text-slate-600 dark:text-[#c1cbc6]">
-                    {m.cantidadVentas} ventas · ${m.totalVentas.toFixed(2)}
+                  <span className="flex items-center gap-2">
+                    <span className="text-slate-600 dark:text-[#c1cbc6]">
+                      {m.cantidadVentas} ventas · ${m.totalVentas.toFixed(2)}
+                    </span>
+                    <Select
+                      value={m.empleadoId ?? ""}
+                      onChange={(e) => vincular(m, e.target.value)}
+                      disabled={vinculando === m.fudoUsuarioId}
+                      className="w-auto! py-1 text-xs"
+                    >
+                      <option value="">Sin vincular</option>
+                      {resumen.empleadosLocal.map((e) => (
+                        <option key={e.id} value={e.id}>
+                          {e.nombre}
+                        </option>
+                      ))}
+                    </Select>
                   </span>
                 </li>
               ))}

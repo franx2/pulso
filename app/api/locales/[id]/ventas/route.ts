@@ -5,9 +5,10 @@ import { obtenerResumenVentas, obtenerTokenFudo } from "@/lib/fudo";
 import { desdeISO, finDelDia } from "@/lib/fechas";
 
 /** Ventas y mozos de una sucursal (personas atendidas + desglose por mozo),
- * leído en vivo de Fudo. El mozo se vincula al empleado de Pulso por nombre
- * (no hay otro ID en común) — si no matchea a nadie, se muestra igual con el
- * nombre que vino de Fudo. */
+ * leído en vivo de Fudo. El mozo se vincula al empleado de Pulso primero por
+ * el link manual (`Empleado.fudoUsuarioId`, elegido a mano en el panel) y,
+ * si no hay uno cargado, por coincidencia de nombre como aproximación —
+ * si no matchea nada, se muestra igual con el nombre que vino de Fudo. */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminApi();
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -31,16 +32,23 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
 
     const empleados = await db.empleado.findMany({
       where: { localId: id },
-      select: { id: true, nombre: true },
+      select: { id: true, nombre: true, fudoUsuarioId: true },
     });
+    const empleadoPorFudoId = new Map(
+      empleados.filter((e) => e.fudoUsuarioId).map((e) => [e.fudoUsuarioId as string, e])
+    );
     const empleadoPorNombre = new Map(empleados.map((e) => [e.nombre.trim().toLowerCase(), e]));
 
     return NextResponse.json({
       ...resumen,
       porMozo: resumen.porMozo.map((m) => ({
         ...m,
-        empleadoId: empleadoPorNombre.get(m.nombreFudo.trim().toLowerCase())?.id ?? null,
+        empleadoId:
+          empleadoPorFudoId.get(m.fudoUsuarioId)?.id ??
+          empleadoPorNombre.get(m.nombreFudo.trim().toLowerCase())?.id ??
+          null,
       })),
+      empleadosLocal: empleados.map((e) => ({ id: e.id, nombre: e.nombre })),
     });
   } catch (e) {
     return NextResponse.json(
