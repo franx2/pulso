@@ -52,7 +52,7 @@ function curvaDemanda(
   cierra: string,
   porHora: Map<number, number>,
   maxVal: number
-): { area: string; linea: string; pico: { xPct: number; valor: number } | null } {
+): { area: string; linea: string; pico: { xPct: number; y: number; valor: number } | null } {
   const puntos: { x: number; y: number; valor: number }[] = [];
   for (let h = 0; h < 24; h++) {
     const pos = posicionBarra(abre, cierra, `${String(h).padStart(2, "0")}:00`, `${String((h + 1) % 24).padStart(2, "0")}:00`);
@@ -70,7 +70,18 @@ function curvaDemanda(
   const linea = puntos.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
   const area = `${linea} L ${puntos[puntos.length - 1].x} ${ALTO_CURVA} L ${puntos[0].x} ${ALTO_CURVA} Z`;
   const pico = puntos.reduce((max, p) => (p.valor > max.valor ? p : max), puntos[0]);
-  return { area, linea, pico: { xPct: pico.x, valor: pico.valor } };
+  return { area, linea, pico: { xPct: pico.x, y: pico.y, valor: pico.valor } };
+}
+
+/** Marcas de hora (cada 2hs en punto) sobre la ventana de apertura del día,
+ * en la misma escala horizontal que la curva y las barras de turnos. */
+function marcasHora(abre: string, cierra: string): { xPct: number; label: string }[] {
+  const marcas: { xPct: number; label: string }[] = [];
+  for (let h = 0; h < 24; h += 2) {
+    const pos = posicionBarra(abre, cierra, `${String(h).padStart(2, "0")}:00`, `${String((h + 1) % 24).padStart(2, "0")}:00`);
+    if (pos) marcas.push({ xPct: pos.leftPct, label: `${String(h).padStart(2, "0")}h` });
+  }
+  return marcas;
 }
 
 export default function SemanaGantt({ locales }: { locales: Local[] }) {
@@ -236,30 +247,63 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                           demandaMaxima
                         );
                         if (!linea) return null;
+                        const marcas = marcasHora(horario.abre!, horario.cierra!);
+                        // Arriba de la curva en su punto más alto, no fijo arriba de la
+                        // caja: con picos bajos quedaba flotando lejos de la línea.
+                        const topBadgePx = Math.max(pico ? pico.y - 15 : 0, 0);
                         return (
-                          <div className="flex items-center gap-2">
-                            <span className="w-20 shrink-0" />
-                            <div className="relative flex-1 overflow-hidden rounded bg-slate-50 dark:bg-[#18201d]" style={{ height: ALTO_CURVA }}>
-                              <svg
-                                viewBox={`0 0 100 ${ALTO_CURVA}`}
-                                preserveAspectRatio="none"
-                                className="absolute inset-0 h-full w-full"
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <span className="w-20 shrink-0" />
+                              <div
+                                className="relative flex-1 overflow-visible rounded bg-slate-50 dark:bg-[#18201d]"
+                                style={{ height: ALTO_CURVA }}
                               >
-                                {/* Grilla de referencia: 50% y 100% de la escala compartida. */}
-                                <line x1="0" y1={ALTO_CURVA / 2} x2="100" y2={ALTO_CURVA / 2} stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-[#26312d]" vectorEffect="non-scaling-stroke" />
-                                <path d={area} fill="#f59e0b" fillOpacity="0.18" />
-                                <path d={linea} fill="none" stroke="#f59e0b" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
-                              </svg>
-                              {pico && pico.valor > 0 && (
-                                <span
-                                  className="absolute top-0.5 -translate-x-1/2 whitespace-nowrap rounded bg-amber-700 px-1 py-0.5 text-[10px] font-semibold leading-none text-white dark:bg-amber-600"
-                                  style={{ left: `${Math.min(Math.max(pico.xPct, 8), 92)}%` }}
+                                <svg
+                                  viewBox={`0 0 100 ${ALTO_CURVA}`}
+                                  preserveAspectRatio="none"
+                                  className="absolute inset-0 h-full w-full overflow-hidden rounded"
                                 >
-                                  pico {pico.valor.toFixed(1)}/h
-                                </span>
-                              )}
+                                  {/* Grilla de referencia: 50% y 100% de la escala compartida. */}
+                                  <line x1="0" y1={ALTO_CURVA / 2} x2="100" y2={ALTO_CURVA / 2} stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-[#26312d]" vectorEffect="non-scaling-stroke" />
+                                  <path d={area} fill="#f59e0b" fillOpacity="0.18" />
+                                  <path d={linea} fill="none" stroke="#f59e0b" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
+                                </svg>
+                                {/* Punto + etiqueta en HTML, no SVG: el viewBox no es
+                                    uniforme (100 x {ALTO_CURVA}), un <circle> saldría
+                                    ovalado. Un div de tamaño fijo en px se ve redondo. */}
+                                {pico && pico.valor > 0 && (
+                                  <>
+                                    <span
+                                      className="absolute h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-700 dark:bg-amber-500"
+                                      style={{ left: `${pico.xPct}%`, top: pico.y }}
+                                    />
+                                    <span
+                                      className="absolute -translate-x-1/2 whitespace-nowrap rounded bg-amber-700 px-1 py-0.5 text-[10px] font-semibold leading-none text-white shadow-sm dark:bg-amber-600"
+                                      style={{ left: `${Math.min(Math.max(pico.xPct, 8), 92)}%`, top: topBadgePx }}
+                                    >
+                                      pico {pico.valor.toFixed(1)} ventas/h
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                              <span className="w-24 shrink-0" />
                             </div>
-                            <span className="w-24 shrink-0" />
+                            <div className="flex items-center gap-2">
+                              <span className="w-20 shrink-0" />
+                              <div className="relative h-3 flex-1">
+                                {marcas.map((m) => (
+                                  <span
+                                    key={m.label}
+                                    className="absolute -translate-x-1/2 text-[9px] text-slate-400 dark:text-[#5d6d67]"
+                                    style={{ left: `${m.xPct}%` }}
+                                  >
+                                    {m.label}
+                                  </span>
+                                ))}
+                              </div>
+                              <span className="w-24 shrink-0" />
+                            </div>
                           </div>
                         );
                       })()}
