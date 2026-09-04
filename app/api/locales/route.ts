@@ -10,6 +10,7 @@ export async function GET() {
   const locales = await db.local.findMany({
     orderBy: { nombre: "asc" },
     include: { _count: { select: { empleados: true } } },
+    omit: { fudoApiKey: true, fudoApiSecret: true },
   });
   return NextResponse.json({ locales });
 }

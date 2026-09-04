@@ -3,15 +3,29 @@ import { db } from "@/lib/db";
 import { requireAdminApi, requireEncargadoApi } from "@/lib/session";
 import { readJsonBody } from "@/lib/http";
 
+/** Nunca se devuelve el apiKey/apiSecret al cliente: sólo si están cargados. */
+async function tieneCredencialesFudo(localId: string): Promise<boolean> {
+  const local = await db.local.findUnique({
+    where: { id: localId },
+    select: { fudoApiKey: true, fudoApiSecret: true },
+  });
+  return Boolean(local?.fudoApiKey && local?.fudoApiSecret);
+}
+
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireEncargadoApi();
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const { id } = await params;
-  const local = await db.local.findUnique({ where: { id } });
+  const local = await db.local.findUnique({
+    where: { id },
+    omit: { fudoApiKey: true, fudoApiSecret: true },
+  });
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 404 });
 
-  return NextResponse.json({ local });
+  return NextResponse.json({
+    local: { ...local, fudoConfigurado: await tieneCredencialesFudo(id) },
+  });
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -30,6 +44,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     verificarRostro?: boolean;
     rostroTolerancia?: number;
     multiplicadorFeriado?: number;
+    fudoApiKey?: string;
+    fudoApiSecret?: string;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
@@ -58,7 +74,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "El multiplicador debe ser al menos 1" }, { status: 400 });
   }
 
-  const local = await db.local.update({
+  await db.local.update({
     where: { id },
     data: {
       ...(body.nombre !== undefined ? { nombre: body.nombre.trim() } : {}),
@@ -73,8 +89,17 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(body.multiplicadorFeriado !== undefined
         ? { multiplicadorFeriado: body.multiplicadorFeriado }
         : {}),
+      ...(body.fudoApiKey !== undefined ? { fudoApiKey: body.fudoApiKey.trim() || null } : {}),
+      ...(body.fudoApiSecret !== undefined ? { fudoApiSecret: body.fudoApiSecret.trim() || null } : {}),
     },
   });
 
-  return NextResponse.json({ local });
+  const local = await db.local.findUniqueOrThrow({
+    where: { id },
+    omit: { fudoApiKey: true, fudoApiSecret: true },
+  });
+
+  return NextResponse.json({
+    local: { ...local, fudoConfigurado: await tieneCredencialesFudo(id) },
+  });
 }

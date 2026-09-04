@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Crosshair, Save } from "lucide-react";
+import { ArrowLeft, Crosshair, RefreshCw, Save } from "lucide-react";
 import {
+  Badge,
   Button,
   Card,
   Checkbox,
@@ -27,6 +28,8 @@ type Local = {
   verificarRostro: boolean;
   rostroTolerancia: number;
   multiplicadorFeriado: number;
+  fudoConfigurado: boolean;
+  demandaSincronizadaEn: string | null;
 };
 
 export default function LocalDetalleClient({ localId }: { localId: string }) {
@@ -46,7 +49,14 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
   const [error, setError] = useState("");
   const [guardado, setGuardado] = useState(false);
 
-  useEffect(() => {
+  const [fudoApiKey, setFudoApiKey] = useState("");
+  const [fudoApiSecret, setFudoApiSecret] = useState("");
+  const [guardandoFudo, setGuardandoFudo] = useState(false);
+  const [errorFudo, setErrorFudo] = useState("");
+  const [sincronizando, setSincronizando] = useState(false);
+  const [resultadoSync, setResultadoSync] = useState("");
+
+  function cargar() {
     fetch(`/api/locales/${localId}`)
       .then((r) => r.json())
       .then((d) => {
@@ -64,7 +74,56 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
         setRostroTolerancia(String(l.rostroTolerancia));
         setMultiplicadorFeriado(String(l.multiplicadorFeriado));
       });
+  }
+
+  useEffect(() => {
+    cargar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [localId]);
+
+  async function guardarFudo(e: React.FormEvent) {
+    e.preventDefault();
+    setErrorFudo("");
+    setResultadoSync("");
+    if (!fudoApiKey.trim() || !fudoApiSecret.trim()) {
+      return setErrorFudo("Cargá los dos campos");
+    }
+    setGuardandoFudo(true);
+    const res = await fetch(`/api/locales/${localId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fudoApiKey, fudoApiSecret }),
+    });
+    const data = await res.json();
+    setGuardandoFudo(false);
+    if (!res.ok) return setErrorFudo(data.error ?? "No se pudo guardar");
+    setFudoApiKey("");
+    setFudoApiSecret("");
+    cargar();
+  }
+
+  async function quitarFudo() {
+    setErrorFudo("");
+    setResultadoSync("");
+    await fetch(`/api/locales/${localId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fudoApiKey: "", fudoApiSecret: "" }),
+    });
+    cargar();
+  }
+
+  async function sincronizarAhora() {
+    setErrorFudo("");
+    setResultadoSync("");
+    setSincronizando(true);
+    const res = await fetch(`/api/locales/${localId}/demanda/sync`, { method: "POST" });
+    const data = await res.json();
+    setSincronizando(false);
+    if (!res.ok) return setErrorFudo(data.error ?? "No se pudo sincronizar");
+    setResultadoSync(`Listo: ${data.ventasProcesadas} ventas de los últimos 90 días, ${data.franjas} franjas día×hora.`);
+    cargar();
+  }
 
   function usarUbicacionActual() {
     setError("");
@@ -280,6 +339,72 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
           {guardado && <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">Guardado.</p>}
         </div>
       </form>
+
+      <Card>
+        <SectionTitle
+          action={
+            <Badge tone={local.fudoConfigurado ? "emerald" : "slate"}>
+              {local.fudoConfigurado ? "Configurado" : "Sin configurar"}
+            </Badge>
+          }
+        >
+          Integración con Fudo
+        </SectionTitle>
+        <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+          Con las credenciales de la cuenta de Fudo de esta sucursal, el mapa de calor de demanda
+          (Turnos → Semana) se recalcula solo con los últimos 90 días de ventas — sin subir un
+          Excel a mano. Cada sucursal es una cuenta de Fudo separada.
+        </p>
+
+        {local.fudoConfigurado && (
+          <p className="mb-4 text-sm text-slate-600 dark:text-[#c1cbc6]">
+            Última sincronización:{" "}
+            {local.demandaSincronizadaEn
+              ? new Date(local.demandaSincronizadaEn).toLocaleString("es-AR")
+              : "todavía no corrió"}
+          </p>
+        )}
+
+        <form onSubmit={guardarFudo} className="flex flex-col gap-3">
+          <div>
+            <Label>API Key</Label>
+            <Input
+              value={fudoApiKey}
+              onChange={(e) => setFudoApiKey(e.target.value)}
+              placeholder={local.fudoConfigurado ? "•••••••• (ya cargada)" : "Se genera en Fudo → Administración → Usuarios"}
+            />
+          </div>
+          <div>
+            <Label>API Secret</Label>
+            <Input
+              type="password"
+              value={fudoApiSecret}
+              onChange={(e) => setFudoApiSecret(e.target.value)}
+              placeholder={local.fudoConfigurado ? "•••••••• (ya cargada)" : "Se muestra una sola vez al generarla"}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button type="submit" disabled={guardandoFudo} variant="ghost">
+              {guardandoFudo ? "Guardando…" : local.fudoConfigurado ? "Reemplazar credenciales" : "Guardar credenciales"}
+            </Button>
+            {local.fudoConfigurado && (
+              <>
+                <Button type="button" onClick={sincronizarAhora} disabled={sincronizando}>
+                  <RefreshCw size={16} />
+                  {sincronizando ? "Sincronizando…" : "Sincronizar ahora"}
+                </Button>
+                <Button type="button" variant="danger" onClick={quitarFudo}>
+                  Quitar credenciales
+                </Button>
+              </>
+            )}
+          </div>
+          <ErrorText>{errorFudo}</ErrorText>
+          {resultadoSync && (
+            <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">{resultadoSync}</p>
+          )}
+        </form>
+      </Card>
 
       <HorarioSemanal localId={localId} />
       <CategoriasLocal localId={localId} />

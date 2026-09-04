@@ -90,6 +90,14 @@ model Local {
   /// para todo el negocio, pero cada local puede pagarlo distinto).
   multiplicadorFeriado Float @default(2)
 
+  /// Credenciales de la cuenta de Fudo DE ESTE LOCAL (cada sucursal es una
+  /// cuenta separada). Null hasta que el admin las carga. Nunca se devuelven
+  /// en una respuesta de API — sólo se usan server-side para sincronizar.
+  fudoApiKey    String?
+  fudoApiSecret String?
+  /// Último sync exitoso del mapa de calor de demanda. Null si nunca corrió.
+  demandaSincronizadaEn DateTime?
+
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
   turnos      Turno[]
