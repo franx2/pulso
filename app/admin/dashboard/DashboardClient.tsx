@@ -29,6 +29,7 @@ type LocalDash = {
   porMedioPago: Mapa;
   porCanal: Mapa;
   porCategoria: Mapa;
+  descuentosPorCaja: Mapa;
   topProductos: { nombre: string; valor: number }[];
 };
 type Dash = {
@@ -314,6 +315,25 @@ export default function DashboardClient() {
                   <Reparto titulo="Medios de pago" datos={l.porMedioPago} />
                   <Reparto titulo="Categorías" datos={l.porCategoria} />
                 </div>
+
+                {Object.keys(l.descuentosPorCaja).length > 0 && (
+                  <div className="flex flex-col gap-1.5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-[#5d6d67]">
+                      Descuentos por caja
+                    </p>
+                    {Object.entries(l.descuentosPorCaja)
+                      .sort((a, b) => b[1] - a[1])
+                      .map(([caja, monto]) => (
+                        <div key={caja} className="flex items-baseline justify-between gap-2 text-sm">
+                          <span className="truncate text-slate-600 dark:text-[#c1cbc6]">{caja}</span>
+                          <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                            {plata(monto)}
+                            {l.descuentos > 0 && ` · ${((monto / l.descuentos) * 100).toFixed(0)}%`}
+                          </span>
+                        </div>
+                      ))}
+                  </div>
+                )}
 
                 {l.topProductos.length > 0 && (
                   <div className="flex flex-col gap-1.5">

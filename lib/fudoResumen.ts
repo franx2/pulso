@@ -1,8 +1,9 @@
 import { db } from "@/lib/db";
-import { FudoError, obtenerTokenFudo } from "@/lib/fudo";
+import { FudoError, obtenerCajas, obtenerTokenFudo } from "@/lib/fudo";
 import {
   agregarPorDia,
   claveDiaAR,
+  type CajaCruda,
   type CategoriaCruda,
   type DescuentoCrudo,
   type FilaResumen,
@@ -42,7 +43,7 @@ async function traerVentasConDetalle(token: string, desde: Date, hasta: Date) {
     const params = new URLSearchParams({
       "filter[createdAt]": `and(gte.${iso(desde)},lte.${iso(hasta)})`,
       "filter[saleState]": "in.(CLOSED)",
-      "fields[sale]": "createdAt,total,people,saleType,items,payments,discounts",
+      "fields[sale]": "createdAt,total,people,saleType,items,payments,discounts,cashRegister",
       include: "items.product,payments.paymentMethod,discounts",
       "page[size]": String(TAMANO_PAGINA),
       "page[number]": String(pagina),
@@ -160,12 +161,14 @@ export async function sincronizarResumenLocal(
   const desde = new Date(hasta.getTime() - dias * 86400000);
   const token = await obtenerTokenFudo(local.fudoApiKey, local.fudoApiSecret);
 
-  const [detalle, categorias, anulaciones, gastos] = await Promise.all([
+  const [detalle, categorias, cajas, anulaciones, gastos] = await Promise.all([
     traerVentasConDetalle(token, desde, hasta),
     traerCategorias(token),
+    obtenerCajas(token).catch((): { id: string; nombre: string }[] => []),
     traerAnulacionesPorDia(token, desde, hasta),
     traerGastosPorDia(token, desde, hasta),
   ]);
+  const cajasCrudas: CajaCruda[] = cajas.map((c) => ({ id: c.id, attributes: { name: c.nombre } }));
 
   const filas: FilaResumen[] = agregarPorDia({
     ventas: detalle.ventas,
@@ -175,6 +178,7 @@ export async function sincronizarResumenLocal(
     pagos: [...detalle.pagos.values()],
     mediosPago: [...detalle.mediosPago.values()],
     descuentos: [...detalle.descuentos.values()],
+    cajas: cajasCrudas,
   });
 
   // Un día puede tener anulaciones o gastos sin ninguna venta cerrada: esos
@@ -196,6 +200,7 @@ export async function sincronizarResumenLocal(
       porMedioPago: f?.porMedioPago ?? {},
       porCanal: f?.porCanal ?? {},
       porCategoria: f?.porCategoria ?? {},
+      descuentosPorCaja: f?.descuentosPorCaja ?? {},
       topProductos: f?.topProductos ?? [],
     };
     await db.resumenDiario.upsert({

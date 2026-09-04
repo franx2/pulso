@@ -162,6 +162,9 @@ model ResumenDiario {
   porCanal     Json?
   /// {"CAFETERIA": 12345, "BEBIDAS Y JUGOS": 6789, ...}
   porCategoria Json?
+  /// Descuentos por caja — en esta cuenta de Fudo cada caja es una persona,
+  /// así que esto responde "quién descontó": {"Antonella": 12345}
+  descuentosPorCaja Json?
   /// [{"nombre": "PROMO LAMINATO", "cantidad": 12, "facturacion": 117600}]
   topProductos Json?
 

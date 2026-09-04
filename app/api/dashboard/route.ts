@@ -20,6 +20,7 @@ type Acumulado = {
   porMedioPago: Mapa;
   porCanal: Mapa;
   porCategoria: Mapa;
+  descuentosPorCaja: Mapa;
   productos: Mapa;
 };
 
@@ -35,6 +36,7 @@ const vacio = (): Acumulado => ({
   porMedioPago: {},
   porCanal: {},
   porCategoria: {},
+  descuentosPorCaja: {},
   productos: {},
 });
 
@@ -57,6 +59,7 @@ type FilaDb = {
   porMedioPago: unknown;
   porCanal: unknown;
   porCategoria: unknown;
+  descuentosPorCaja: unknown;
   topProductos: unknown;
 };
 
@@ -74,6 +77,7 @@ function acumular(filas: FilaDb[]): Acumulado {
     sumarMapa(a.porMedioPago, f.porMedioPago);
     sumarMapa(a.porCanal, f.porCanal);
     sumarMapa(a.porCategoria, f.porCategoria);
+    sumarMapa(a.descuentosPorCaja, f.descuentosPorCaja);
     // Los top diarios se suman por nombre: no es el ranking exacto del
     // período (un producto que nunca entró al top 20 de ningún día queda
     // afuera), pero para "qué se vende" alcanza y evita guardar todo.
@@ -161,6 +165,7 @@ export async function GET(request: Request) {
       porMedioPago: actual.porMedioPago,
       porCanal: actual.porCanal,
       porCategoria: actual.porCategoria,
+      descuentosPorCaja: actual.descuentosPorCaja,
       topProductos: top(actual.productos, 10),
       promedioDiarioHistorico,
       promedioDiarioActual: actual.ventas / dias,

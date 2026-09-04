@@ -20,8 +20,10 @@ export type VentaCruda = {
     items?: { data?: { id: string }[] };
     payments?: { data?: { id: string }[] };
     discounts?: { data?: { id: string }[] };
+    cashRegister?: { data?: { id: string } | null };
   };
 };
+export type CajaCruda = { id: string; attributes: { name: string } };
 export type ItemCrudo = {
   id: string;
   attributes: { price: number; quantity: number; canceled: boolean | null };
@@ -52,6 +54,9 @@ export type FilaResumen = {
   porMedioPago: Record<string, number>;
   porCanal: Record<string, number>;
   porCategoria: Record<string, number>;
+  /** Descuentos por caja, que en esta cuenta de Fudo es una persona: es la
+   * respuesta a "quién lo descontó", no sólo cuánto. */
+  descuentosPorCaja: Record<string, number>;
   topProductos: { nombre: string; cantidad: number; facturacion: number }[];
 };
 
@@ -65,6 +70,7 @@ export function agregarPorDia(datos: {
   pagos: PagoCrudo[];
   mediosPago: MedioPagoCrudo[];
   descuentos: DescuentoCrudo[];
+  cajas?: CajaCruda[];
 }): FilaResumen[] {
   const itemPorId = new Map(datos.items.map((i) => [i.id, i]));
   const productoPorId = new Map(datos.productos.map((p) => [p.id, p]));
@@ -72,6 +78,7 @@ export function agregarPorDia(datos: {
   const pagoPorId = new Map(datos.pagos.map((p) => [p.id, p]));
   const medioPorId = new Map(datos.mediosPago.map((m) => [m.id, m.attributes.name]));
   const descuentoPorId = new Map(datos.descuentos.map((d) => [d.id, d]));
+  const cajaPorId = new Map((datos.cajas ?? []).map((c) => [c.id, c.attributes.name]));
 
   // Los productos se acumulan por día y recién al final se recorta el top:
   // recortar antes daría un ranking distinto según el orden de las ventas.
@@ -92,6 +99,7 @@ export function agregarPorDia(datos: {
         porMedioPago: {},
         porCanal: {},
         porCategoria: {},
+        descuentosPorCaja: {},
         topProductos: [],
         productos: new Map(),
       };
@@ -148,10 +156,13 @@ export function agregarPorDia(datos: {
       dia.porMedioPago[medio] = (dia.porMedioPago[medio] ?? 0) + pago.attributes.amount;
     }
 
+    const cajaId = v.relationships?.cashRegister?.data?.id;
+    const caja = (cajaId && cajaPorId.get(cajaId)) || "Sin caja";
     for (const ref of v.relationships?.discounts?.data ?? []) {
       const desc = descuentoPorId.get(ref.id);
       if (!desc || desc.attributes.canceled) continue;
       dia.descuentos += desc.attributes.amount;
+      dia.descuentosPorCaja[caja] = (dia.descuentosPorCaja[caja] ?? 0) + desc.attributes.amount;
     }
   }
 
