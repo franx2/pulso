@@ -1,7 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, KeyRound, Link as LinkIcon, Lock, Plus, Store, UserPlus, X } from "lucide-react";
+import {
+  Banknote,
+  ChevronDown,
+  ChevronRight,
+  KeyRound,
+  Link as LinkIcon,
+  Lock,
+  Plus,
+  Store,
+  UserPlus,
+  X,
+} from "lucide-react";
 import {
   Badge,
   Button,
@@ -57,6 +68,9 @@ export default function EmpleadosClient() {
   const [passwordGenerada, setPasswordGenerada] = useState<{ nombre: string; password: string } | null>(null);
   const [cargando, setCargando] = useState(false);
   const [abierto, setAbierto] = useState(false);
+  // Cerrado por local por defecto: con varias sucursales, ver todo el
+  // personal mezclado de entrada es más ruido que ayuda.
+  const [localesAbiertos, setLocalesAbiertos] = useState<Set<string>>(new Set());
 
   // Carga masiva de precio/hora: modo selección + valor a aplicar.
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
@@ -159,6 +173,15 @@ export default function EmpleadosClient() {
       return;
     }
     setPasswordGenerada({ nombre: e.nombre, password: data.password });
+  }
+
+  function toggleLocalAbierto(id: string) {
+    setLocalesAbiertos((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
   }
 
   function toggleExtra(id: string) {
@@ -359,14 +382,23 @@ export default function EmpleadosClient() {
         locales.map((local) => {
           const delLocal = gruposPorLocal.get(local.id) ?? [];
           if (delLocal.length === 0) return null;
+          const abierto = localesAbiertos.has(local.id);
           return (
             <div key={local.id}>
-              <SectionTitle>
-                <span className="inline-flex items-center gap-1.5">
-                  <Store size={14} />
-                  {local.nombre} ({delLocal.length})
-                </span>
-              </SectionTitle>
+              <button
+                type="button"
+                onClick={() => toggleLocalAbierto(local.id)}
+                className="flex w-full items-center gap-1.5 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412]"
+              >
+                {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                <SectionTitle>
+                  <span className="inline-flex items-center gap-1.5">
+                    <Store size={14} />
+                    {local.nombre} ({delLocal.length})
+                  </span>
+                </SectionTitle>
+              </button>
+              {abierto && (
               <div className="flex flex-col gap-2 md:gap-1.5">
                 {delLocal.map((e) => (
                   <Card key={e.id} className="flex flex-col gap-3 md:p-3">
@@ -486,6 +518,7 @@ export default function EmpleadosClient() {
                   </Card>
                 ))}
               </div>
+              )}
             </div>
           );
         })
