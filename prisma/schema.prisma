@@ -97,6 +97,8 @@ model Local {
   fudoApiSecret String?
   /// Último sync exitoso del mapa de calor de demanda. Null si nunca corrió.
   demandaSincronizadaEn DateTime?
+  /// Último sync exitoso del resumen diario que alimenta el dashboard.
+  resumenSincronizadoEn DateTime?
 
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
@@ -106,6 +108,7 @@ model Local {
   horarios    HorarioLocal[]
   categorias  Categoria[]
   demandas    DemandaHoraria[]
+  resumenes   ResumenDiario[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -123,6 +126,49 @@ model DemandaHoraria {
   ventasProm Float
 
   @@unique([localId, diaSemana, hora])
+}
+
+/// Una fila por local y día calendario (hora argentina), armada desde Fudo.
+/// El dashboard lee de acá y no de la API: un año de ventas son ~200 páginas
+/// paginadas, imposible de esperar en pantalla; además las alertas necesitan
+/// historia para comparar contra el promedio.
+model ResumenDiario {
+  id       String   @id @default(cuid())
+  local    Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId  String
+  fecha    DateTime @db.Date
+
+  ventas      Float @default(0)
+  /// Ventas cerradas del día (tickets).
+  tickets     Int   @default(0)
+  /// Suma de `people` de las ventas que lo traen (sólo salón; delivery y
+  /// takeaway vienen sin el dato).
+  personas    Int   @default(0)
+  descuentos  Float @default(0)
+  /// Facturación de las ventas anuladas (no está incluida en `ventas`).
+  anulaciones Float @default(0)
+  /// Gastos cargados en Fudo ese día (proveedores, servicios, retiros).
+  gastos      Float @default(0)
+
+  /// Costo de lo vendido, sumando el costo cargado en cada producto. Fudo
+  /// deja el costo en null cuando no lo cargaron: `costoIncompleto` avisa que
+  /// el margen que sale de acá es optimista, en vez de mostrarlo como cierto.
+  costo           Float   @default(0)
+  costoIncompleto Boolean @default(false)
+
+  /// {"Efectivo": 12345, "Tarj. Débito": 6789, ...}
+  porMedioPago Json?
+  /// {"EAT-IN": 12345, "TAKEAWAY": 6789, "DELIVERY": 0}
+  porCanal     Json?
+  /// {"CAFETERIA": 12345, "BEBIDAS Y JUGOS": 6789, ...}
+  porCategoria Json?
+  /// [{"nombre": "PROMO LAMINATO", "cantidad": 12, "facturacion": 117600}]
+  topProductos Json?
+
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([localId, fecha])
+  @@index([localId, fecha])
 }
 
 /// Calendario nacional de feriados, único para todo el negocio (cada local

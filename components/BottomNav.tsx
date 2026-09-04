@@ -1,7 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { Activity, BarChart3, CalendarDays, Clock, Settings, Users, Wallet, type LucideIcon } from "lucide-react";
+import {
+  Activity,
+  BarChart3,
+  CalendarDays,
+  Clock,
+  LayoutDashboard,
+  Settings,
+  Users,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import type { Rol } from "@/lib/session";
 
 export type NavActivo =
@@ -11,7 +21,8 @@ export type NavActivo =
   | "turnos"
   | "reportes"
   | "configuracion"
-  | "arqueos";
+  | "arqueos"
+  | "dashboard";
 
 type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol; grupo: string };
 
@@ -20,6 +31,7 @@ export const ITEMS: Item[] = [
   { key: "presencia", href: "/admin/presencia", Icon: Activity, label: "Presencia", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "turnos", href: "/admin/turnos", Icon: CalendarDays, label: "Turnos", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "arqueos", href: "/admin/arqueos", Icon: Wallet, label: "Arqueos", minimo: "ENCARGADO", grupo: "Operación" },
+  { key: "dashboard", href: "/admin/dashboard", Icon: LayoutDashboard, label: "Dashboard", minimo: "ADMIN", grupo: "Análisis" },
   { key: "reportes", href: "/admin/reportes", Icon: BarChart3, label: "Reportes", minimo: "ADMIN", grupo: "Análisis" },
   { key: "empleados", href: "/admin/empleados", Icon: Users, label: "Equipo", minimo: "ADMIN", grupo: "Gestión" },
   { key: "configuracion", href: "/admin/configuracion", Icon: Settings, label: "Ajustes", minimo: "ADMIN", grupo: "Gestión" },
