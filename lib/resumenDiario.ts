@@ -58,6 +58,16 @@ export type FilaResumen = {
    * respuesta a "quién lo descontó", no sólo cuánto. */
   descuentosPorCaja: Record<string, number>;
   topProductos: { nombre: string; cantidad: number; facturacion: number }[];
+  /** Todos los productos del día, no sólo el top: es lo que permite mirar los
+   * que MENOS salen y comparar el mismo producto entre sucursales. */
+  productos: {
+    fudoProductoId: string;
+    nombre: string;
+    categoria: string | null;
+    cantidad: number;
+    facturacion: number;
+    costo: number;
+  }[];
 };
 
 const TOP_PRODUCTOS = 20;
@@ -82,7 +92,15 @@ export function agregarPorDia(datos: {
 
   // Los productos se acumulan por día y recién al final se recorta el top:
   // recortar antes daría un ranking distinto según el orden de las ventas.
-  type Acumulador = FilaResumen & { productos: Map<string, { nombre: string; cantidad: number; facturacion: number }> };
+  type ProductoAcc = {
+    fudoProductoId: string;
+    nombre: string;
+    categoria: string | null;
+    cantidad: number;
+    facturacion: number;
+    costo: number;
+  };
+  type Acumulador = Omit<FilaResumen, "productos"> & { productos: Map<string, ProductoAcc> };
   const porDia = new Map<string, Acumulador>();
 
   const bucket = (fecha: string): Acumulador => {
@@ -124,13 +142,14 @@ export function agregarPorDia(datos: {
       // de "CORTADO x2 @9200" cierra en 9200, no en 18400. Multiplicar por la
       // cantidad duplicaba la facturación por producto y por categoría.
       const facturacion = item.attributes.price;
-      const producto = item.relationships?.product?.data?.id
-        ? productoPorId.get(item.relationships.product.data.id)
-        : undefined;
+      const productoId = item.relationships?.product?.data?.id;
+      const producto = productoId ? productoPorId.get(productoId) : undefined;
 
       // El costo del producto sí es unitario, así que acá la cantidad va.
+      let costoLinea = 0;
       if (producto?.attributes.cost != null) {
-        dia.costo += producto.attributes.cost * item.attributes.quantity;
+        costoLinea = producto.attributes.cost * item.attributes.quantity;
+        dia.costo += costoLinea;
       } else {
         // Un producto sin costo cargado hace que el margen del día quede
         // mejor de lo que es; se marca en vez de mentir por omisión.
@@ -142,10 +161,22 @@ export function agregarPorDia(datos: {
       dia.porCategoria[categoria] = (dia.porCategoria[categoria] ?? 0) + facturacion;
 
       const nombre = producto?.attributes.name ?? "Sin nombre";
-      const acc = dia.productos.get(nombre) ?? { nombre, cantidad: 0, facturacion: 0 };
+      // Se acumula por id de Fudo, no por nombre: dos productos distintos
+      // pueden llamarse igual, y el id es lo que después permite cruzar el
+      // mismo producto entre sucursales.
+      const clave = productoId ?? nombre;
+      const acc = dia.productos.get(clave) ?? {
+        fudoProductoId: clave,
+        nombre,
+        categoria: categoria === "SIN CATEGORÍA" ? null : categoria,
+        cantidad: 0,
+        facturacion: 0,
+        costo: 0,
+      };
       acc.cantidad += item.attributes.quantity;
       acc.facturacion += facturacion;
-      dia.productos.set(nombre, acc);
+      acc.costo += costoLinea;
+      dia.productos.set(clave, acc);
     }
 
     for (const ref of v.relationships?.payments?.data ?? []) {
@@ -167,11 +198,15 @@ export function agregarPorDia(datos: {
   }
 
   return [...porDia.values()]
-    .map(({ productos, ...fila }) => ({
-      ...fila,
-      topProductos: [...productos.values()]
-        .sort((a, b) => b.facturacion - a.facturacion)
-        .slice(0, TOP_PRODUCTOS),
-    }))
+    .map(({ productos, ...fila }) => {
+      const todos = [...productos.values()].sort((a, b) => b.facturacion - a.facturacion);
+      return {
+        ...fila,
+        topProductos: todos
+          .slice(0, TOP_PRODUCTOS)
+          .map(({ nombre, cantidad, facturacion }) => ({ nombre, cantidad, facturacion })),
+        productos: todos,
+      };
+    })
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
 }

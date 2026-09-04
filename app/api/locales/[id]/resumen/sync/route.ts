@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/session";
 import { sincronizarResumenLocal } from "@/lib/fudoResumen";
 
+/** Un local grande son ~10k ventas en 90 días y más de dos minutos de
+ * paginado: sin esto, Vercel corta la función antes de terminar. */
+export const maxDuration = 300;
+
 /** Sync manual del resumen diario que alimenta el dashboard. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminApi();

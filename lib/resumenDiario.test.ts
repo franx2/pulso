@@ -73,6 +73,13 @@ assert.deepStrictEqual(d3.topProductos, [
   { nombre: "JUGO", cantidad: 1, facturacion: 500 },
 ]);
 
+// El detalle completo lleva id y categoría, que es lo que permite cruzar el
+// mismo producto entre sucursales y mirar los que menos salen.
+assert.deepStrictEqual(d3.productos, [
+  { fudoProductoId: "p1", nombre: "CAFÉ", categoria: "CAFETERIA", cantidad: 2, facturacion: 1000, costo: 200 },
+  { fudoProductoId: "p2", nombre: "JUGO", categoria: "BEBIDAS Y JUGOS", cantidad: 1, facturacion: 500, costo: 0 },
+]);
+
 assert.strictEqual(d4.fecha, "2026-09-04");
 assert.strictEqual(d4.ventas, 800);
 assert.strictEqual(d4.personas, 0, "sin people (takeaway) suma cero, no rompe");

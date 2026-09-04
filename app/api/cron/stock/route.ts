@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { snapshotStockTodos } from "@/lib/fudoStock";
 
+/** Paginar la API de Fudo para varios locales lleva minutos, no segundos. */
+export const maxDuration = 300;
+
 /**
  * Foto diaria del stock de cada local, que es lo que arma la serie histórica
  * que Fudo no guarda. Correr UNA vez por día y a la misma hora (después del

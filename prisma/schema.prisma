@@ -110,6 +110,7 @@ model Local {
   demandas    DemandaHoraria[]
   resumenes   ResumenDiario[]
   stocks      StockDiario[]
+  productosDiarios ProductoDiario[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -173,6 +174,32 @@ model ResumenDiario {
 
   @@unique([localId, fecha])
   @@index([localId, fecha])
+}
+
+/// Una fila por producto vendido, por local y por día. `ResumenDiario` guarda
+/// sólo el top del día, que alcanza para "qué se vende" pero no para lo que
+/// pide un análisis serio: los que MENOS salen, el mismo producto comparado
+/// entre sucursales, o un rango de fechas cualquiera.
+model ProductoDiario {
+  id      String   @id @default(cuid())
+  local   Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+  fecha   DateTime @db.Date
+
+  fudoProductoId String
+  /// Desnormalizados: el histórico no puede depender de que el producto siga
+  /// existiendo en Fudo, ni de que la categoría no se haya renombrado.
+  producto       String
+  categoria      String?
+
+  cantidad    Float
+  facturacion Float
+  /// Costo de lo vendido según el costo cargado en Fudo (0 si no lo cargaron).
+  costo       Float @default(0)
+
+  @@unique([localId, fecha, fudoProductoId])
+  @@index([localId, fecha])
+  @@index([producto])
 }
 
 /// Foto diaria del stock de cada producto, para tener la serie que la API de

@@ -208,6 +208,25 @@ export async function sincronizarResumenLocal(
       create: { localId, fecha: fechaSql(dia), ...datos },
       update: datos,
     });
+
+    // El detalle por producto se reemplaza entero: borrar + insertar en lote
+    // es mucho más barato que un upsert por producto (son cientos por día).
+    await db.productoDiario.deleteMany({ where: { localId, fecha: fechaSql(dia) } });
+    if (f && f.productos.length > 0) {
+      await db.productoDiario.createMany({
+        data: f.productos.map((p) => ({
+          localId,
+          fecha: fechaSql(dia),
+          fudoProductoId: p.fudoProductoId,
+          producto: p.nombre,
+          categoria: p.categoria,
+          cantidad: p.cantidad,
+          facturacion: p.facturacion,
+          costo: p.costo,
+        })),
+        skipDuplicates: true,
+      });
+    }
   }
 
   await db.local.update({ where: { id: localId }, data: { resumenSincronizadoEn: new Date() } });

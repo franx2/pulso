@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { sincronizarResumenTodos } from "@/lib/fudoResumen";
 
+/** Paginar la API de Fudo para varios locales lleva minutos, no segundos. */
+export const maxDuration = 300;
+
 /**
  * Refresca el resumen diario de todos los locales con Fudo, para que el
  * dashboard abra con datos de hoy sin que nadie apriete nada.

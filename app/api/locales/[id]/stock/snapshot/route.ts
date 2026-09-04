@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { requireAdminApi } from "@/lib/session";
 import { snapshotStockLocal } from "@/lib/fudoStock";
 
+/** Paginar la API de Fudo para varios locales lleva minutos, no segundos. */
+export const maxDuration = 300;
+
 /** Foto manual del stock. Para la serie conviene el cron a hora fija. */
 export async function POST(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminApi();
