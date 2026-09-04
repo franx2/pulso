@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Download, FileSpreadsheet, Printer, Search } from "lucide-react";
 import { Badge, Button, Card, EmptyState, Input, Label, PageTitle, Select, Spinner } from "@/components/ui";
+import CostoLaboral from "./CostoLaboral";
 
 type Empleado = { id: string; nombre: string };
 type Local = { id: string; nombre: string };
@@ -148,6 +149,17 @@ export default function ReportesClient() {
           </a>
         </div>
       </Card>
+
+      {!cargando && hayMonto && (
+        <CostoLaboral
+          costoLaboral={totalMonto}
+          empleadosSinPrecio={filas.filter((f) => f.montoAPagar == null).length}
+          desde={desde}
+          hasta={hasta}
+          localId={localId}
+          locales={locales}
+        />
+      )}
 
       {cargando ? (
         <Spinner />

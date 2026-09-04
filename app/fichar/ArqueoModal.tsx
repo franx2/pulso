@@ -9,10 +9,17 @@ import { Button, ErrorText, Input, Label, Modal } from "@/components/ui";
 export default function ArqueoModal({
   fichajeId,
   efectivoEsperado,
+  fondoInicial,
+  efectivoVendido,
+  gastosEfectivo,
   onListo,
 }: {
   fichajeId: string;
   efectivoEsperado: number;
+  /** Con caja vinculada, el desglose (fondo + vendido − gastos) del total. */
+  fondoInicial?: number | null;
+  efectivoVendido?: number | null;
+  gastosEfectivo?: number | null;
   onListo: () => void;
 }) {
   const [contado, setContado] = useState("");
@@ -44,9 +51,20 @@ export default function ArqueoModal({
   return (
     <Modal title="Arqueo de caja" onClose={onListo}>
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-[#c1cbc6]">
-          <Wallet size={16} />
-          Según Fudo, se cobraron ${efectivoEsperado.toFixed(2)} en efectivo en tu turno.
+        <div className="flex flex-col gap-1 text-sm text-slate-600 dark:text-[#c1cbc6]">
+          <div className="flex items-center gap-2">
+            <Wallet size={16} />
+            Debería haber ${efectivoEsperado.toFixed(2)} en la caja.
+          </div>
+          {fondoInicial != null && efectivoVendido != null && (
+            <p className="pl-6 text-xs text-slate-400 dark:text-[#74817b]">
+              Fondo inicial ${fondoInicial.toFixed(2)} + vendido en efectivo $
+              {efectivoVendido.toFixed(2)}
+              {gastosEfectivo != null && gastosEfectivo > 0 && (
+                <> − gastos pagados de la caja ${gastosEfectivo.toFixed(2)}</>
+              )}
+            </p>
+          )}
         </div>
 
         <div>

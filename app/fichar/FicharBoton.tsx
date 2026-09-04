@@ -7,6 +7,7 @@ import MisSolicitudes from "./MisSolicitudes";
 import RegistrarRostro from "./RegistrarRostro";
 import VerificarRostroModal, { type ResultadoVerificacion } from "./VerificarRostroModal";
 import ArqueoModal from "./ArqueoModal";
+import FondoInicialModal from "./FondoInicialModal";
 import { formatearFechaSql } from "@/lib/fechas";
 import { precargarModelos } from "@/lib/rostroCliente";
 
@@ -58,7 +59,14 @@ export default function FicharBoton({
   });
   const [verificando, setVerificando] = useState(false);
   const resolverVerificacion = useRef<((r: ResultadoVerificacion) => void) | null>(null);
-  const [arqueo, setArqueo] = useState<{ fichajeId: string; efectivoEsperado: number } | null>(null);
+  const [arqueo, setArqueo] = useState<{
+    fichajeId: string;
+    efectivoEsperado: number;
+    fondoInicial: number | null;
+    efectivoVendido: number | null;
+    gastosEfectivo: number | null;
+  } | null>(null);
+  const [fondoInicialPendiente, setFondoInicialPendiente] = useState<string | null>(null);
 
   /** Abre el modal de cámara y devuelve el resultado cuando termina de analizar. */
   function pedirVerificacionRostro(): Promise<ResultadoVerificacion> {
@@ -130,7 +138,15 @@ export default function FicharBoton({
       );
     }
     if (data.fichaje?.efectivoEsperado != null) {
-      setArqueo({ fichajeId: data.fichaje.id, efectivoEsperado: data.fichaje.efectivoEsperado });
+      setArqueo({
+        fichajeId: data.fichaje.id,
+        efectivoEsperado: data.fichaje.efectivoEsperado,
+        fondoInicial: data.fondoInicial ?? null,
+        efectivoVendido: data.efectivoVendido ?? null,
+        gastosEfectivo: data.gastosEfectivo ?? null,
+      });
+    } else if (data.fichaje?.tipo === "ENTRADA" && data.usaCaja) {
+      setFondoInicialPendiente(data.fichaje.id);
     }
     await cargar();
     setMarcando(false);
@@ -211,10 +227,20 @@ export default function FicharBoton({
 
       {rostro.exigido && <RegistrarRostro registrado={rostro.registrado} onListo={cargar} />}
 
+      {fondoInicialPendiente && (
+        <FondoInicialModal
+          fichajeId={fondoInicialPendiente}
+          onListo={() => setFondoInicialPendiente(null)}
+        />
+      )}
+
       {arqueo && (
         <ArqueoModal
           fichajeId={arqueo.fichajeId}
           efectivoEsperado={arqueo.efectivoEsperado}
+          fondoInicial={arqueo.fondoInicial}
+          efectivoVendido={arqueo.efectivoVendido}
+          gastosEfectivo={arqueo.gastosEfectivo}
           onListo={() => setArqueo(null)}
         />
       )}

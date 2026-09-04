@@ -8,7 +8,12 @@ import { comoFechaSql, inicioDelDia } from "@/lib/fechas";
 import { bytesADescriptor, descriptorDesdeJson, distanciaRostros } from "@/lib/rostro";
 import { leerDataUrl, type ImagenSubida } from "@/lib/dataUrl";
 import type { VerificacionRostro } from "@prisma/client";
-import { obtenerEfectivoCobrado, obtenerEfectivoCobradoDeCaja, obtenerTokenFudo } from "@/lib/fudo";
+import {
+  obtenerEfectivoCobrado,
+  obtenerEfectivoCobradoDeCaja,
+  obtenerGastosEnEfectivoDeCaja,
+  obtenerTokenFudo,
+} from "@/lib/fudo";
 
 const inicioDeHoy = () => inicioDelDia();
 
@@ -18,6 +23,14 @@ async function turnoDeHoy(empleadoId: string) {
     where: { empleadoId, fecha: comoFechaSql() },
     orderBy: { inicioAt: "asc" },
   });
+}
+
+/** Si el local tiene Fudo y el empleado tiene su caja vinculada, se le pide
+ * el fondo inicial al abrir y el arqueo de salida lo suma a lo vendido —
+ * si no, no aplica (el respaldo sin caja vinculada no modela un fondo). */
+async function fudoCajaDelEmpleado(empleadoId: string): Promise<string | null> {
+  const e = await db.empleado.findUnique({ where: { id: empleadoId }, select: { fudoCajaId: true } });
+  return e?.fudoCajaId ?? null;
 }
 
 export async function GET() {
@@ -36,12 +49,15 @@ export async function GET() {
 
   const estado = calcularHoras(fichajesHoy, { descuentaDescanso: local?.descuentaDescanso });
 
+  const usaCaja = local?.fudoApiKey ? Boolean(await fudoCajaDelEmpleado(session.empleadoId!)) : false;
+
   return NextResponse.json({
     fichajesHoy,
     proximoTipo: proximoFichaje(estado),
     puedeDescansar: estado.abierto || estado.enDescanso,
     horasTrabajadas: estado.horasTrabajadas,
     turno: turno && { horaInicio: turno.horaInicio, horaFin: turno.horaFin },
+    usaCaja,
   });
 }
 
@@ -116,13 +132,34 @@ export async function POST(request: Request) {
       ? "DESCANSO_INICIO"
       : automatico;
 
+  const cajaId = local.fudoApiKey ? await fudoCajaDelEmpleado(session.empleadoId!) : null;
+  // Al abrir con caja vinculada, se le pide el fondo inicial aparte (ver
+  // /api/fichajes/[id]/fondo-inicial) — acá sólo se avisa que corresponde.
+  const usaCaja = tipo === "ENTRADA" && Boolean(cajaId);
+
   let efectivoEsperado: number | null = null;
+  let fondoInicial: number | null = null;
+  let efectivoVendido: number | null = null;
+  let gastosEfectivo: number | null = null;
   if (tipo === "SALIDA" && estado.entrada && local.fudoApiKey) {
-    const empleado = await db.empleado.findUnique({
-      where: { id: session.empleadoId! },
-      select: { fudoCajaId: true },
-    });
-    efectivoEsperado = await calcularEfectivoEsperado(local, estado.entrada, empleado?.fudoCajaId ?? null);
+    if (cajaId) {
+      // El fondo vive en el fichaje de ENTRADA de hoy: sin él no se inventa
+      // un esperado que subestimaría lo que debería haber en la caja.
+      const entradaFichaje = fichajesHoy.find((f) => f.tipo === "ENTRADA");
+      fondoInicial = entradaFichaje?.fondoInicial ?? null;
+      if (fondoInicial != null) {
+        const arqueo = await calcularArqueoDeCaja(local, estado.entrada, cajaId);
+        if (arqueo) {
+          efectivoVendido = arqueo.vendido;
+          gastosEfectivo = arqueo.gastos;
+          // Lo que tiene que haber en el cajón: lo que había + lo que entró
+          // en efectivo − lo que salió pagando algo desde la caja.
+          efectivoEsperado = fondoInicial + arqueo.vendido - arqueo.gastos;
+        }
+      }
+    } else {
+      efectivoEsperado = await calcularEfectivoEsperado(local, estado.entrada);
+    }
   }
 
   const fichaje = await db.fichaje.create({
@@ -141,7 +178,14 @@ export async function POST(request: Request) {
     },
   });
 
-  return NextResponse.json({ fichaje, rostro: rostro.resultado });
+  return NextResponse.json({
+    fichaje,
+    rostro: rostro.resultado,
+    usaCaja,
+    fondoInicial,
+    efectivoVendido,
+    gastosEfectivo,
+  });
 }
 
 /**
@@ -203,27 +247,43 @@ async function verificarRostro({
 }
 
 /**
- * Efectivo que Fudo registró cobrado entre la entrada y esta salida, para el
- * arqueo de caja. Sólo corre si el local tiene Fudo configurado; si la
- * consulta falla (Fudo caído, credenciales vencidas) no bloquea el fichaje,
- * simplemente no se arma el arqueo de esta salida.
- *
- * Si el empleado tiene su caja de Fudo vinculada (`fudoCajaId`), se suma
- * SÓLO lo que pasó por esa caja — mucho más preciso que sumar todo el
- * efectivo del local mientras estuvo fichado, que es el respaldo cuando
- * todavía no se vinculó.
+ * Arqueo de la caja del empleado entre su entrada y esta salida: lo que
+ * entró en efectivo y lo que salió pagando gastos desde ese mismo cajón.
+ * Si Fudo falla (caído, credenciales vencidas) devuelve null y el fichaje
+ * sigue igual — no se arma el arqueo, pero nunca se bloquea la salida.
+ */
+async function calcularArqueoDeCaja(
+  local: { fudoApiKey: string | null; fudoApiSecret: string | null },
+  entrada: Date,
+  fudoCajaId: string
+): Promise<{ vendido: number; gastos: number } | null> {
+  if (!local.fudoApiKey || !local.fudoApiSecret) return null;
+  try {
+    const token = await obtenerTokenFudo(local.fudoApiKey, local.fudoApiSecret);
+    const hasta = new Date();
+    const [vendido, gastos] = await Promise.all([
+      obtenerEfectivoCobradoDeCaja(token, entrada, hasta, fudoCajaId),
+      obtenerGastosEnEfectivoDeCaja(token, entrada, hasta, fudoCajaId),
+    ]);
+    return { vendido, gastos };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Respaldo para cuando el empleado todavía no tiene su caja de Fudo
+ * vinculada: suma todo el efectivo cobrado en el local mientras estuvo
+ * fichado. Es una aproximación — no distingue de quién fue la caja ni
+ * descuenta gastos — y por eso tampoco modela un fondo inicial.
  */
 async function calcularEfectivoEsperado(
   local: { fudoApiKey: string | null; fudoApiSecret: string | null },
-  entrada: Date,
-  fudoCajaId: string | null
+  entrada: Date
 ): Promise<number | null> {
   if (!local.fudoApiKey || !local.fudoApiSecret) return null;
   try {
     const token = await obtenerTokenFudo(local.fudoApiKey, local.fudoApiSecret);
-    if (fudoCajaId) {
-      return await obtenerEfectivoCobradoDeCaja(token, entrada, new Date(), fudoCajaId);
-    }
     return await obtenerEfectivoCobrado(token, entrada, new Date());
   } catch {
     return null;

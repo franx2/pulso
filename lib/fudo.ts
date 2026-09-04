@@ -324,3 +324,80 @@ export async function obtenerEfectivoCobradoDeCaja(
 
   return sumarEfectivoDeCaja(ventas, pagos, [...metodosVistos.values()], cajaId);
 }
+
+type GastoJson = {
+  attributes: { amount: number; canceled: boolean | null; useInCashCount?: boolean | null };
+  relationships?: { paymentMethod?: { data?: { id: string } | null } };
+};
+type MetodoPagoConCodigoJson = { id: string; attributes: { name: string; code?: string | null } };
+
+/** Un método de pago es efectivo si Fudo lo marca con code "cash" (más
+ * confiable que el nombre, que cada local renombra a gusto); si el endpoint
+ * no devuelve `code`, se cae al nombre conocido. */
+function esEfectivo(metodo: MetodoPagoConCodigoJson | undefined): boolean {
+  if (!metodo) return false;
+  if (metodo.attributes.code) return metodo.attributes.code === "cash";
+  return NOMBRES_EFECTIVO.has(metodo.attributes.name);
+}
+
+/**
+ * Gastos pagados en efectivo desde una caja: plata que salió del cajón
+ * (pago a un proveedor, retiro) y que por lo tanto NO tiene que estar al
+ * cerrar. Sin esto, el arqueo marca faltante cada vez que alguien pagó algo
+ * de la caja.
+ *
+ * `useInCashCount` es la marca de Fudo para "esto entra en el arqueo": si
+ * viene en false se respeta y no se descuenta; si no viene, un gasto en
+ * efectivo se descuenta igual, porque la plata salió del cajón igual.
+ */
+export function sumarGastosEnEfectivo(gastos: GastoJson[], metodos: MetodoPagoConCodigoJson[]): number {
+  const metodoPorId = new Map(metodos.map((m) => [m.id, m]));
+  let total = 0;
+  for (const g of gastos) {
+    if (g.attributes.canceled) continue;
+    if (g.attributes.useInCashCount === false) continue;
+    const metodoId = g.relationships?.paymentMethod?.data?.id;
+    if (esEfectivo(metodoId ? metodoPorId.get(metodoId) : undefined)) total += g.attributes.amount;
+  }
+  return total;
+}
+
+/** Gastos en efectivo cargados a una caja entre `desde` y `hasta`. */
+export async function obtenerGastosEnEfectivoDeCaja(
+  token: string,
+  desde: Date,
+  hasta: Date,
+  cajaId: string
+): Promise<number> {
+  const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+  const gastos: GastoJson[] = [];
+  const metodosVistos = new Map<string, MetodoPagoConCodigoJson>();
+  let pagina = 1;
+
+  for (;;) {
+    const params = new URLSearchParams({
+      "filter[cashRegisterId]": `eq.${cajaId}`,
+      "filter[createdAt]": `and(gte.${isoSinMilisegundos(desde)},lte.${isoSinMilisegundos(hasta)})`,
+      "filter[canceled]": "neq.true",
+      "fields[expense]": "amount,canceled,useInCashCount,paymentMethod,cashRegister",
+      include: "paymentMethod",
+      "fields[paymentMethod]": "code,name",
+      "page[size]": String(TAMANO_PAGINA),
+      "page[number]": String(pagina),
+    });
+    const res = await fetch(`${API_URL}/expenses?${params}`, { headers });
+    if (!res.ok) {
+      throw new FudoError(`Fudo devolvió un error al listar gastos (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    const lote = (data.data ?? []) as GastoJson[];
+    gastos.push(...lote);
+    for (const m of (data.included ?? []) as MetodoPagoConCodigoJson[]) metodosVistos.set(m.id, m);
+
+    if (lote.length < TAMANO_PAGINA) break;
+    pagina++;
+    if (pagina > 200) break;
+  }
+
+  return sumarGastosEnEfectivo(gastos, [...metodosVistos.values()]);
+}

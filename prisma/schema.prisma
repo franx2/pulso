@@ -390,9 +390,11 @@ model Fichaje {
   rostroFoto      Bytes?
   rostroFotoTipo  String?
 
-  /// Arqueo de caja, sólo en SALIDA y sólo cuando el local tiene Fudo
-  /// configurado: efectivo que Fudo registró como cobrado entre la entrada y
-  /// esta salida.
+  /// Arqueo de caja, sólo cuando el empleado tiene una caja de Fudo
+  /// vinculada. En la ENTRADA: cuánto había en la caja al abrir (fondo).
+  /// En la SALIDA: fondo inicial + lo que Fudo registró vendido en efectivo
+  /// entre la entrada y esta salida — lo que debería haber en la caja.
+  fondoInicial     Float?
   efectivoEsperado Float?
   /// Lo que el empleado contó y cargó al fichar la salida.
   efectivoContado  Float?

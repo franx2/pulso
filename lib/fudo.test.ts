@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { sumarPagosEnEfectivo, resumirVentas, sumarEfectivoDeCaja } from "./fudo";
+import { sumarPagosEnEfectivo, resumirVentas, sumarEfectivoDeCaja, sumarGastosEnEfectivo } from "./fudo";
 
 const metodos = [
   { id: "1", attributes: { name: "Efectivo" } },
@@ -66,5 +66,29 @@ assert.strictEqual(
   "sólo efectivo de ventas de ESA caja, ignora otra caja/tarjeta/sin caja"
 );
 assert.strictEqual(sumarEfectivoDeCaja(ventasConCaja, pagosConId, metodos, "999"), 0, "caja sin ventas, total 0");
+
+// Gastos pagados desde la caja: salen del cajón, no tienen que estar al cerrar.
+const metodosConCodigo = [
+  { id: "1", attributes: { name: "Efectivo", code: "cash" } },
+  { id: "3", attributes: { name: "Tarj. Crédito", code: "credit-card" } },
+  { id: "8", attributes: { name: "Transferencia", code: "transferencia" } },
+];
+const gastos = [
+  { attributes: { amount: 3000, canceled: null, useInCashCount: true }, relationships: { paymentMethod: { data: { id: "1" } } } },
+  // Efectivo sin la marca: sale del cajón igual, se descuenta.
+  { attributes: { amount: 500, canceled: null }, relationships: { paymentMethod: { data: { id: "1" } } } },
+  // Marcado explícitamente fuera del arqueo: se respeta.
+  { attributes: { amount: 9999, canceled: null, useInCashCount: false }, relationships: { paymentMethod: { data: { id: "1" } } } },
+  // Pagado por transferencia: no tocó la caja.
+  { attributes: { amount: 7000, canceled: null, useInCashCount: true }, relationships: { paymentMethod: { data: { id: "8" } } } },
+  // Anulado.
+  { attributes: { amount: 100, canceled: true, useInCashCount: true }, relationships: { paymentMethod: { data: { id: "1" } } } },
+];
+assert.strictEqual(
+  sumarGastosEnEfectivo(gastos, metodosConCodigo),
+  3500,
+  "sólo gastos en efectivo no anulados y no excluidos del arqueo"
+);
+assert.strictEqual(sumarGastosEnEfectivo([], metodosConCodigo), 0, "sin gastos, total 0");
 
 console.log("fudo.test.ts OK");
