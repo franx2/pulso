@@ -50,6 +50,15 @@ No apagarlo todavia sin:
 - Migracion aplicada a Neon a mano (`prisma/migrations/20260903192929_precio_hora_feriados/migration.sql`) porque `prisma migrate dev` colgo con un advisory lock stale (`pg_advisory_lock`) — quedo resuelto solo despues de un rato, sin necesitar terminar la conexion a mano (esa accion la bloqueo el sistema de permisos, correctamente: es destructiva).
 - **Nota de entorno**: si corres `prisma generate` con el dev server (`npm run dev`) ya corriendo en esta carpeta, vas a pegar un `EPERM` al renombrar el motor nativo — es el binario bloqueado por el proceso vivo, no un error real; los tipos TS igual se regeneran bien. Si otra sesion tiene el dev server abierto hace rato, ese proceso puede tener el Prisma Client VIEJO en memoria (no se entera de columnas/tablas nuevas hasta que se reinicia) — no lo mates sin avisar, esta corriendo por otra sesion en paralelo. Para verificar cambios de schema con confianza, `npm run build` + deploy a Vercel (cada build ahi regenera el cliente desde cero).
 
+## Integración Fudo y crons (2026-09-04, commit posterior a `e46823b`)
+
+- Cada sucursal puede cargar su propio `apiKey`/`apiSecret` de Fudo (Ajustes → la sucursal → Integración con Fudo) para que el mapa de calor de demanda (Turnos → Semana) se recalcule solo con los últimos 90 días de ventas, sin subir un Excel a mano. Fudo requiere Plan Pro por cuenta; cada sucursal es una cuenta de Fudo separada, con sus propias credenciales — confirmado con el usuario.
+- El token de Fudo vence a las 24hs: `lib/fudoSync.ts` pide uno nuevo en cada sync, nunca lo guarda.
+- Botón "Sincronizar ahora" (manual) + `GET /api/cron/demanda` (automático, mismo esquema que `/api/cron/alertas`: protegido con `Authorization: Bearer $CRON_SECRET`, pensado para un cron EXTERNO — este proyecto no usa Vercel Cron, no hay `vercel.json`).
+- **`CRON_SECRET` se seteó recién en Vercel (Production + Preview) — no estaba configurado antes, así que `/api/cron/alertas` nunca había corrido en producción (404 silencioso).** El valor se le mostró al usuario una sola vez en la conversación de esta sesión, nunca se guardó en este repo (es público) ni en ningún archivo — si se perdió, hay que rotarlo (`vercel env rm CRON_SECRET production/preview` y volver a crearlo) y actualizar el scheduler externo que pegue a `/api/cron/alertas` y `/api/cron/demanda`.
+- `/api/locales` y `/api/locales/[id]` nunca devuelven `fudoApiKey`/`fudoApiSecret` (Prisma `omit`); exponen `fudoConfigurado` (bool) y `demandaSincronizadaEn` en su lugar.
+- Pendiente: el usuario tiene que generar el apiKey/apiSecret desde Fudo (Aplicaciones externas → API Pública General, después Administración → Usuarios) para Jumbo y para Las Cañas, y cargarlos en Ajustes. Sin eso, la sincronización automática no tiene nada que sincronizar (el cron simplemente no encuentra locales configurados y no hace nada, no falla).
+
 ## Que es la app
 
 - Next.js 16 (App Router), React 19, TypeScript y Tailwind CSS v4.
