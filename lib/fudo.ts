@@ -137,3 +137,86 @@ export async function obtenerEfectivoCobrado(token: string, desde: Date, hasta: 
 
   return sumarPagosEnEfectivo(pagos, [...metodosVistos.values()]);
 }
+
+type VentaJson = {
+  attributes: { people: number | null; total: number };
+  relationships?: { waiter?: { data?: { id: string } | null } };
+};
+type UsuarioJson = { id: string; attributes: { name: string } };
+
+export type ResumenVentas = {
+  cantidadVentas: number;
+  totalVentas: number;
+  personasAtendidas: number;
+  porMozo: { nombreFudo: string; cantidadVentas: number; totalVentas: number }[];
+};
+
+/** Agrega ventas cerradas para el panel "Ventas y mozos": personas atendidas
+ * (sólo se carga en las EAT-IN, viene null en TAKEAWAY/DELIVERY) y un
+ * desglose por mozo — sólo cuenta las ventas donde Fudo registró quién
+ * atendió, que en la práctica es una minoría. */
+export function resumirVentas(ventas: VentaJson[], usuarios: UsuarioJson[]): ResumenVentas {
+  const nombrePorId = new Map(usuarios.map((u) => [u.id, u.attributes.name]));
+  const porMozoId = new Map<string, { nombreFudo: string; cantidadVentas: number; totalVentas: number }>();
+
+  let cantidadVentas = 0;
+  let totalVentas = 0;
+  let personasAtendidas = 0;
+
+  for (const v of ventas) {
+    cantidadVentas++;
+    totalVentas += v.attributes.total;
+    if (v.attributes.people != null) personasAtendidas += v.attributes.people;
+
+    const mozoId = v.relationships?.waiter?.data?.id;
+    if (!mozoId) continue;
+    const nombreFudo = nombrePorId.get(mozoId) ?? `Usuario ${mozoId}`;
+    const acc = porMozoId.get(mozoId) ?? { nombreFudo, cantidadVentas: 0, totalVentas: 0 };
+    acc.cantidadVentas++;
+    acc.totalVentas += v.attributes.total;
+    porMozoId.set(mozoId, acc);
+  }
+
+  return {
+    cantidadVentas,
+    totalVentas,
+    personasAtendidas,
+    porMozo: [...porMozoId.values()].sort((a, b) => b.totalVentas - a.totalVentas),
+  };
+}
+
+/** Ventas cerradas de `desde` a `hasta`, para el panel "Ventas y mozos" de
+ * cada sucursal (personas atendidas + desglose por mozo). */
+export async function obtenerResumenVentas(token: string, desde: Date, hasta: Date): Promise<ResumenVentas> {
+  const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+  const filtroFecha = `and(gte.${isoSinMilisegundos(desde)},lte.${isoSinMilisegundos(hasta)})`;
+  const ventas: VentaJson[] = [];
+  const usuariosVistos = new Map<string, UsuarioJson>();
+  let pagina = 1;
+
+  for (;;) {
+    const params = new URLSearchParams({
+      "filter[createdAt]": filtroFecha,
+      "filter[saleState]": "in.(CLOSED)",
+      "fields[sale]": "createdAt,people,total,waiter",
+      include: "waiter",
+      "page[size]": String(TAMANO_PAGINA),
+      "page[number]": String(pagina),
+      sort: "id",
+    });
+    const res = await fetch(`${API_URL}/sales?${params}`, { headers });
+    if (!res.ok) {
+      throw new FudoError(`Fudo devolvió un error al listar ventas (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    const lote = (data.data ?? []) as VentaJson[];
+    ventas.push(...lote);
+    for (const u of (data.included ?? []) as UsuarioJson[]) usuariosVistos.set(u.id, u);
+
+    if (lote.length < TAMANO_PAGINA) break;
+    pagina++;
+    if (pagina > 200) break;
+  }
+
+  return resumirVentas(ventas, [...usuariosVistos.values()]);
+}
