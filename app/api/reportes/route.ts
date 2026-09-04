@@ -26,6 +26,17 @@ export type FilaReporte = {
   montoAPagar: number | null;
 };
 
+/** Ingreso y egreso de un empleado en un día puntual: la salida es null si
+ * el día quedó abierto (sin fichar salida todavía). */
+export type FilaDetalleDiario = {
+  empleadoId: string;
+  nombre: string;
+  fecha: string;
+  entrada: string | null;
+  salida: string | null;
+  horas: number;
+};
+
 export async function GET(request: Request) {
   const session = await requireAdminApi();
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
@@ -130,6 +141,8 @@ export async function GET(request: Request) {
     d.localId = t.localId;
   }
 
+  const detalleDiario: FilaDetalleDiario[] = [];
+
   const filas: FilaReporte[] = [...porEmpleado.entries()].map(([id, emp]) => {
     // Cada día se etiqueta con su semana ISO: el tope semanal se aplica semana
     // por semana, no sobre el total del rango.
@@ -161,6 +174,17 @@ export async function GET(request: Request) {
       if (j.estado === "SIN_FICHAR") diasSinFichar++;
       else if (j.horasTrabajadas > 0) diasTrabajados++;
 
+      if (j.entrada) {
+        detalleDiario.push({
+          empleadoId: id,
+          nombre: emp.nombre,
+          fecha: clave,
+          entrada: j.entrada.toISOString(),
+          salida: j.salida ? j.salida.toISOString() : null,
+          horas: j.horasTrabajadas,
+        });
+      }
+
       if (emp.precioHora != null) {
         const factor = feriadosSet.has(clave) ? (local?.multiplicadorFeriado ?? 2) : 1;
         montoAPagar = (montoAPagar ?? 0) + j.horasTrabajadas * emp.precioHora * factor;
@@ -190,6 +214,7 @@ export async function GET(request: Request) {
   });
 
   filas.sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  detalleDiario.sort((a, b) => a.nombre.localeCompare(b.nombre, "es") || a.fecha.localeCompare(b.fecha));
 
   if (formato === "csv") {
     const columnas = [
@@ -232,7 +257,7 @@ export async function GET(request: Request) {
 
   if (formato === "xlsx") {
     const { reporteAExcel } = await import("@/lib/exportar");
-    const archivo = await reporteAExcel({ filas, desde, hasta });
+    const archivo = await reporteAExcel({ filas, detalleDiario, desde, hasta });
     return new NextResponse(archivo, {
       headers: {
         "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
@@ -241,5 +266,5 @@ export async function GET(request: Request) {
     });
   }
 
-  return NextResponse.json({ filas });
+  return NextResponse.json({ filas, detalleDiario });
 }

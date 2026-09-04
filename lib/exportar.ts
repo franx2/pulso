@@ -1,15 +1,17 @@
 import ExcelJS from "exceljs";
-import type { FilaReporte } from "@/app/api/reportes/route";
+import type { FilaDetalleDiario, FilaReporte } from "@/app/api/reportes/route";
 
 const VERDE = "FF0F766E";
 
 /** Planilla lista para pasarle a quien liquida sueldos. */
 export async function reporteAExcel({
   filas,
+  detalleDiario,
   desde,
   hasta,
 }: {
   filas: FilaReporte[];
+  detalleDiario: FilaDetalleDiario[];
   desde: string;
   hasta: string;
 }): Promise<Uint8Array<ArrayBuffer>> {
@@ -102,8 +104,34 @@ export async function reporteAExcel({
   ]);
   ws.getRow(nota.number + 1).font = { italic: true, size: 9, color: { argb: "FF64748B" } };
 
+  const wsDetalle = wb.addWorksheet("Detalle diario", {
+    views: [{ state: "frozen", ySplit: 1 }],
+  });
+  wsDetalle.columns = [
+    { key: "nombre", width: 28 },
+    { key: "fecha", width: 14 },
+    { key: "entrada", width: 12 },
+    { key: "salida", width: 12 },
+    { key: "horas", width: 12 },
+  ];
+  const encabezadoDetalle = wsDetalle.addRow(["Empleado", "Fecha", "Entrada", "Salida", "Horas"]);
+  encabezadoDetalle.font = { bold: true, color: { argb: "FFFFFFFF" } };
+  encabezadoDetalle.fill = { type: "pattern", pattern: "solid", fgColor: { argb: VERDE } };
+
+  for (const d of detalleDiario) {
+    wsDetalle.addRow([d.nombre, d.fecha, formatearHora(d.entrada), formatearHora(d.salida), redondear(d.horas)]);
+  }
+  wsDetalle.getColumn("horas").numFmt = "0.00";
+
   const buffer = await wb.xlsx.writeBuffer();
   return new Uint8Array(buffer as ArrayBuffer);
+}
+
+/** Hora local (AR) de un instante ISO, o "" si el día quedó abierto (sin
+ * salida) o sin ese fichaje. */
+function formatearHora(iso: string | null): string {
+  if (!iso) return "";
+  return new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
 }
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
