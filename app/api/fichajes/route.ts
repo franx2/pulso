@@ -8,6 +8,7 @@ import { comoFechaSql, inicioDelDia } from "@/lib/fechas";
 import { bytesADescriptor, descriptorDesdeJson, distanciaRostros } from "@/lib/rostro";
 import { leerDataUrl, type ImagenSubida } from "@/lib/dataUrl";
 import type { VerificacionRostro } from "@prisma/client";
+import { obtenerEfectivoCobrado, obtenerTokenFudo } from "@/lib/fudo";
 
 const inicioDeHoy = () => inicioDelDia();
 
@@ -115,6 +116,11 @@ export async function POST(request: Request) {
       ? "DESCANSO_INICIO"
       : automatico;
 
+  const efectivoEsperado =
+    tipo === "SALIDA" && estado.entrada
+      ? await calcularEfectivoEsperado(local, estado.entrada)
+      : null;
+
   const fichaje = await db.fichaje.create({
     data: {
       empleadoId: session.empleadoId!,
@@ -127,6 +133,7 @@ export async function POST(request: Request) {
       rostroDistancia: rostro.distancia,
       rostroFoto: rostro.foto?.datos ?? null,
       rostroFotoTipo: rostro.foto?.tipo ?? null,
+      efectivoEsperado,
     },
   });
 
@@ -189,6 +196,25 @@ async function verificarRostro({
     // Sólo se guarda evidencia de lo que no cerró.
     foto: coincide ? null : foto,
   };
+}
+
+/**
+ * Efectivo que Fudo registró cobrado entre la entrada y esta salida, para el
+ * arqueo de caja. Sólo corre si el local tiene Fudo configurado; si la
+ * consulta falla (Fudo caído, credenciales vencidas) no bloquea el fichaje,
+ * simplemente no se arma el arqueo de esta salida.
+ */
+async function calcularEfectivoEsperado(
+  local: { fudoApiKey: string | null; fudoApiSecret: string | null },
+  entrada: Date
+): Promise<number | null> {
+  if (!local.fudoApiKey || !local.fudoApiSecret) return null;
+  try {
+    const token = await obtenerTokenFudo(local.fudoApiKey, local.fudoApiSecret);
+    return await obtenerEfectivoCobrado(token, entrada, new Date());
+  } catch {
+    return null;
+  }
 }
 
 async function localMasCercano(

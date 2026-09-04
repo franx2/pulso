@@ -6,6 +6,7 @@ import { Badge, Button, Card, ErrorText, SectionTitle } from "@/components/ui";
 import MisSolicitudes from "./MisSolicitudes";
 import RegistrarRostro from "./RegistrarRostro";
 import VerificarRostroModal, { type ResultadoVerificacion } from "./VerificarRostroModal";
+import ArqueoModal from "./ArqueoModal";
 import { formatearFechaSql } from "@/lib/fechas";
 import { precargarModelos } from "@/lib/rostroCliente";
 
@@ -57,6 +58,7 @@ export default function FicharBoton({
   });
   const [verificando, setVerificando] = useState(false);
   const resolverVerificacion = useRef<((r: ResultadoVerificacion) => void) | null>(null);
+  const [arqueo, setArqueo] = useState<{ fichajeId: string; efectivoEsperado: number } | null>(null);
 
   /** Abre el modal de cámara y devuelve el resultado cuando termina de analizar. */
   function pedirVerificacionRostro(): Promise<ResultadoVerificacion> {
@@ -126,6 +128,9 @@ export default function FicharBoton({
           ? "Fichaje registrado, pero no pudimos confirmar que seas vos. El encargado lo va a revisar."
           : "Fichaje registrado sin verificar tu rostro. El encargado lo va a revisar."
       );
+    }
+    if (data.fichaje?.efectivoEsperado != null) {
+      setArqueo({ fichajeId: data.fichaje.id, efectivoEsperado: data.fichaje.efectivoEsperado });
     }
     await cargar();
     setMarcando(false);
@@ -205,6 +210,14 @@ export default function FicharBoton({
       )}
 
       {rostro.exigido && <RegistrarRostro registrado={rostro.registrado} onListo={cargar} />}
+
+      {arqueo && (
+        <ArqueoModal
+          fichajeId={arqueo.fichajeId}
+          efectivoEsperado={arqueo.efectivoEsperado}
+          onListo={() => setArqueo(null)}
+        />
+      )}
 
       <Card className="w-full max-w-xs">
         <SectionTitle

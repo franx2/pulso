@@ -77,3 +77,63 @@ export async function obtenerVentasCerradas(
 
   return ventas;
 }
+
+type PagoJson = {
+  attributes: { amount: number; canceled: boolean | null };
+  relationships?: { paymentMethod?: { data?: { id: string } | null } };
+};
+type MetodoPagoJson = { id: string; attributes: { name: string } };
+
+/** Fudo no expone un "es efectivo" en el filtro de pagos: hay que resolverlo
+ * por nombre de método de pago contra la lista de /payment-methods de la
+ * cuenta. "Efectivo Uber Eats" cuenta como caja física igual que "Efectivo". */
+const NOMBRES_EFECTIVO = new Set(["Efectivo", "Efectivo Uber Eats"]);
+
+export function sumarPagosEnEfectivo(pagos: PagoJson[], metodos: MetodoPagoJson[]): number {
+  const nombrePorId = new Map(metodos.map((m) => [m.id, m.attributes.name]));
+  let total = 0;
+  for (const p of pagos) {
+    if (p.attributes.canceled) continue;
+    const metodoId = p.relationships?.paymentMethod?.data?.id;
+    const nombre = metodoId ? nombrePorId.get(metodoId) : undefined;
+    if (nombre && NOMBRES_EFECTIVO.has(nombre)) total += p.attributes.amount;
+  }
+  return total;
+}
+
+/** Efectivo cobrado en Fudo entre `desde` y `hasta` (la ventana del turno de
+ * un empleado), para el arqueo de caja al fichar salida. */
+export async function obtenerEfectivoCobrado(token: string, desde: Date, hasta: Date): Promise<number> {
+  const headers = { Authorization: `Bearer ${token}`, Accept: "application/json" };
+
+  const filtroFecha = `and(gte.${isoSinMilisegundos(desde)},lte.${isoSinMilisegundos(hasta)})`;
+  const pagos: PagoJson[] = [];
+  const metodosVistos = new Map<string, MetodoPagoJson>();
+  let pagina = 1;
+
+  for (;;) {
+    const params = new URLSearchParams({
+      "filter[paidAt]": filtroFecha,
+      "fields[payment]": "amount,paidAt,canceled,paymentMethod",
+      include: "paymentMethod",
+      "fields[paymentMethod]": "name",
+      "page[size]": String(TAMANO_PAGINA),
+      "page[number]": String(pagina),
+      sort: "id",
+    });
+    const res = await fetch(`${API_URL}/payments?${params}`, { headers });
+    if (!res.ok) {
+      throw new FudoError(`Fudo devolvió un error al listar pagos (HTTP ${res.status})`);
+    }
+    const data = await res.json();
+    const lote = (data.data ?? []) as PagoJson[];
+    pagos.push(...lote);
+    for (const m of (data.included ?? []) as MetodoPagoJson[]) metodosVistos.set(m.id, m);
+
+    if (lote.length < TAMANO_PAGINA) break;
+    pagina++;
+    if (pagina > 200) break;
+  }
+
+  return sumarPagosEnEfectivo(pagos, [...metodosVistos.values()]);
+}

@@ -380,6 +380,13 @@ model Fichaje {
   rostroFoto      Bytes?
   rostroFotoTipo  String?
 
+  /// Arqueo de caja, sólo en SALIDA y sólo cuando el local tiene Fudo
+  /// configurado: efectivo que Fudo registró como cobrado entre la entrada y
+  /// esta salida.
+  efectivoEsperado Float?
+  /// Lo que el empleado contó y cargó al fichar la salida.
+  efectivoContado  Float?
+
   correcciones SolicitudCorreccion[]
 
   @@index([empleadoId, timestamp])
