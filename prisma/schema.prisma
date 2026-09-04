@@ -109,6 +109,7 @@ model Local {
   categorias  Categoria[]
   demandas    DemandaHoraria[]
   resumenes   ResumenDiario[]
+  stocks      StockDiario[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -171,6 +172,38 @@ model ResumenDiario {
   actualizadoEn DateTime @updatedAt
 
   @@unique([localId, fecha])
+  @@index([localId, fecha])
+}
+
+/// Foto diaria del stock de cada producto, para tener la serie que la API de
+/// Fudo no guarda (devuelve el stock de ahora, no su historia).
+///
+/// Fudo descuenta el stock con cada venta, así que en un día sin recepciones
+/// ni ajustes vale: stock_hoy = stock_ayer − vendido. `movimientoNoExplicado`
+/// es lo que sobra de esa cuenta: mercadería que entró, un recuento a mano, o
+/// una pérdida. Ese es el número accionable mientras nadie cargue las compras
+/// en Fudo; el día que se carguen, la serie ya está y el desvío se vuelve un
+/// "debería haber vs. hay" de verdad.
+model StockDiario {
+  id       String   @id @default(cuid())
+  local    Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId  String
+  fecha    DateTime @db.Date
+
+  fudoProductoId String
+  /// Desnormalizado a propósito: el reporte histórico no puede depender de
+  /// que el producto siga existiendo (o llamándose igual) en Fudo.
+  producto       String
+
+  stock       Float
+  stockPrevio  Float?
+  /// Unidades vendidas ese día, contadas desde los items de las ventas.
+  vendido     Float @default(0)
+  movimientoNoExplicado Float?
+
+  actualizadoEn DateTime @updatedAt
+
+  @@unique([localId, fecha, fudoProductoId])
   @@index([localId, fecha])
 }
 

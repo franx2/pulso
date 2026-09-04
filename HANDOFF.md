@@ -110,3 +110,35 @@ app/api/                             Rutas API
 - Decidir dominio propio final para `RP_ID`/`ORIGIN` antes de que se registren mas passkeys, para no forzar un tercer re-registro.
 - Cargar los feriados trasladables de 2026 en Ajustes → Feriados en cuanto se confirmen las fechas oficiales (ver seccion de arriba).
 - El admin (`usuario: admin`) tiene contraseña propia generada en esta sesion para pruebas — pedisela al usuario si haces falta, no quedo en este archivo.
+
+## Dashboard por local y serie de stock (2026-09-04)
+
+**Endpoints de cron nuevos** (mismo esquema: `Authorization: Bearer $CRON_SECRET`, scheduler externo):
+
+| Endpoint | Cuándo | Para qué |
+|---|---|---|
+| `GET /api/cron/resumen?dias=7` | seguido (cada hora / varias veces al día) | refresca `ResumenDiario`, que es de donde lee el dashboard |
+| `GET /api/cron/resumen?dias=90` | 1 vez por semana | recupera días viejos que se hayan corregido en Fudo |
+| `GET /api/cron/stock` | **1 vez por día, a hora fija, después del cierre** | foto de stock: Fudo devuelve el stock de ese instante, dos corridas a horas distintas no son comparables |
+
+**Por qué hay una tabla intermedia** (`ResumenDiario`): un año de ventas son ~200 páginas
+paginadas de la API de Fudo — no se puede esperar eso en pantalla, y las alertas necesitan
+historia para comparar contra el promedio. El sync de 90 días tarda ~28s.
+
+**Cosas que se aprendieron de la API de Fudo y no son obvias:**
+- `item.price` es el **total de la línea**, no el unitario (CORTADO x2 @9200 → la venta cierra
+  en 9200). `product.cost` sí es unitario.
+- `sale.total` ya viene **neto de descuentos**.
+- La "Caja" (`cashRegister`) en esta cuenta es una **persona**, no un canal fijo — por eso
+  sirve para atribuir arqueos y descuentos.
+- `/payments` **no** expone la caja de origen; hay que ir por `/sales` → `payments`.
+- `/discounts` no tiene filtro por fecha; se llega a ellos incluyéndolos desde `/sales`.
+
+**Datos que hoy limitan el dashboard (no son bugs del código):**
+- Jumbo no tiene credenciales de Fudo cargadas → no hay comparación real entre locales.
+- Los costos por producto están casi todos en `null` en Fudo → el food cost sale optimista y
+  se marca con `*` en vez de mostrarse como cierto.
+- El módulo de stock de Fudo no se usa: descuenta con las ventas pero nadie carga la
+  mercadería que entra, por eso hay stocks negativos grandes (TÉ DILMAH −482). La serie
+  (`StockDiario`) igual arrancó, y mide "movimiento no explicado por las ventas", que sí es
+  accionable hoy; el día que carguen compras, se vuelve un "debería haber vs. hay" real.

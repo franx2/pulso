@@ -122,6 +122,87 @@ function Reparto({ titulo, datos, etiquetas }: { titulo: string; datos: Mapa; et
   );
 }
 
+type Stock = {
+  diasEnSerie: number;
+  productosSeguidos: number;
+  movimientos: {
+    fecha: string;
+    local: string;
+    producto: string;
+    stock: number;
+    vendido: number;
+    movimiento: number;
+  }[];
+};
+
+/**
+ * Fudo no guarda la historia del stock (devuelve el de ahora), así que la
+ * serie se arma con una foto diaria. Con la foto de ayer y lo vendido hoy,
+ * lo que no cierra es mercadería que entró, un recuento a mano o un faltante.
+ */
+function SerieStock() {
+  const [stock, setStock] = useState<Stock | null>(null);
+
+  useEffect(() => {
+    fetch("/api/stock")
+      .then((r) => (r.ok ? r.json() : null))
+      .then(setStock)
+      .catch(() => setStock(null));
+  }, []);
+
+  if (!stock || stock.productosSeguidos === 0) return null;
+
+  return (
+    <Card className="flex flex-col gap-3">
+      <SectionTitle
+        action={
+          <span className="text-xs text-slate-400 dark:text-[#74817b]">
+            {stock.productosSeguidos} productos · {stock.diasEnSerie}{" "}
+            {stock.diasEnSerie === 1 ? "día" : "días"} de serie
+          </span>
+        }
+      >
+        Movimientos de stock sin explicar
+      </SectionTitle>
+
+      {stock.movimientos.length === 0 ? (
+        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+          {stock.diasEnSerie <= 1
+            ? "La serie arrancó hoy: la primera comparación sale mañana, cuando haya una foto anterior contra la cual medir."
+            : "Ningún producto se movió por fuera de lo que explican las ventas."}
+        </p>
+      ) : (
+        <>
+          <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+            Diferencia entre el stock de hoy y el de ayer menos lo vendido. Positivo suele ser
+            mercadería que entró; negativo, faltante o ajuste a mano.
+          </p>
+          <div className="flex flex-col gap-1.5">
+            {stock.movimientos.map((m) => (
+              <div key={`${m.fecha}-${m.local}-${m.producto}`} className="flex items-baseline justify-between gap-2 text-sm">
+                <span className="truncate text-slate-600 dark:text-[#c1cbc6]">
+                  {m.producto}
+                  <span className="ml-1.5 text-xs text-slate-400 dark:text-[#74817b]">
+                    {m.local} · {m.fecha}
+                  </span>
+                </span>
+                <span
+                  className={`shrink-0 tabular-nums font-semibold ${
+                    m.movimiento < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-500 dark:text-[#94a19c]"
+                  }`}
+                >
+                  {m.movimiento > 0 ? "+" : ""}
+                  {m.movimiento.toLocaleString("es-AR")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
+    </Card>
+  );
+}
+
 export default function DashboardClient() {
   const [periodo, setPeriodo] = useState("semana");
   const [datos, setDatos] = useState<Dash | null>(null);
@@ -231,6 +312,8 @@ export default function DashboardClient() {
               ))}
             </Card>
           )}
+
+          <SerieStock />
 
           {datos.locales.filter((l) => l.tieneFudo).length === 0 ? (
             <EmptyState>
