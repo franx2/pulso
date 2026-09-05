@@ -52,6 +52,33 @@ enum TipoAusencia {
   OTRO
 }
 
+/// Un local dentro de un shopping no siente la lluvia como uno a la calle.
+/// El modelo NO asume cuánto: usa esto para aprender la sensibilidad real de
+/// cada tipo con los datos (ver `lib/forecast/clima.ts`).
+enum TipoLocal {
+  INDOOR_MALL
+  OPEN_AIR
+}
+
+/// Sectores operativos para los que se calcula carga y dotación. Se mapean
+/// desde las categorías de empleado que ya existen por local (`Categoria`).
+enum Sector {
+  COCINA
+  SALON
+  CAJA
+  DESPACHO
+  ENCARGADO
+}
+
+enum OrigenParametro {
+  /// Valor por defecto, todavía sin evidencia propia del local.
+  DEFECTO
+  /// Calculado por el sistema a partir del histórico.
+  APRENDIDO
+  /// Fijado a mano por un administrador: gana sobre los otros dos.
+  MANUAL
+}
+
 enum VerificacionRostro {
   /// La cara coincidió con la registrada.
   OK
@@ -100,6 +127,10 @@ model Local {
   /// Último sync exitoso del resumen diario que alimenta el dashboard.
   resumenSincronizadoEn DateTime?
 
+  /// Expuesto o no al clima. Sin esto, el modelo no puede separar por qué un
+  /// día de lluvia mueve a un local y al otro no.
+  tipoLocal TipoLocal @default(OPEN_AIR)
+
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
   turnos      Turno[]
@@ -111,6 +142,13 @@ model Local {
   resumenes   ResumenDiario[]
   stocks      StockDiario[]
   productosDiarios ProductoDiario[]
+  demandaSlots     DemandaSlot[]
+  coeficientesSector CoeficienteSector[]
+  coeficientesCanal  CoeficienteCanal[]
+  capacidades      CapacidadSector[]
+  ajustesK         AjusteK[]
+  climas           ClimaDia[]
+  pronosticos      Pronostico[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -231,6 +269,203 @@ model StockDiario {
   actualizadoEn DateTime @updatedAt
 
   @@unique([localId, fecha, fudoProductoId])
+  @@index([localId, fecha])
+}
+
+// ─────────────────────────────────────────────────────────────────────────
+// Módulo de pronóstico de demanda y dotación.
+// La serie de 30 minutos es la base de todo: ni ResumenDiario (día) ni
+// DemandaHoraria (promedio día-de-semana × hora, sin fecha) sirven para
+// pronosticar, porque ninguno es una serie temporal real.
+// ─────────────────────────────────────────────────────────────────────────
+
+/// Una fila por local, día y franja de 30 minutos (slot 0 = 00:00-00:30 hora
+/// argentina, slot 47 = 23:30-24:00). Guarda medidas crudas, no carga: la
+/// carga depende de coeficientes editables y se calcula al leer, así cambiar
+/// la matriz no obliga a re-sincronizar tres meses.
+model DemandaSlot {
+  id      String   @id @default(cuid())
+  local   Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+  fecha   DateTime @db.Date
+  /// 0..47
+  slot    Int
+
+  tickets  Int   @default(0)
+  /// Unidades vendidas (ítems), que pesan más que la plata para la carga.
+  unidades Float @default(0)
+  ventas   Float @default(0)
+  /// Comensales declarados (sólo salón; delivery/takeaway vienen sin dato).
+  personas Int   @default(0)
+
+  /// {"EAT-IN": 12, "TAKEAWAY": 4, "DELIVERY": 2} — tickets por canal.
+  porCanal     Json?
+  /// {"cafeteria": 18, "panificados": 6} — unidades por categoría canónica.
+  porCategoria Json?
+
+  @@unique([localId, fecha, slot])
+  @@index([localId, fecha])
+}
+
+/// Matriz categoría × sector: cuánta carga genera una unidad de esa categoría
+/// en ese sector. Es el punto 9 del pedido y arranca con valores por defecto
+/// razonables, marcados como DEFECTO para que se vea que todavía no se
+/// aprendieron. Una fila con `localId` gana sobre la global (`localId` null).
+model CoeficienteSector {
+  id        String  @id @default(cuid())
+  local     Local?  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId   String?
+  /// Categoría canónica (ver lib/forecast/categorias.ts), no el nombre crudo
+  /// de Fudo: los locales escriben la misma categoría de cuatro formas.
+  categoria String
+  sector    Sector
+  coeficiente Float
+  origen    OrigenParametro @default(DEFECTO)
+
+  @@unique([localId, categoria, sector])
+  @@index([categoria])
+}
+
+/// Carga que agrega un ticket por el solo hecho de existir, según su canal
+/// (atender una mesa cuesta aunque el pedido sea chico; un delivery ocupa
+/// despacho). Separado de la matriz de productos a propósito.
+model CoeficienteCanal {
+  id          String  @id @default(cuid())
+  local       Local?  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId     String?
+  canal       String
+  sector      Sector
+  coeficiente Float
+  origen      OrigenParametro @default(DEFECTO)
+
+  @@unique([localId, canal, sector])
+}
+
+/// Cuánta carga por hora absorbe una persona en un sector. Es lo que traduce
+/// carga en dotación, y hoy NO se puede aprender: hay 34 fichajes en total.
+/// Por eso arranca en DEFECTO con la confianza en el piso, y el motor lo dice
+/// en la salida en vez de presentar la dotación como si fuera medida.
+model CapacidadSector {
+  id      String @id @default(cuid())
+  local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+  sector  Sector
+
+  /// Puntos de SectorLoadScore por hora y por persona.
+  capacidadPorEmpleado Float
+  minPersonas          Int    @default(0)
+  maxPersonas          Int    @default(10)
+  origen               OrigenParametro @default(DEFECTO)
+  /// 0..1. Sube a medida que hay fichajes reales contra los que calibrar.
+  confianza            Float  @default(0.2)
+  /// Cuántas observaciones (franja × día con dotación conocida) respaldan el
+  /// valor. Con 0, la capacidad es un supuesto declarado, no un aprendizaje.
+  observaciones        Int    @default(0)
+
+  @@unique([localId, sector])
+}
+
+/// Ajuste manual de demanda (K_manual). Ámbito de menor a mayor precedencia:
+/// local → día de semana → fecha puntual → franja. Por defecto no existe
+/// ninguna fila y K_manual vale 1.
+model AjusteK {
+  id      String  @id @default(cuid())
+  local   Local?  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String?
+  /// 0..6 (domingo=0), null si no aplica.
+  diaSemana Int?
+  /// Fecha puntual (un evento, un corte de calle), null si no aplica.
+  fecha     DateTime? @db.Date
+  /// Franja de 30 min, null = todo el día.
+  slot      Int?
+
+  valor  Float
+  motivo String?
+
+  @@index([localId, fecha])
+}
+
+/// Sensibilidad al clima aprendida por tipo de local. Es el punto 19: en vez
+/// de asumir "llueve → -18%", se mide contra el histórico y se guarda con su
+/// confianza y con cuántos días la respaldan.
+model SensibilidadClima {
+  id        String    @id @default(cuid())
+  tipoLocal TipoLocal
+  /// "LLUVIA", "FRIO", "CALOR"
+  condicion String
+  /// Multiplicador medido sobre la demanda normal (1 = sin efecto).
+  factor    Float
+  confianza Float     @default(0)
+  /// Días de historia que respaldan el factor.
+  dias      Int       @default(0)
+  origen    OrigenParametro @default(DEFECTO)
+  calculadoEn DateTime @updatedAt
+
+  @@unique([tipoLocal, condicion])
+}
+
+/// Clima por local y día. Histórico para aprender, pronóstico para proyectar.
+/// Sin coordenadas cargadas en el local no hay clima, y el motor lo trata
+/// como factor neutro en vez de inventarlo.
+model ClimaDia {
+  id      String   @id @default(cuid())
+  local   Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+  fecha   DateTime @db.Date
+
+  tempMax  Float?
+  tempMin  Float?
+  lluviaMm Float?
+  vientoKmh Float?
+  /// true cuando viene del pronóstico y todavía no del histórico.
+  esPronostico Boolean @default(false)
+
+  @@unique([localId, fecha])
+}
+
+/// Forecast guardado. Nunca se borra: sin el histórico de pronósticos no se
+/// puede saber si el modelo está mejorando (punto 16). Cuando llega el dato
+/// real se completa `real*` y el error, en la misma fila.
+model Pronostico {
+  id      String   @id @default(cuid())
+  local   Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+  fecha   DateTime @db.Date
+  /// null = fila del día completo; 0..47 = franja de 30 minutos.
+  slot    Int?
+
+  /// Cuándo se emitió: dos pronósticos de la misma fecha hechos en momentos
+  /// distintos no son el mismo pronóstico.
+  emitidoEn DateTime @default(now())
+
+  demandaBase   Float
+  kAuto         Float
+  kManual       Float @default(1)
+  demandaFinal  Float
+  /// {"K_calendar":1.18,"K_weather":1.06,...} para poder explicarlo.
+  kDetalle      Json?
+
+  ticketsPronosticados Float
+  unidadesPronosticadas Float
+  ventasPronosticadas  Float
+  /// Índice normalizado: 100 = demanda normal de ESE local en ESA franja.
+  demandIndex          Float
+
+  /// Intervalo de confianza sobre tickets.
+  ticketsMin Float?
+  ticketsMax Float?
+  confianza  Float?
+
+  /// {"COCINA": 3, "SALON": 2, ...}
+  cargaPorSector    Json?
+  dotacionPorSector Json?
+
+  /// Se completan cuando llega el día.
+  ticketsReales  Float?
+  ventasReales   Float?
+  errorTickets   Float?
+
+  @@unique([localId, fecha, slot, emitidoEn])
   @@index([localId, fecha])
 }
 

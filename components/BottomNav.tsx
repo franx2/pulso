@@ -3,6 +3,7 @@
 import Link from "next/link";
 import {
   Activity,
+  Brain,
   BarChart3,
   CalendarDays,
   Clock,
@@ -22,7 +23,8 @@ export type NavActivo =
   | "reportes"
   | "configuracion"
   | "arqueos"
-  | "dashboard";
+  | "dashboard"
+  | "pronostico";
 
 type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol; grupo: string };
 
@@ -32,6 +34,7 @@ export const ITEMS: Item[] = [
   { key: "turnos", href: "/admin/turnos", Icon: CalendarDays, label: "Turnos", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "arqueos", href: "/admin/arqueos", Icon: Wallet, label: "Arqueos", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "dashboard", href: "/admin/dashboard", Icon: LayoutDashboard, label: "Dashboard", minimo: "ADMIN", grupo: "Análisis" },
+  { key: "pronostico", href: "/admin/pronostico", Icon: Brain, label: "Pronóstico", minimo: "ADMIN", grupo: "Análisis" },
   { key: "reportes", href: "/admin/reportes", Icon: BarChart3, label: "Reportes", minimo: "ADMIN", grupo: "Análisis" },
   { key: "empleados", href: "/admin/empleados", Icon: Users, label: "Equipo", minimo: "ADMIN", grupo: "Gestión" },
   { key: "configuracion", href: "/admin/configuracion", Icon: Settings, label: "Ajustes", minimo: "ADMIN", grupo: "Gestión" },
