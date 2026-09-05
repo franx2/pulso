@@ -7,10 +7,15 @@
  * el proveedor le manda —o a la que se reenvía— funciona desde el primer día
  * y no depende de nada más.
  *
- * Los mensajes procesados se marcan como leídos, que es lo que evita
- * procesarlos dos veces. Como red de seguridad, la carga igual rechaza
- * remitos repetidos por número: si alguien marca todo como no leído, no se
- * duplican los costos.
+ * **No borra, no archiva, no mueve y no marca como leído.** Los mensajes
+ * procesados se marcan con una etiqueta propia (`Pulso/Procesado` en Gmail),
+ * que es lo único que este código escribe en la casilla. La casilla es la
+ * personal del dueño: tocarle el estado de leído le haría perder de vista
+ * mails que todavía no miró.
+ *
+ * Como red de seguridad, la carga igual rechaza remitos repetidos por número,
+ * así que aunque la etiqueta falle o alguien la borre, no se duplican los
+ * costos: se vuelve a leer el PDF y se descarta.
  */
 
 import { ImapFlow } from "imapflow";
@@ -31,11 +36,10 @@ export type ConfigCorreo = {
   /** Carpeta a mirar. Por defecto la bandeja de entrada. */
   carpeta: string;
   /**
-   * Sólo se tocan los mails de este remitente. Alcanza con el dominio.
+   * Sólo se miran los mails de este remitente. Alcanza con el dominio.
    *
-   * No es un lujo: los mensajes procesados se marcan como leídos, así que sin
-   * filtro y apuntando a INBOX el cron le marcaría leída la casilla entera al
-   * dueño. Con filtro, los mails que no son del proveedor ni se bajan.
+   * En una casilla personal es lo que evita que el cron ande abriendo y
+   * etiquetando correspondencia que no tiene nada que ver.
    */
   remitente: string | null;
 };
@@ -44,7 +48,7 @@ export type ConfigCorreo = {
 export function advertencias(config: ConfigCorreo): string[] {
   if (config.carpeta.toUpperCase() === "INBOX" && !config.remitente) {
     return [
-      "Está leyendo INBOX sin filtro de remitente: va a marcar como leído todo " +
+      "Está leyendo INBOX sin filtro de remitente: va a abrir y etiquetar todo " +
         "mail que entre. Poné REMITOS_REMITENTE con el mail del proveedor, o " +
         "mandá los remitos a una carpeta propia con REMITOS_IMAP_CARPETA.",
     ];
@@ -79,11 +83,20 @@ export function configDesdeEntorno(): ConfigCorreo | null {
 const MAX_MENSAJES = 25;
 
 /**
- * Trae los PDF adjuntos de los mails sin leer y los marca como leídos.
+ * La marca que distingue lo ya procesado. Gmail muestra los keywords de IMAP
+ * como etiquetas, así que en la casilla se ve como "Pulso/Procesado" y no
+ * cambia nada más del mensaje.
+ */
+const MARCA = "PulsoProcesado";
+
+/** Ventana hacia atrás. Sin esto la búsqueda recorrería la casilla entera. */
+const DIAS_ATRAS = 45;
+
+/**
+ * Trae los PDF adjuntos de los mails del proveedor que todavía no se leyeron.
  *
- * Sólo se marca lo que se pudo leer entero: si la conexión se corta a la
- * mitad, los mensajes que no se procesaron siguen sin leer y entran en la
- * corrida siguiente.
+ * Sólo se marca lo que se procesó entero: si la conexión se corta a la mitad,
+ * los mensajes que faltaron entran en la corrida siguiente.
  */
 export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<AdjuntoPdf[]> {
   const cliente = new ImapFlow({
@@ -99,12 +112,20 @@ export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<Adjunto
   try {
     const cerrojo = await cliente.getMailboxLock(config.carpeta);
     try {
-      // El filtro va en la búsqueda y no después de bajar: así los mails de
-      // otros ni se descargan ni se marcan.
-      const sinLeer = await cliente.search(
-        config.remitente ? { seen: false, from: config.remitente } : { seen: false }
-      );
-      const mensajes = (sinLeer || []).slice(-MAX_MENSAJES);
+      const desde = new Date(Date.now() - DIAS_ATRAS * 86400000);
+      // El filtro de remitente va en la búsqueda y no después de bajar: así
+      // los mails de otros ni se descargan.
+      const base = config.remitente ? { since: desde, from: config.remitente } : { since: desde };
+
+      let encontrados: number[] | false;
+      try {
+        encontrados = await cliente.search({ ...base, unKeyword: MARCA });
+      } catch {
+        // Si el servidor no soporta keywords, mejor traer de más y dejar que
+        // la carga descarte los repetidos por número, que quedarse mudo.
+        encontrados = await cliente.search(base);
+      }
+      const mensajes = (encontrados || []).slice(-MAX_MENSAJES);
 
       for (const uid of mensajes) {
         const bajado = await cliente.download(String(uid), undefined, { uid: true });
@@ -123,9 +144,13 @@ export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<Adjunto
             origen: `${remitente} · ${mail.subject ?? "sin asunto"}`,
           });
         }
-        // Se marca leído aunque no traiga PDF: si no, los mails sueltos del
-        // proveedor se vuelven a bajar en cada corrida para siempre.
-        await cliente.messageFlagsAdd(String(uid), ["\\Seen"], { uid: true });
+        // Se marca aunque no traiga PDF: si no, los mails sueltos del
+        // proveedor se vuelven a bajar en cada corrida para siempre. No se
+        // toca `\Seen`: el mail queda como estaba para el dueño.
+        await cliente.messageFlagsAdd(String(uid), [MARCA], { uid: true }).catch(() => {
+          // Que no se pueda etiquetar no es motivo para perder el remito: se
+          // vuelve a leer la próxima vez y la carga lo descarta por repetido.
+        });
       }
     } finally {
       cerrojo.release();
