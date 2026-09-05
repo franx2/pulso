@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { configDesdeEntorno, traerRemitosSinLeer } from "@/lib/compras/correo";
+import { advertencias, configDesdeEntorno, traerRemitosSinLeer } from "@/lib/compras/correo";
 import { ingerirRemito } from "@/lib/compras/ingesta";
 
 /** Bajar mails y leer PDF es I/O; 25 remitos entran holgados. */
@@ -60,6 +60,9 @@ export async function GET(request: Request) {
   }
 
   return NextResponse.json({
+    carpeta: config.carpeta,
+    remitente: config.remitente ?? "(sin filtro)",
+    advertencias: advertencias(config),
     revisados: adjuntos.length,
     guardados: resultados.filter((r) => r.estado === "guardado").length,
     duplicados: resultados.filter((r) => r.estado === "duplicado").length,

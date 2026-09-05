@@ -30,7 +30,27 @@ export type ConfigCorreo = {
   password: string;
   /** Carpeta a mirar. Por defecto la bandeja de entrada. */
   carpeta: string;
+  /**
+   * Sólo se tocan los mails de este remitente. Alcanza con el dominio.
+   *
+   * No es un lujo: los mensajes procesados se marcan como leídos, así que sin
+   * filtro y apuntando a INBOX el cron le marcaría leída la casilla entera al
+   * dueño. Con filtro, los mails que no son del proveedor ni se bajan.
+   */
+  remitente: string | null;
 };
+
+/** Riesgos de configuración que conviene que la respuesta del cron diga. */
+export function advertencias(config: ConfigCorreo): string[] {
+  if (config.carpeta.toUpperCase() === "INBOX" && !config.remitente) {
+    return [
+      "Está leyendo INBOX sin filtro de remitente: va a marcar como leído todo " +
+        "mail que entre. Poné REMITOS_REMITENTE con el mail del proveedor, o " +
+        "mandá los remitos a una carpeta propia con REMITOS_IMAP_CARPETA.",
+    ];
+  }
+  return [];
+}
 
 /**
  * Lee la configuración del entorno.
@@ -51,6 +71,7 @@ export function configDesdeEntorno(): ConfigCorreo | null {
     usuario,
     password,
     carpeta: process.env.REMITOS_IMAP_CARPETA || "INBOX",
+    remitente: process.env.REMITOS_REMITENTE || null,
   };
 }
 
@@ -78,7 +99,11 @@ export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<Adjunto
   try {
     const cerrojo = await cliente.getMailboxLock(config.carpeta);
     try {
-      const sinLeer = await cliente.search({ seen: false });
+      // El filtro va en la búsqueda y no después de bajar: así los mails de
+      // otros ni se descargan ni se marcan.
+      const sinLeer = await cliente.search(
+        config.remitente ? { seen: false, from: config.remitente } : { seen: false }
+      );
       const mensajes = (sinLeer || []).slice(-MAX_MENSAJES);
 
       for (const uid of mensajes) {
