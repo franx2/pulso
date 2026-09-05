@@ -1,5 +1,6 @@
 import type { Sector } from "@prisma/client";
 import { db } from "@/lib/db";
+import { fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
 import { intervalo } from "./backtest";
 import { calcularCarga, cargaPorHora, COEFICIENTES_CANAL_INICIALES, COEFICIENTES_INICIALES } from "./carga";
 import { recomendarDotacion, type CapacidadSectorial } from "./dotacion";
@@ -63,17 +64,6 @@ export type PronosticoDia = {
   slots: PronosticoSlot[];
 };
 
-const fechaSql = (dia: string) => new Date(`${dia}T00:00:00.000Z`);
-
-function sumarDias(dia: string, n: number): string {
-  const d = new Date(`${dia}T00:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-}
-
-export function hoyAR(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
 
 /** Observaciones de la ventana histórica, desde la serie de 30 minutos. */
 export async function cargarObservaciones(localId: string, hasta: string, dias = 90): Promise<Observacion[]> {

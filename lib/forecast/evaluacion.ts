@@ -145,8 +145,15 @@ export const VENTANAS_CANDIDATAS = [45, 90, 180, 365];
 export async function calibrarVentana(
   localId: string,
   opciones: { corte: string; horizonte?: number } = { corte: "" }
-): Promise<{ ventana: number; wape: number; ranking: { ventana: number; wape: number }[] }> {
-  const resultados: { ventana: number; wape: number }[] = [];
+): Promise<{
+  ventana: number;
+  wape: number;
+  /** Cuánto tira el modelo para arriba (+) o para abajo (−), en %. */
+  sesgoPct: number | null;
+  diasEvaluados: number;
+  ranking: { ventana: number; wape: number }[];
+}> {
+  const resultados: { ventana: number; wape: number; sesgoPct: number | null; dias: number }[] = [];
 
   for (const ventana of VENTANAS_CANDIDATAS) {
     const r = await backtestLocal(localId, {
@@ -156,21 +163,67 @@ export async function calibrarVentana(
     });
     // Se calibra contra el error del DÍA, no de la franja: es el nivel en el
     // que se decide, y el de la franja está dominado por ruido de conteo.
-    const pares = r.porDia.map((d) => ({ pronosticado: d.pronosticado, real: d.realTickets }));
-    resultados.push({ ventana, wape: calcularMetricas(pares).wape });
+    const pares = r.porDia
+      .filter((d) => d.realTickets > 0)
+      .map((d) => ({ pronosticado: d.pronosticado, real: d.realTickets }));
+    const real = pares.reduce((s, p) => s + p.real, 0);
+    const pron = pares.reduce((s, p) => s + p.pronosticado, 0);
+    resultados.push({
+      ventana,
+      wape: calcularMetricas(pares).wape,
+      // El WAPE no distingue pasarse de quedarse corto; el sesgo sí, y para
+      // decidir dotación o compras no es lo mismo.
+      sesgoPct: real > 0 ? ((pron - real) / real) * 100 : null,
+      dias: pares.length,
+    });
   }
 
   const ranking = [...resultados].sort((a, b) => a.wape - b.wape);
-  return { ventana: ranking[0].ventana, wape: ranking[0].wape, ranking };
+  const mejor = ranking[0];
+  return {
+    ventana: mejor.ventana,
+    wape: mejor.wape,
+    sesgoPct: mejor.sesgoPct,
+    diasEvaluados: mejor.dias,
+    ranking: ranking.map(({ ventana, wape }) => ({ ventana, wape })),
+  };
 }
 
-/** Calibra todos los locales y guarda la ventana elegida en cada uno. */
-export async function calibrarVentanaTodos(corte: string) {
+/**
+ * Guarda la ventana elegida y lo que costó medirla.
+ *
+ * Lo medido se persiste porque calcularlo son cuatro backtests completos. La
+ * pantalla del modelo lo lee de acá en vez de repetirlos en cada carga.
+ */
+export async function guardarCalibracion(
+  localId: string,
+  calibracion: Awaited<ReturnType<typeof calibrarVentana>>,
+  contexto: { corte: string; horizonte: number }
+) {
+  await db.local.update({
+    where: { id: localId },
+    data: {
+      ventanaForecastDias: calibracion.ventana,
+      ventanaCalibracion: {
+        wape: calibracion.wape,
+        sesgoPct: calibracion.sesgoPct,
+        diasEvaluados: calibracion.diasEvaluados,
+        corte: contexto.corte,
+        horizonte: contexto.horizonte,
+        medidaEn: new Date().toISOString(),
+        ranking: calibracion.ranking,
+      },
+    },
+  });
+}
+
+/** Calibra todos los locales y guarda lo medido en cada uno. */
+export async function calibrarVentanaTodos(corte: string, horizonte = 15) {
   const locales = await db.local.findMany({ where: { fudoApiKey: { not: null } }, orderBy: { nombre: "asc" } });
   const out: { local: string; ventana: number; wape: number }[] = [];
   for (const l of locales) {
-    const r = await calibrarVentana(l.id, { corte });
-    await db.local.update({ where: { id: l.id }, data: { ventanaForecastDias: r.ventana } });
+    const r = await calibrarVentana(l.id, { corte, horizonte });
+    await guardarCalibracion(l.id, r, { corte, horizonte });
     out.push({ local: l.nombre, ventana: r.ventana, wape: r.wape });
   }
   return out;

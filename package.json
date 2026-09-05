@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p ${PORT:-3000}",
     "lint": "eslint",
-    "test": "tsx lib/horas.test.ts && tsx lib/geo.test.ts && tsx lib/jornada.test.ts && tsx lib/fechas.test.ts && tsx lib/alertas.test.ts && tsx lib/rostro.test.ts && tsx lib/password.test.ts && tsx lib/rateLimit.test.ts && tsx lib/ganttBarra.test.ts && tsx lib/pago.test.ts && tsx lib/demanda.test.ts && tsx lib/fudo.test.ts && tsx lib/resumenDiario.test.ts && tsx lib/forecast/forecast.test.ts",
+    "test": "tsx lib/horas.test.ts && tsx lib/geo.test.ts && tsx lib/jornada.test.ts && tsx lib/fechas.test.ts && tsx lib/periodo.test.ts && tsx lib/alertas.test.ts && tsx lib/rostro.test.ts && tsx lib/password.test.ts && tsx lib/rateLimit.test.ts && tsx lib/ganttBarra.test.ts && tsx lib/pago.test.ts && tsx lib/demanda.test.ts && tsx lib/fudo.test.ts && tsx lib/resumenDiario.test.ts && tsx lib/forecast/forecast.test.ts && tsx lib/forecast/estacionalidad.test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
     "postinstall": "prisma generate"

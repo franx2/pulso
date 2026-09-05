@@ -10,13 +10,7 @@ import { db } from "@/lib/db";
  * año pasado, que separa "creció" de "es la temporada".
  */
 
-const fechaSql = (dia: string) => new Date(`${dia}T00:00:00.000Z`);
-const sumarDias = (dia: string, n: number) => {
-  const d = new Date(`${dia}T00:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() + n);
-  return d.toISOString().slice(0, 10);
-};
-const hoyAR = () => new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
+import { diaDeFechaSql, fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
 
 export type PuntoSemana = {
   /** Lunes de la semana, "YYYY-MM-DD". */
@@ -58,7 +52,7 @@ const MIN_DIAS_SEMANA = 6;
 
 /** Lunes de la semana a la que pertenece una fecha. */
 function lunesDe(fecha: string): string {
-  const d = new Date(`${fecha}T00:00:00.000Z`);
+  const d = fechaSql(fecha);
   const dia = d.getUTCDay();
   d.setUTCDate(d.getUTCDate() - (dia === 0 ? 6 : dia - 1));
   return d.toISOString().slice(0, 10);
@@ -99,7 +93,7 @@ export async function tendenciaDeVentas(opciones: { semanas?: number } = {}): Pr
     // fuera del ajuste: está incompleta y tiraría la pendiente para abajo.
     const porSemana = new Map<string, { ventas: number; tickets: number; dias: number }>();
     for (const f of suyas) {
-      const fecha = f.fecha.toISOString().slice(0, 10);
+      const fecha = diaDeFechaSql(f.fecha);
       if (fecha < desde) continue;
       const semana = lunesDe(fecha);
       const acc = porSemana.get(semana) ?? { ventas: 0, tickets: 0, dias: 0 };
@@ -135,7 +129,7 @@ export async function tendenciaDeVentas(opciones: { semanas?: number } = {}): Pr
     const desdeAnio = sumarDias(hoy, -365 - 27);
     const hastaAnio = sumarDias(hoy, -365);
     const delAnioPasado = suyas.filter((f) => {
-      const d = f.fecha.toISOString().slice(0, 10);
+      const d = diaDeFechaSql(f.fecha);
       return d >= desdeAnio && d <= hastaAnio;
     });
     const ventasAnioAnterior = delAnioPasado.length >= 14 ? delAnioPasado.reduce((s, f) => s + f.ventas, 0) : null;

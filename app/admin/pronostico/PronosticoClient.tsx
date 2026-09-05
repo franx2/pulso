@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { ForecastChart } from "@/components/AnalyticsCharts";
 import { Badge, Button, EmptyState, PageTitle } from "@/components/ui";
+import TemporadaPanel from "./TemporadaPanel";
 import TendenciaPanel from "./TendenciaPanel";
 
 type DiaPronostico = {
@@ -87,7 +88,7 @@ type Respuesta = {
   }[];
 };
 
-type Vista = "proyeccion" | "modelo";
+type Vista = "proyeccion" | "temporada" | "modelo";
 type SemanaPronostico = {
   clave: string;
   desde: string;
@@ -101,6 +102,7 @@ type SemanaPronostico = {
 
 const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "proyeccion", label: "Proyección" },
+  { clave: "temporada", label: "Temporada" },
   { clave: "modelo", label: "Modelo y evidencia" },
 ];
 const HORIZONTES = [7, 15, 30];
@@ -463,6 +465,8 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
 
           <TendenciaPanel seleccionado={seleccionado} onSeleccionar={setLocalId} />
         </div>
+      ) : vista === "temporada" ? (
+        <TemporadaPanel seleccionado={seleccionado} onSeleccionar={setLocalId} />
       ) : (
         <div className="space-y-5">
           <Panel>

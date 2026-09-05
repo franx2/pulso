@@ -12,38 +12,43 @@
 
 ## 1. Lo primero que hay que arreglar
 
-### 🔴 `lib/fechas.ts` depende del timezone del proceso, y Vercel corre en UTC
+### ✅ El desfasaje de 21 horas ya está arreglado (2026-09-05)
 
-Es el problema más grave abierto y **está afectando producción ahora**. Medido el 2026-09-05 a
-las 02:27 UTC (23:27 en Argentina, todavía día 4):
+Se deja escrito porque explica cómo está armado el manejo de fechas y por qué no hay que
+volver atrás. `lib/fechas.ts` usaba los getters locales de `Date`
+(`getFullYear`/`getMonth`/`getDate`), o sea que asumía que el proceso corría en
+`America/Argentina/Buenos_Aires`. Vercel corre en UTC y **rechaza `TZ` como nombre de variable
+de entorno**, así que entre las 21:00 y las 24:00 argentinas el proceso ya estaba en el día
+siguiente. Medido antes de arreglarlo, el 2026-09-05 a las 02:27 UTC:
 
 ```
-inicioDelDia() devuelve   2026-09-05T00:00:00Z
-debería devolver          2026-09-04T03:00:00Z   (00:00 hora argentina)
+inicioDelDia() devolvía   2026-09-05T00:00:00Z
+debía devolver            2026-09-04T03:00:00Z   (00:00 hora argentina)
 desfasaje                 21 horas
 ```
 
-`inicioDelDia`, `finDelDia`, `desdeISO`, `claveDia` y `claveSemana` usan los getters locales de
-`Date` (`getFullYear`/`getMonth`/`getDate`), así que asumen que el proceso corre en
-`America/Argentina/Buenos_Aires`. **Vercel rechaza `TZ` como nombre de variable de entorno**, así
-que no se arregla seteando la variable: hay que reescribir esas funciones con aritmética de
-offset explícita.
+Tocaba los fichajes del día en `/fichar`, los rangos de reportes y la asignación de turnos.
 
-Qué toca: los fichajes del día en `/fichar`, los rangos de reportes y la asignación de turnos —
-o sea el corazón de la app original.
+**Cómo quedó:** el offset argentino vive en **un solo lugar, `lib/fechaAR.ts`**, y todo lo demás
+lo importa de ahí — `lib/fechas.ts`, `lib/resumenDiario.ts`, `lib/periodo.ts`, `lib/forecast/*`,
+las rutas de API y el cliente del dashboard. Antes estaba copiado en siete archivos, y eso fue
+justamente lo que dejó pasar el bug: no había un lugar al que converger. **No vuelvas a escribir
+`3 * 60 * 60 * 1000` en otro archivo.**
 
-Qué NO toca: nada del dashboard ni del pronóstico. Ese código usa aritmética UTC explícita a
-propósito (`claveDiaAR` en `lib/resumenDiario.ts`, `hoyAR` y `slotDesdeISO` en `lib/forecast/`).
-Cuando arregles `lib/fechas.ts`, copiá ese patrón.
+`lib/fechas.test.ts` ahora afirma sobre instantes absolutos (`"...Z"`) y no sobre getters
+locales. La versión vieja construía fechas con `new Date(2026, 7, 28)` y las verificaba con
+`.getDate()`: pasaba en cualquier zona horaria, incluso mientras producción estaba corrida 21
+horas. Corré los tests en UTC si tocás esto:
 
-`comoFechaSql` y `formatearFechaSql` ya son UTC explícito y están bien.
+```bash
+TZ=UTC npm test
+```
 
 ### 🟡 Antes de apagar Railway
 
 1. Que el usuario confirme login y fichaje reales desde su celular en `pulso-t572.vercel.app`
    (passkey, cámara y GPS no se pueden probar desde un navegador de sandbox).
-2. Arreglar el `TZ` de arriba.
-3. **Rotar la contraseña del Postgres de Railway**: durante la migración quedó impresa en texto
+2. **Rotar la contraseña del Postgres de Railway**: durante la migración quedó impresa en texto
    plano en una conversación.
 
 ### 🟡 Passkeys atadas al dominio
@@ -79,16 +84,32 @@ Creció en tres módulos que conviene entender por separado:
 
 ## 3. Estado de los datos (verificado 2026-09-05)
 
-Los cuatro locales tienen Fudo configurado y un año de historia cargada:
+Los cuatro locales tienen Fudo configurado. En `ResumenDiario` hay **desde enero de 2025**, o
+sea 18-20 meses según el local:
 
-| Local | Tipo | Ventana de perfil | WAPE día |
-|---|---|---:|---:|
-| Chacras | `OPEN_AIR` | 45 d | 12,7% |
-| Jumbo | `INDOOR_MALL` | 90 d | 8,9% |
-| Las cañas | `OPEN_AIR` | 45 d | 8,7% |
-| QuickPoint | `OPEN_AIR` | 180 d | 8,8% |
+| Local | Tipo | Historia diaria | Ventana de perfil | WAPE día |
+|---|---|---|---:|---:|
+| Chacras | `OPEN_AIR` | 2025-03-04 → hoy (548 d) | 45 d | 12,3% |
+| Jumbo | `INDOOR_MALL` | 2025-01-02 → hoy (605 d) | 90 d | 9,2% |
+| Las cañas | `OPEN_AIR` | 2025-01-29 → hoy (579 d) | 45 d | 7,8% |
+| QuickPoint | `OPEN_AIR` | 2025-01-02 → hoy (599 d) | 180 d | 7,4% |
 
-La "ventana de perfil" no se elige a dedo: la calibra el backtest (ver §6).
+**Chacras y Las cañas no existían a principios de 2025** — abren el 4 de marzo y el 29 de enero
+respectivamente. No es un hueco de sincronización: Fudo no tiene ventas antes de eso. Cualquier
+comparación interanual de esos dos locales arranca recién ahí.
+
+La "ventana de perfil" no se elige a dedo: la calibra el backtest (ver §6), y desde 2026-09-05
+el resultado queda guardado en `Local.ventanaCalibracion` en vez de recalcularse por pantalla.
+
+**Ojo con qué serie tiene qué.** La recarga de 2025 llenó `ResumenDiario` y `ProductoDiario` —
+que es lo que usan el dashboard, la tendencia y la temporada. **`DemandaSlot` (la serie de 30
+minutos) sigue teniendo ~un año**, que es lo que usa el pronóstico intradiario. No hace falta
+extenderla: la calibración ya mostró que para ese modelo un año pierde contra 45-180 días.
+
+Para recargar más historia: `sincronizarResumenLocal(localId, { desde, hasta })` acepta un
+intervalo explícito. Hay que llamarlo por tramos de ~45 días desde un script local — un pedido
+de un año entero acumula cientos de miles de ventas en memoria antes de agregarlas, y no entra
+en los 300 s de una función serverless.
 
 **Lo que sí está medido**: demanda, ventas, tickets, mix por canal/categoría/medio de pago,
 descuentos por caja, sensibilidad al clima.
@@ -112,7 +133,9 @@ descuentos por caja, sensibilidad al clima.
 ```text
 prisma/schema.prisma          modelo completo
 lib/
-  fechas.ts                   ⚠️ ver §1
+  fechaAR.ts                  ⭐ el offset argentino vive acá y sólo acá (§1)
+  fechas.ts                   días calendario y semanas ISO, sobre fechaAR
+  periodo.ts                  qué período se mira y contra qué se compara
   horas.ts jornada.ts pago.ts cálculo de horas, jornadas y liquidación
   session.ts webauthn.ts      auth
   geo.ts rostro.ts            geocerca y reconocimiento facial
@@ -130,7 +153,8 @@ lib/
     carga.ts                  SectorLoadScore
     dotacion.ts               carga → personas, aprendizaje de capacidad
     clima.ts                  Open-Meteo + sensibilidad por tipo de local
-    tendencia.ts              tendencia de ventas semanal y proyección
+    tendencia.ts              tendencia de ventas semanal y proyección a 30 días
+    estacionalidad.ts         índice por mes, proyección por temporada (§6)
     analitica.ts              correlaciones históricas y resumen explicable de factores
     backtest.ts               MAE / RMSE / WAPE, intervalos
     evaluacion.ts             backtesting y calibración de ventana
@@ -139,7 +163,7 @@ lib/
 app/
   fichar/                     fichaje del empleado (móvil)
   admin/dashboard/            comando, comparación local, productos y control
-  admin/pronostico/           proyección, modelo, correlaciones y tendencia por local
+  admin/pronostico/           proyección, temporada, modelo y correlaciones por local
   admin/pronostico/ajustes/   K manual, capacidades, matriz sector, clima
   admin/{turnos,presencia,reportes,empleados,arqueos,configuracion}/
   api/                        rutas API
@@ -193,7 +217,7 @@ Vercel Cron y no hay `vercel.json`.
 |---|---|---|---|
 | `/api/cron/resumen?dias=7` | cada hora | ~40 s | refresca el dashboard |
 | `/api/cron/resumen?dias=90&local=<nombre>` | semanal, **una llamada por local** | ~1,5 min c/u | recupera días viejos corregidos en Fudo |
-| `/api/cron/semanal` | semanal | **106 s** | refresca franjas, **recalibra la ventana de cada local** y remide el clima |
+| `/api/cron/semanal` | semanal | **106 s** | refresca franjas, **recalibra la ventana de cada local**, guarda lo que midió y remide el clima |
 | `/api/cron/stock` | diario, **hora fija post-cierre** | ~2 min | foto de stock |
 | `/api/cron/demanda` | semanal | ~1 min | mapa de calor de Turnos → Semana |
 | `/api/cron/alertas` | cada hora | rápido | tardanzas, faltas, salidas olvidadas |
@@ -251,6 +275,58 @@ porque responden preguntas distintas.
 **La matriz carga → dotación se deriva de la capacidad, no se guarda aparte.** Son la misma
 afirmación escrita dos veces y dos copias se contradicen. Se calibra un número por sector y la
 tabla se actualiza sola (`matrizDesdeCapacidad`).
+
+### Temporada (`lib/forecast/estacionalidad.ts`)
+
+Es la otra mitad de "cuánto se va a vender", y responde a un horizonte distinto: el pronóstico
+de arriba mira 7-30 días, esto mira 3-12 meses. Vive aparte porque la pregunta es otra —
+enero en Mendoza no se parece a junio, y eso no se ve en una ventana de 45 días.
+
+```
+venta ≈ nivel × tendencia(t) × índice del mes × perfil del día de semana
+```
+
+Dos decisiones que cambian el resultado:
+
+**El índice del mes se calcula sobre la serie DESTENDENCIADA.** Con inflación alta, la venta
+nominal de diciembre es más grande que la de enero por dos razones distintas: porque diciembre
+vende más y porque diciembre llega once meses después. Sacar la tendencia primero es lo único
+que separa "temporada" de "los precios subieron". Es lo que verifica el test sintético: se
+genera una serie con estacionalidad y crecimiento conocidos y se comprueba que el módulo
+recupera los dos por separado.
+
+**La tendencia se ajusta en logaritmos**, porque el crecimiento acá es multiplicativo. Una recta
+sobre pesos nominales subestima el arranque y se dispara al final.
+
+El nivel de arranque de la proyección **no** sale del ajuste largo: es el promedio de los
+últimos 28 días desestacionalizado. Del ajuste largo se toma la forma (cuánto crece por día),
+no el punto de partida — anclarlo a un año entero lo ata a precios viejos. Y el crecimiento se
+aplica a la mitad, igual que en la proyección simple.
+
+La pantalla (pestaña **Temporada**) siempre muestra al lado la alternativa boba —repetir el
+promedio de los últimos 28 días— medida sobre los mismos 45 días reservados. Si el ajuste por
+temporada no le gana, hay que decirlo en vez de mostrar el modelo lindo.
+
+Un mes con menos de 20 días observados en toda la historia queda neutro (índice 1) y marcado
+como "poca historia": no se inventa una temporada que no se vio. Y hay una segunda advertencia
+distinta: **`repetido`** dice si ese mes se vio en más de un año. Hoy octubre, noviembre y
+diciembre tienen 30 días observados cada uno y son **un solo** octubre, noviembre y diciembre;
+el índice no puede distinguir "así es diciembre" de "así fue diciembre de 2025". La pantalla lo
+marca como "un solo año". En enero de 2027 esto se arregla solo.
+
+Medido el 2026-09-05, con el backtest de 45 días reservados:
+
+| Local | WAPE con temporada | Repitiendo 28 días | Mejora |
+|---|---:|---:|---:|
+| Jumbo | 10,8% | 22,2% | **−51%** |
+| Chacras | 17,3% | 30,5% | **−43%** |
+| Las cañas | 17,6% | 29,6% | **−41%** |
+| QuickPoint | 19,8% | 19,2% | **+3%** |
+
+**QuickPoint es la excepción y hay que dejarla dicha**: ajustar por temporada ahí *empeora* el
+pronóstico. Su curva es casi plana (0,92-1,21 contra 0,73-1,28 de Chacras) y los dos métodos se
+pasan un 12%. Es también el local con días que Fudo no registra (ver §11): probablemente no sea
+que no tiene estacionalidad, sino que su serie tiene agujeros.
 
 ### Clima
 
@@ -374,7 +450,6 @@ Notas de entorno que ahorran tiempo:
 
 **Bloqueantes para cerrar la migración**
 
-- Arreglar `lib/fechas.ts` (§1).
 - Probar en celular real: passkey, cámara, GPS.
 - Rotar la password de Postgres de Railway y apagar el servicio.
 
@@ -390,8 +465,8 @@ Notas de entorno que ahorran tiempo:
 
 **Mejoras**
 
-- Interanual real: hay exactamente 365 días, y comparar 4 semanas contra el año pasado necesita
-  13 meses. En un mes sale solo.
+- La comparación interanual de `tendencia.ts` sigue leyendo una ventana de 400 días. Con 2025
+  entero cargado ya hay historia para ampliarla; el módulo de temporada sí usa todo.
 - Feriados trasladables de 2026 (Carnaval, Semana Santa, puentes): cargarlos en Ajustes cuando
   se confirmen. El seed sólo trae los de fecha fija.
 - `K_event` y `K_promotion` existen en la fórmula pero no tienen fuente de datos; quedan en 1.

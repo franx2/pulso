@@ -10,90 +10,106 @@ import {
   inicioDelDia,
 } from "./fechas";
 
-// El día local arranca a las 00:00 y termina a las 23:59:59.999 locales.
-const unMomento = new Date(2026, 7, 28, 15, 42, 10);
-assert.strictEqual(inicioDelDia(unMomento).getHours(), 0);
-assert.strictEqual(inicioDelDia(unMomento).getDate(), 28);
-assert.strictEqual(finDelDia(unMomento).getHours(), 23);
-assert.strictEqual(finDelDia(unMomento).getMilliseconds(), 999);
+/**
+ * Todas las entradas son instantes absolutos ("...Z") y todas las
+ * afirmaciones son sobre instantes absolutos.
+ *
+ * Eso es a propósito y es el punto del archivo: la versión anterior de estos
+ * checks construía fechas con `new Date(2026, 7, 28)` y las verificaba con
+ * `.getDate()` — local adentro, local afuera. Pasaban en cualquier zona
+ * horaria, incluso mientras producción estaba corrida 21 horas. Un test que
+ * no puede fallar en UTC no protege nada acá.
+ */
+
+// 18:42Z es 15:42 en Argentina: mismo día calendario.
+const tarde = new Date("2026-08-28T18:42:10.000Z");
+assert.strictEqual(inicioDelDia(tarde).toISOString(), "2026-08-28T03:00:00.000Z");
+assert.strictEqual(finDelDia(tarde).toISOString(), "2026-08-29T02:59:59.999Z");
+
+// EL BUG: 02:27Z del 5 de septiembre son las 23:27 del 4 en Argentina. El día
+// que se está trabajando es el 4, no el 5. Con getters locales en un proceso
+// UTC esto daba 2026-09-05T00:00:00Z: 21 horas de corrimiento.
+const casiMedianocheAR = new Date("2026-09-05T02:27:40.000Z");
+assert.strictEqual(
+  inicioDelDia(casiMedianocheAR).toISOString(),
+  "2026-09-04T03:00:00.000Z",
+  "las 23:27 argentinas todavía pertenecen al día anterior en UTC"
+);
+assert.strictEqual(claveDia(casiMedianocheAR), "2026-09-04");
+assert.strictEqual(comoFechaSql(casiMedianocheAR).toISOString(), "2026-09-04T00:00:00.000Z");
 
 // El rango de un día cubre cualquier instante de ese día, incluidos los bordes.
-const inicio = inicioDelDia(unMomento);
-const fin = finDelDia(unMomento);
-assert.ok(inicio <= unMomento && unMomento <= fin, "un instante del día cae dentro del rango");
-const casiMedianoche = new Date(2026, 7, 28, 23, 59, 59, 500);
-assert.ok(casiMedianoche <= fin, "23:59:59.5 todavía es del mismo día");
-const yaEsManana = new Date(2026, 7, 29, 0, 0, 0, 0);
-assert.ok(yaEsManana > fin, "la medianoche siguiente ya quedó afuera");
+const inicio = inicioDelDia(tarde);
+const fin = finDelDia(tarde);
+assert.ok(inicio <= tarde && tarde <= fin, "un instante del día cae dentro del rango");
+assert.ok(new Date("2026-08-29T02:59:59.500Z") <= fin, "23:59:59.5 argentinas siguen siendo del día");
+assert.ok(new Date("2026-08-29T03:00:00.000Z") > fin, "la medianoche argentina siguiente quedó afuera");
 
-// desdeISO interpreta el texto como día LOCAL, no como medianoche UTC: este era
-// el bug que dejaba los reportes vacíos.
-const local = desdeISO("2026-08-28");
-assert.strictEqual(local.getFullYear(), 2026);
-assert.strictEqual(local.getMonth(), 7);
-assert.strictEqual(local.getDate(), 28);
-assert.strictEqual(local.getHours(), 0);
+// El primer instante del día también entra: el borde de abajo es inclusivo.
+assert.ok(inicioDelDia(inicio).getTime() === inicio.getTime(), "el arranque del día es idempotente");
 
-// comoFechaSql da medianoche UTC del mismo día calendario, que es como Prisma
+// desdeISO interpreta el texto como día ARGENTINO, no como medianoche UTC.
+assert.strictEqual(desdeISO("2026-08-28").toISOString(), "2026-08-28T03:00:00.000Z");
+assert.strictEqual(claveDia(desdeISO("2026-08-28")), "2026-08-28", "ida y vuelta sin corrimiento");
+
+// comoFechaSql da medianoche UTC del día argentino, que es como Prisma
 // devuelve los campos @db.Date.
-const sql = comoFechaSql(unMomento);
-assert.strictEqual(sql.toISOString(), "2026-08-28T00:00:00.000Z");
+assert.strictEqual(comoFechaSql(tarde).toISOString(), "2026-08-28T00:00:00.000Z");
 
-// Un instante de la tarde y otro de la mañana del mismo día comparten clave.
-assert.strictEqual(claveDia(new Date(2026, 7, 28, 2, 0)), "2026-08-28");
-assert.strictEqual(claveDia(new Date(2026, 7, 28, 22, 0)), "2026-08-28");
-assert.notStrictEqual(claveDia(new Date(2026, 7, 29, 2, 0)), "2026-08-28");
+// Un instante de la mañana y otro de la noche del mismo día argentino
+// comparten clave, aunque en UTC caigan en días distintos.
+assert.strictEqual(claveDia(new Date("2026-08-28T12:00:00.000Z")), "2026-08-28");
+assert.strictEqual(claveDia(new Date("2026-08-29T02:00:00.000Z")), "2026-08-28");
+assert.strictEqual(claveDia(new Date("2026-08-29T03:00:00.000Z")), "2026-08-29");
 
 // Meses y días de un dígito se rellenan con cero.
-assert.strictEqual(claveDia(new Date(2026, 0, 5, 12, 0)), "2026-01-05");
+assert.strictEqual(claveDia(new Date("2026-01-05T15:00:00.000Z")), "2026-01-05");
+
+// Cruce de año: las 22:00 del 31 de diciembre siguen siendo del año viejo.
+assert.strictEqual(claveDia(new Date("2026-01-01T01:00:00.000Z")), "2025-12-31");
 
 // Un @db.Date serializado se muestra con SU día calendario, no corrido por la
 // zona horaria: en UTC-3, formatear "2026-08-28T00:00:00Z" a secas daría 27.
-// Se comparan las partes y no el texto, que depende del locale del sistema.
 const soloDia: Intl.DateTimeFormatOptions = { day: "numeric", month: "numeric", year: "numeric" };
-assert.strictEqual(
-  formatearFechaSql("2026-08-28T00:00:00.000Z", soloDia),
-  new Date(2026, 7, 28).toLocaleDateString("es-AR", soloDia),
-  "un @db.Date del 28 debe mostrarse como 28, no como 27"
-);
+assert.strictEqual(formatearFechaSql("2026-08-28T00:00:00.000Z", soloDia), "28/8/2026");
 
 // Y lo mismo cruzando el año, que es donde más duele equivocarse.
+assert.strictEqual(formatearFechaSql("2026-01-01T00:00:00.000Z", soloDia), "1/1/2026");
+
+// Ida y vuelta: guardar un día argentino y volver a mostrarlo da el mismo día.
 assert.strictEqual(
-  formatearFechaSql("2026-01-01T00:00:00.000Z", soloDia),
-  new Date(2026, 0, 1).toLocaleDateString("es-AR", soloDia),
-  "el 1 de enero no puede caer en diciembre del año anterior"
+  formatearFechaSql(comoFechaSql(new Date("2026-08-28T18:00:00.000Z")).toISOString(), soloDia),
+  "28/8/2026"
 );
 
-// Ida y vuelta: guardar un día local y volver a mostrarlo da el mismo día.
-const guardado = comoFechaSql(new Date(2026, 7, 28, 15, 0)).toISOString();
-assert.strictEqual(
-  formatearFechaSql(guardado, soloDia),
-  new Date(2026, 7, 28).toLocaleDateString("es-AR", soloDia)
-);
-
-// claveFechaSql lee el día calendario de un @db.Date con getters UTC: no lo
-// corre un día en una zona al oeste de Greenwich (Argentina, UTC-3).
+// claveFechaSql lee el día calendario de un @db.Date: no lo corre un día.
 assert.strictEqual(claveFechaSql(new Date("2026-05-01T00:00:00.000Z")), "2026-05-01");
 assert.strictEqual(claveFechaSql(new Date("2026-01-01T00:00:00.000Z")), "2026-01-01");
 
 // --- Semana ISO ---
 
 // La semana va de lunes a domingo: los 7 días comparten clave.
-// 2026-08-24 es lunes.
-const semanaDelLunes = claveSemana(new Date(2026, 7, 24));
+// 2026-08-24 es lunes. Se toma el mediodía argentino de cada día.
+const alMediodiaAR = (dia: string) => new Date(`${dia}T15:00:00.000Z`);
+const semanaDelLunes = claveSemana(alMediodiaAR("2026-08-24"));
 for (let i = 0; i < 7; i++) {
+  const dia = `2026-08-${24 + i}`;
   assert.strictEqual(
-    claveSemana(new Date(2026, 7, 24 + i)),
+    claveSemana(alMediodiaAR(dia)),
     semanaDelLunes,
-    `el día ${24 + i} debería caer en la misma semana que el lunes 24`
+    `${dia} debería caer en la misma semana que el lunes 24`
   );
 }
 
 // El lunes siguiente ya es otra semana.
-assert.notStrictEqual(claveSemana(new Date(2026, 7, 31)), semanaDelLunes);
+assert.notStrictEqual(claveSemana(alMediodiaAR("2026-08-31")), semanaDelLunes);
 
 // El domingo pertenece a la semana que arrancó el lunes anterior, no a la próxima.
-assert.strictEqual(claveSemana(new Date(2026, 7, 30)), semanaDelLunes, "el domingo cierra la semana");
+assert.strictEqual(claveSemana(alMediodiaAR("2026-08-30")), semanaDelLunes, "el domingo cierra la semana");
+
+// Un fichaje de las 23:30 del domingo (02:30Z del lunes) sigue siendo de la
+// semana que cierra, no de la que arranca: es el mismo criterio que el día.
+assert.strictEqual(claveSemana(new Date("2026-08-31T02:30:00.000Z")), semanaDelLunes);
 
 // Formato esperado.
 assert.match(semanaDelLunes, /^\d{4}-W\d{2}$/);
@@ -101,9 +117,14 @@ assert.match(semanaDelLunes, /^\d{4}-W\d{2}$/);
 // Cruce de año: el 31 de diciembre y el 1 de enero pueden compartir semana ISO.
 // 2025-12-31 es miércoles, así que esa semana incluye el 1 de enero de 2026.
 assert.strictEqual(
-  claveSemana(new Date(2025, 11, 31)),
-  claveSemana(new Date(2026, 0, 1)),
+  claveSemana(alMediodiaAR("2025-12-31")),
+  claveSemana(alMediodiaAR("2026-01-01")),
   "el fin de año no debe partir la semana en dos"
 );
+assert.strictEqual(claveSemana(alMediodiaAR("2025-12-31")), "2026-W01");
+
+// El 1 de enero que cae domingo pertenece a la última semana del año anterior.
+// 2023-01-01 fue domingo.
+assert.strictEqual(claveSemana(alMediodiaAR("2023-01-01")), "2022-W52");
 
 console.log("lib/fechas.test.ts: todos los checks pasaron");

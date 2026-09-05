@@ -44,6 +44,41 @@ function rutaConIndices(puntos: { indice: number; valor: number }[], total: numb
     .join(" ");
 }
 
+/** Posición dentro del contenedor, en % — la misma cuenta que el viewBox pero
+ * en unidades que no dependen de cuánto se estiró el SVG. */
+const pctX = (indice: number, total: number) => (xDe(indice, total) / WIDTH) * 100;
+const pctY = (valor: number, maximo: number) => (yDe(valor, maximo) / HEIGHT) * 100;
+
+/**
+ * Los puntos van en HTML, no adentro del SVG.
+ *
+ * El SVG se estira con `preserveAspectRatio="none"` para que la serie ocupe
+ * todo el ancho disponible, y en un SVG estirado un `<circle>` se deforma:
+ * con el viewBox de 1000×240 y una caja de 1200×192 los puntos salían
+ * ovalados 1,5 a 1. Las líneas se salvan con `vector-effect`, los círculos no.
+ */
+function Punto({
+  x,
+  y,
+  color,
+  grande = false,
+}: {
+  x: number;
+  y: number;
+  color: string;
+  grande?: boolean;
+}) {
+  return (
+    <span
+      aria-hidden
+      className={`pointer-events-none absolute rounded-full ${
+        grande ? "h-2.5 w-2.5 ring-2 ring-white dark:ring-[#101c19]" : "h-1.5 w-1.5"
+      }`}
+      style={{ left: `${x}%`, top: `${y}%`, backgroundColor: color, transform: "translate(-50%, -50%)" }}
+    />
+  );
+}
+
 function fechaCorta(fecha: string) {
   return new Date(`${fecha}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 }
@@ -177,40 +212,30 @@ export function ComparisonChart({
                 strokeWidth="2.5"
                 vectorEffect="non-scaling-stroke"
               />
-              {actual.map((punto, indice) =>
-                punto.valor != null && punto.completo === false ? (
-                  <circle
-                    key={punto.fecha}
-                    cx={xDe(indice, actual.length)}
-                    cy={yDe(punto.valor, maximo)}
-                    r="3"
-                    fill="#d97706"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                ) : null
-              )}
               {activo != null && puntoActivo?.valor != null && (
-                <>
-                  <line
-                    x1={xDe(activo, actual.length)}
-                    x2={xDe(activo, actual.length)}
-                    y1="0"
-                    y2={HEIGHT}
-                    vectorEffect="non-scaling-stroke"
-                    className="stroke-slate-300 dark:stroke-[#53615c]"
-                  />
-                  <circle
-                    cx={xDe(activo, actual.length)}
-                    cy={yDe(puntoActivo.valor, maximo)}
-                    r="4"
-                    fill="#0f766e"
-                    stroke="white"
-                    strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </>
+                <line
+                  x1={xDe(activo, actual.length)}
+                  x2={xDe(activo, actual.length)}
+                  y1="0"
+                  y2={HEIGHT}
+                  vectorEffect="non-scaling-stroke"
+                  className="stroke-slate-300 dark:stroke-[#53615c]"
+                />
               )}
             </svg>
+            {actual.map((punto, indice) =>
+              punto.valor != null && punto.completo === false ? (
+                <Punto
+                  key={punto.fecha}
+                  x={pctX(indice, actual.length)}
+                  y={pctY(punto.valor, maximo)}
+                  color="#d97706"
+                />
+              ) : null
+            )}
+            {activo != null && puntoActivo?.valor != null && (
+              <Punto x={pctX(activo, actual.length)} y={pctY(puntoActivo.valor, maximo)} color="#0f766e" grande />
+            )}
             {activo != null && puntoActivo && (
               <div
                 className={`pointer-events-none absolute top-2 z-10 min-w-36 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-[#29403b] dark:bg-[#101c19] ${activo > actual.length * 0.75 ? "-translate-x-full" : ""}`}
@@ -347,27 +372,24 @@ export function ForecastChart({
                 vectorEffect="non-scaling-stroke"
               />
               {activo != null && puntoActivo && (
-                <>
-                  <line
-                    x1={xDe(activo, combinados.length)}
-                    x2={xDe(activo, combinados.length)}
-                    y1="0"
-                    y2={HEIGHT}
-                    className="stroke-slate-300 dark:stroke-[#53615c]"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                  <circle
-                    cx={xDe(activo, combinados.length)}
-                    cy={yDe(puntoActivo.valor, maximo)}
-                    r="4"
-                    fill={puntoActivo.tipo === "real" ? "#475569" : "#0f766e"}
-                    stroke="white"
-                    strokeWidth="2"
-                    vectorEffect="non-scaling-stroke"
-                  />
-                </>
+                <line
+                  x1={xDe(activo, combinados.length)}
+                  x2={xDe(activo, combinados.length)}
+                  y1="0"
+                  y2={HEIGHT}
+                  className="stroke-slate-300 dark:stroke-[#53615c]"
+                  vectorEffect="non-scaling-stroke"
+                />
               )}
             </svg>
+            {activo != null && puntoActivo && (
+              <Punto
+                x={pctX(activo, combinados.length)}
+                y={pctY(puntoActivo.valor, maximo)}
+                color={puntoActivo.tipo === "real" ? "#475569" : "#0f766e"}
+                grande
+              />
+            )}
             <span
               className="pointer-events-none absolute top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-[#101c19]/90 dark:text-[#94a19c]"
               style={{ left: `${fronteraPct}%`, transform: "translateX(-50%)" }}

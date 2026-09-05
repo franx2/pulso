@@ -136,6 +136,12 @@ model Local {
   /// (45, 90 y 180 en la medición inicial). Un año nunca ganó: arrastra
   /// estacionalidad vieja que corre el nivel actual.
   ventanaForecastDias Int @default(90)
+  /// Lo que midió esa calibración: `{ wape, sesgoPct, diasEvaluados, corte,
+  /// medidaEn, ranking }`. Se guarda porque calcularlo cuesta un backtest
+  /// completo por ventana candidata: el cron semanal ya los corre para elegir
+  /// la ventana, y sin esto la pantalla del modelo los repetía en cada carga
+  /// para mostrar el mismo número.
+  ventanaCalibracion Json?
 
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]

@@ -2,21 +2,57 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/session";
 import { correlacionesHistoricas, resumirFactores } from "@/lib/forecast/analitica";
-import { calcularMetricas } from "@/lib/forecast/backtest";
-import { backtestLocal } from "@/lib/forecast/evaluacion";
 import { LIMITES_K } from "@/lib/forecast/k";
-import { hoyAR, pronosticar } from "@/lib/forecast/motor";
+import { fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
+import { pronosticar } from "@/lib/forecast/motor";
 import { DECAIMIENTO_SEMANAL } from "@/lib/forecast/perfil";
 
-/** El forecast, el backtest y las correlaciones consultan series distintas. */
-export const maxDuration = 120;
+/** El forecast y las correlaciones consultan series distintas. El backtest
+ * NO se corre acá: lo mide el cron semanal y esta ruta lee lo que guardó. */
+export const maxDuration = 60;
 
-const fechaSql = (dia: string) => new Date(`${dia}T00:00:00.000Z`);
-const sumarDias = (dia: string, cantidad: number) => {
-  const fecha = fechaSql(dia);
-  fecha.setUTCDate(fecha.getUTCDate() + cantidad);
-  return fecha.toISOString().slice(0, 10);
+type Calibracion = {
+  wape: number | null;
+  sesgoPct: number | null;
+  diasEvaluados: number;
+  desde: string | null;
+  hasta: string | null;
+  medidaEn: string | null;
+  ranking: { ventana: number; wape: number }[];
 };
+
+/**
+ * Lee lo que guardó el cron. Es un `Json` de Prisma, o sea `unknown` en la
+ * práctica: se valida campo por campo en vez de castear, porque una fila vieja
+ * o a medio escribir no puede tumbar la pantalla del modelo.
+ */
+function leerCalibracion(valor: unknown): Calibracion | null {
+  if (!valor || typeof valor !== "object" || Array.isArray(valor)) return null;
+  const c = valor as Record<string, unknown>;
+  const numero = (v: unknown) => (typeof v === "number" && Number.isFinite(v) ? v : null);
+  const texto = (v: unknown) => (typeof v === "string" ? v : null);
+  const dias = numero(c.diasEvaluados) ?? 0;
+  // Menos de 5 días medidos no es una medición: se muestra como "sin datos".
+  if (dias < 5) return null;
+  const corte = texto(c.corte);
+  const horizonte = numero(c.horizonte) ?? 15;
+  return {
+    wape: numero(c.wape),
+    sesgoPct: numero(c.sesgoPct),
+    diasEvaluados: dias,
+    desde: corte,
+    hasta: corte ? sumarDias(corte, horizonte - 1) : null,
+    medidaEn: texto(c.medidaEn),
+    ranking: Array.isArray(c.ranking)
+      ? c.ranking.flatMap((fila) => {
+          const f = fila as Record<string, unknown>;
+          const ventana = numero(f?.ventana);
+          const wape = numero(f?.wape);
+          return ventana != null && wape != null ? [{ ventana, wape }] : [];
+        })
+      : [],
+  };
+}
 
 export async function GET(request: Request) {
   const session = await requireAdminApi();
@@ -28,17 +64,16 @@ export async function GET(request: Request) {
 
   const locales = await db.local.findMany({
     where: { fudoApiKey: { not: null } },
-    select: { id: true, nombre: true, tipoLocal: true, ventanaForecastDias: true },
+    select: { id: true, nombre: true, tipoLocal: true, ventanaForecastDias: true, ventanaCalibracion: true },
     orderBy: { nombre: "asc" },
   });
   if (locales.length === 0) return NextResponse.json({ locales: [], pronostico: null });
 
   const elegido = locales.find((local) => local.id === localId) ?? locales[0];
   const hoy = hoyAR();
-  const corteBacktest = sumarDias(hoy, -15);
   const desdeHistoria = sumarDias(hoy, -365);
 
-  const [{ dias: pronostico, diagnostico }, resumenes, climas, sensibilidades, backtest] = await Promise.all([
+  const [{ dias: pronostico, diagnostico }, resumenes, climas, sensibilidades] = await Promise.all([
     pronosticar(elegido.id, { dias }),
     db.resumenDiario.findMany({
       where: { localId: elegido.id, fecha: { gte: fechaSql(desdeHistoria), lt: fechaSql(hoy) } },
@@ -53,11 +88,6 @@ export async function GET(request: Request) {
       where: { tipoLocal: elegido.tipoLocal },
       select: { condicion: true, factor: true, confianza: true, dias: true, origen: true },
       orderBy: { condicion: "asc" },
-    }),
-    backtestLocal(elegido.id, {
-      corte: corteBacktest,
-      horizonte: 15,
-      ventana: elegido.ventanaForecastDias,
     }),
   ]);
 
@@ -76,13 +106,9 @@ export async function GET(request: Request) {
   });
 
   const factores = resumirFactores(pronostico.flatMap((dia) => dia.slots));
-  const paresDia = backtest.porDia
-    .filter((dia) => dia.realTickets > 0)
-    .map((dia) => ({ pronosticado: dia.pronosticado, real: dia.realTickets }));
-  const metricasDia = calcularMetricas(paresDia);
-  const totalReal = paresDia.reduce((s, par) => s + par.real, 0);
-  const totalPronosticado = paresDia.reduce((s, par) => s + par.pronosticado, 0);
-  const backtestSuficiente = paresDia.length >= 5;
+  // Lo dejó el cron semanal en `/api/cron/semanal`. Si todavía no corrió, la
+  // pantalla dice que no hay medición en vez de inventar una.
+  const calibracion = leerCalibracion(elegido.ventanaCalibracion);
 
   return NextResponse.json({
     locales,
@@ -114,14 +140,7 @@ export async function GET(request: Request) {
       decaimientoSemanal: DECAIMIENTO_SEMANAL,
       limitesFactor: LIMITES_K,
       factores,
-      backtest: {
-        desde: corteBacktest,
-        hasta: sumarDias(corteBacktest, 14),
-        diasEvaluados: paresDia.length,
-        wapeDia: backtestSuficiente ? metricasDia.wape : null,
-        sesgoPct:
-          backtestSuficiente && totalReal > 0 ? ((totalPronosticado - totalReal) / totalReal) * 100 : null,
-      },
+      backtest: calibracion,
     },
     correlaciones: correlacionesHistoricas(muestras),
     sensibilidadClima: sensibilidades,

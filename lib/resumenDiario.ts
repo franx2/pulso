@@ -6,12 +6,10 @@
 
 /** Fudo devuelve UTC; el negocio cierra la caja por día argentino (UTC-3),
  * así que una venta de las 23:30 de Mendoza (02:30Z del día siguiente) tiene
- * que caer en el día que se trabajó, no en el siguiente. */
-const OFFSET_AR_MS = 3 * 60 * 60 * 1000;
-
-export function claveDiaAR(iso: string): string {
-  return new Date(new Date(iso).getTime() - OFFSET_AR_MS).toISOString().slice(0, 10);
-}
+ * que caer en el día que se trabajó, no en el siguiente. El offset vive en
+ * `lib/fechaAR.ts` y es el único lugar donde está escrito. */
+import { claveDiaAR } from "@/lib/fechaAR";
+export { claveDiaAR };
 
 export type VentaCruda = {
   id: string;

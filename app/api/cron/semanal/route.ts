@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hoyAR, sumarDias } from "@/lib/fechaAR";
 import { construirDatasetLocal } from "@/lib/forecast/dataset";
-import { calibrarVentana } from "@/lib/forecast/evaluacion";
+import { calibrarVentana, guardarCalibracion } from "@/lib/forecast/evaluacion";
 import { guardarSensibilidad, sincronizarClimaLocal } from "@/lib/forecast/clima";
 
 /** Recalibrar es cálculo sobre datos ya guardados, no paginar Fudo entero:
@@ -40,9 +41,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const corte = new Date(Date.now() - 3 * 60 * 60 * 1000 - DIAS_EVALUACION * 86400000)
-    .toISOString()
-    .slice(0, 10);
+  const corte = sumarDias(hoyAR(), -DIAS_EVALUACION);
 
   const locales = await db.local.findMany({
     where: { fudoApiKey: { not: null } },
@@ -58,7 +57,9 @@ export async function GET(request: Request) {
       await construirDatasetLocal(l.id, DIAS_REFRESCO);
       await sincronizarClimaLocal(l.id, DIAS_REFRESCO);
       const cal = await calibrarVentana(l.id, { corte, horizonte: DIAS_EVALUACION });
-      await db.local.update({ where: { id: l.id }, data: { ventanaForecastDias: cal.ventana } });
+      // Lo medido se guarda junto con la ventana: es el mismo backtest, y la
+      // pantalla del modelo lo lee en vez de recalcularlo en cada carga.
+      await guardarCalibracion(l.id, cal, { corte, horizonte: DIAS_EVALUACION });
       resultados.push({
         local: l.nombre,
         ok: true,

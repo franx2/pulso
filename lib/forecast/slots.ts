@@ -2,8 +2,9 @@
  * slot 47 = 23:30-24:00. Todo el módulo razona en estos slots y consolida
  * hacia arriba (hora, turno, día) cuando hace falta. */
 
+import { OFFSET_AR_MS } from "@/lib/fechaAR";
+
 export const SLOTS_POR_DIA = 48;
-const OFFSET_AR_MS = 3 * 60 * 60 * 1000;
 
 /** Instante UTC → { dia: "YYYY-MM-DD", slot: 0..47 } en hora argentina. */
 export function slotDesdeISO(iso: string): { dia: string; slot: number } {

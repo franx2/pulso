@@ -172,9 +172,16 @@ function fechaSql(dia: string): Date {
   return new Date(`${dia}T00:00:00.000Z`);
 }
 
+/**
+ * `rango` acepta un número de días hacia atrás (el uso normal, desde los
+ * crons) o un intervalo explícito. El intervalo existe para rellenar historia
+ * vieja: pedir "hace 613 días" traería todo el período de una sola vez y
+ * acumularía cientos de miles de ventas en memoria antes de agregarlas, así
+ * que la recarga larga se hace por tramos desde afuera.
+ */
 export async function sincronizarResumenLocal(
   localId: string,
-  dias = 90
+  rango: number | { desde: Date; hasta: Date } = 90
 ): Promise<{ diasProcesados: number; ventas: number }> {
   const local = await db.local.findUnique({ where: { id: localId } });
   if (!local) throw new FudoError("Local no encontrado");
@@ -182,8 +189,8 @@ export async function sincronizarResumenLocal(
     throw new FudoError("Este local no tiene Fudo configurado");
   }
 
-  const hasta = new Date();
-  const desde = new Date(hasta.getTime() - dias * 86400000);
+  const hasta = typeof rango === "number" ? new Date() : rango.hasta;
+  const desde = typeof rango === "number" ? new Date(hasta.getTime() - rango * 86400000) : rango.desde;
   const token = await obtenerTokenFudo(local.fudoApiKey, local.fudoApiSecret);
 
   // El histórico se recorre en tramos: un pedido de un año en un local

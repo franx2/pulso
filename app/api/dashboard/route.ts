@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { diaDeFechaSql } from "@/lib/fechaAR";
+import { resolverRango } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
-
-/** Los presets rápidos son ventanas móviles; mes y año calendario se
- * resuelven aparte para poder navegar historia sin mezclar criterios. */
-const DIAS_POR_PERIODO: Record<string, number> = { hoy: 1, semana: 7, mes: 30, anio: 365 };
 
 type Mapa = Record<string, number>;
 
@@ -102,137 +100,13 @@ const top = (m: Mapa, n: number) =>
     .slice(0, n)
     .map(([nombre, valor]) => ({ nombre, valor }));
 
-/** Medianoche argentina de hace `dias` días, en el formato `@db.Date`. */
-function fechaDesdeHoy(dias: number): Date {
-  const d = new Date(`${hoyAR()}T00:00:00.000Z`);
-  d.setUTCDate(d.getUTCDate() - dias);
-  return d;
-}
-
-function hoyAR(): string {
-  return new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-}
-
-const fechaSql = (dia: string) => new Date(`${dia}T00:00:00.000Z`);
-const diasEntre = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
-const pad = (n: number) => String(n).padStart(2, "0");
-
-function ultimoDia(anio: number, mes: number) {
-  return new Date(Date.UTC(anio, mes, 0)).getUTCDate();
-}
-
-function fechaValida(valor: string | null): valor is string {
-  return Boolean(valor && /^\d{4}-\d{2}-\d{2}$/.test(valor) && !Number.isNaN(fechaSql(valor).getTime()));
-}
-
-/**
- * Resuelve qué se compara contra qué.
- *
- * - `mtd`: del 1 del mes hasta hoy, contra los mismos días del mes pasado
- *   (al 4 de septiembre compara 1-4/9 contra 1-4/8). Es la lectura de "cómo
- *   venimos este mes", que no sirve contra el mes cerrado entero.
- * - rango a medida (`desde`/`hasta`): el período previo es la misma cantidad
- *   de días, pegado antes.
- * - presets: ventana móvil terminando hoy.
- */
-function resolverRango(params: URLSearchParams) {
-  const periodo = params.get("periodo") ?? "semana";
-  const desdeParam = params.get("desde");
-  const hastaParam = params.get("hasta");
-
-  if (periodo === "mes-calendario" && /^\d{4}-\d{2}$/.test(params.get("mes") ?? "")) {
-    const [anio, mes] = params.get("mes")!.split("-").map(Number);
-    if (mes >= 1 && mes <= 12) {
-      const hoy = hoyAR();
-      const esMesActual = hoy.startsWith(`${anio}-${pad(mes)}`);
-      const diaFin = esMesActual ? Number(hoy.slice(8, 10)) : ultimoDia(anio, mes);
-      const inicioActual = fechaSql(`${anio}-${pad(mes)}-01`);
-      const finActual = fechaSql(`${anio}-${pad(mes)}-${pad(diaFin)}`);
-      const fechaMesPrevio = new Date(Date.UTC(anio, mes - 2, 1));
-      const anioPrevio = fechaMesPrevio.getUTCFullYear();
-      const mesPrevio = fechaMesPrevio.getUTCMonth() + 1;
-      const inicioPrevio = fechaSql(`${anioPrevio}-${pad(mesPrevio)}-01`);
-      const finPrevio = fechaSql(
-        `${anioPrevio}-${pad(mesPrevio)}-${pad(Math.min(diaFin, ultimoDia(anioPrevio, mesPrevio)))}`
-      );
-      return {
-        periodo,
-        inicioActual,
-        finActual,
-        inicioPrevio,
-        finPrevio,
-        dias: diasEntre(inicioActual, finActual),
-      };
-    }
-  }
-
-  if (periodo === "anio-calendario" && /^\d{4}$/.test(params.get("anio") ?? "")) {
-    const anio = Number(params.get("anio"));
-    const hoy = hoyAR();
-    const anioActual = Number(hoy.slice(0, 4));
-    const fin = anio === anioActual ? hoy.slice(5) : "12-31";
-    const finPrevio = fin === "02-29" ? "02-28" : fin;
-    const inicioActual = fechaSql(`${anio}-01-01`);
-    const finActual = fechaSql(`${anio}-${fin}`);
-    const inicioPrevio = fechaSql(`${anio - 1}-01-01`);
-    return {
-      periodo,
-      inicioActual,
-      finActual,
-      inicioPrevio,
-      finPrevio: fechaSql(`${anio - 1}-${finPrevio}`),
-      dias: diasEntre(inicioActual, finActual),
-    };
-  }
-
-  if (periodo === "mtd") {
-    const hoy = hoyAR();
-    const [anio, mes, dia] = hoy.split("-").map(Number);
-    const inicioActual = fechaSql(`${hoy.slice(0, 8)}01`);
-    const finActual = fechaSql(hoy);
-    const mesPrevio = mes === 1 ? 12 : mes - 1;
-    const anioPrevio = mes === 1 ? anio - 1 : anio;
-    const inicioPrevio = fechaSql(`${anioPrevio}-${pad(mesPrevio)}-01`);
-    // El mes pasado puede tener menos días (31/3 vs. febrero): se recorta al
-    // último día que exista, en vez de saltar de mes.
-    const ultimoDiaMesPrevio = new Date(Date.UTC(anioPrevio, mesPrevio, 0)).getUTCDate();
-    const finPrevio = fechaSql(`${anioPrevio}-${pad(mesPrevio)}-${pad(Math.min(dia, ultimoDiaMesPrevio))}`);
-    return { periodo, inicioActual, finActual, inicioPrevio, finPrevio, dias: dia };
-  }
-
-  if (fechaValida(desdeParam) && fechaValida(hastaParam) && desdeParam <= hastaParam) {
-    const inicioActual = fechaSql(desdeParam);
-    const finActual = fechaSql(hastaParam);
-    const dias = Math.min(Math.max(diasEntre(inicioActual, finActual), 1), 730);
-    if (diasEntre(inicioActual, finActual) > 730) {
-      finActual.setTime(inicioActual.getTime());
-      finActual.setUTCDate(finActual.getUTCDate() + 729);
-    }
-    const finPrevio = new Date(inicioActual);
-    finPrevio.setUTCDate(finPrevio.getUTCDate() - 1);
-    const inicioPrevio = new Date(finPrevio);
-    inicioPrevio.setUTCDate(inicioPrevio.getUTCDate() - (dias - 1));
-    return { periodo: "rango", inicioActual, finActual, inicioPrevio, finPrevio, dias };
-  }
-
-  const dias = DIAS_POR_PERIODO[periodo] ?? 7;
-  return {
-    periodo,
-    inicioActual: fechaDesdeHoy(dias - 1),
-    finActual: fechaSql(hoyAR()),
-    inicioPrevio: fechaDesdeHoy(dias * 2 - 1),
-    finPrevio: fechaDesdeHoy(dias),
-    dias,
-  };
-}
-
 type FilaSerie = { localId: string; fecha: Date; ventas: number; tickets: number };
 
 function construirSerie(filas: FilaSerie[], inicio: Date, fin: Date, localesEsperados = 1) {
   const porFecha = new Map<string, { ventas: number; tickets: number; locales: Set<string> }>();
   for (const fila of filas) {
     if (fila.fecha < inicio || fila.fecha > fin) continue;
-    const fecha = fila.fecha.toISOString().slice(0, 10);
+    const fecha = diaDeFechaSql(fila.fecha);
     const acumulado = porFecha.get(fecha) ?? { ventas: 0, tickets: 0, locales: new Set<string>() };
     acumulado.ventas += fila.ventas;
     acumulado.tickets += fila.tickets;
@@ -249,7 +123,7 @@ function construirSerie(filas: FilaSerie[], inicio: Date, fin: Date, localesEspe
   }[] = [];
   const cursor = new Date(inicio);
   while (cursor <= fin) {
-    const fecha = cursor.toISOString().slice(0, 10);
+    const fecha = diaDeFechaSql(cursor);
     const punto = porFecha.get(fecha);
     puntos.push({
       fecha,
@@ -368,8 +242,8 @@ export async function GET(request: Request) {
   return NextResponse.json({
     periodo,
     dias,
-    rango: { desde: inicioActual.toISOString().slice(0, 10), hasta: finActual.toISOString().slice(0, 10) },
-    rangoPrevio: { desde: inicioPrevio.toISOString().slice(0, 10), hasta: finPrevio.toISOString().slice(0, 10) },
+    rango: { desde: diaDeFechaSql(inicioActual), hasta: diaDeFechaSql(finActual) },
+    rangoPrevio: { desde: diaDeFechaSql(inicioPrevio), hasta: diaDeFechaSql(finPrevio) },
     cadena: {
       ...cadena,
       variacionVentas: variacion(ventasComparables, ventasComparablesPrevio),

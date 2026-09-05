@@ -351,15 +351,35 @@ function DashboardSkeleton() {
   );
 }
 
-export default function DashboardClient() {
+export type EstadoInicial = {
+  vista?: string;
+  periodo?: string;
+  mes?: string;
+  anio?: string;
+  desde?: string;
+  hasta?: string;
+  local?: string;
+};
+
+const esDia = (valor: string | undefined): valor is string => /^\d{4}-\d{2}-\d{2}$/.test(valor ?? "");
+
+export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInicial }) {
   const hoy = useMemo(() => hoyAR(), []);
-  const [vista, setVista] = useState<Vista>("rendimiento");
-  const [periodo, setPeriodo] = useState<Periodo>("mes");
-  const [mesElegido, setMesElegido] = useState(hoy.slice(0, 7));
-  const [anioElegido, setAnioElegido] = useState(hoy.slice(0, 4));
-  const [desde, setDesde] = useState(sumarDias(hoy, -29));
-  const [hasta, setHasta] = useState(hoy);
-  const [alcance, setAlcance] = useState("");
+  const [vista, setVista] = useState<Vista>(
+    VISTAS.some((v) => v.clave === inicial.vista) ? (inicial.vista as Vista) : "rendimiento"
+  );
+  const [periodo, setPeriodo] = useState<Periodo>(
+    PERIODOS.some((p) => p.clave === inicial.periodo) ? (inicial.periodo as Periodo) : "mes"
+  );
+  const [mesElegido, setMesElegido] = useState(
+    /^\d{4}-\d{2}$/.test(inicial.mes ?? "") ? inicial.mes! : hoy.slice(0, 7)
+  );
+  const [anioElegido, setAnioElegido] = useState(
+    /^\d{4}$/.test(inicial.anio ?? "") ? inicial.anio! : hoy.slice(0, 4)
+  );
+  const [desde, setDesde] = useState(esDia(inicial.desde) ? inicial.desde : sumarDias(hoy, -29));
+  const [hasta, setHasta] = useState(esDia(inicial.hasta) ? inicial.hasta : hoy);
+  const [alcance, setAlcance] = useState(inicial.local ?? "");
   const [metricaGrafico, setMetricaGrafico] = useState<MetricaGrafico>("ventas");
   const [datos, setDatos] = useState<Dash | null>(null);
   const [cargando, setCargando] = useState(true);
@@ -397,6 +417,25 @@ export default function DashboardClient() {
       });
     return () => controlador.abort();
   }, [periodo, mesElegido, anioElegido, desde, hasta, revision]);
+
+  // El estado vive también en la URL: recargar no vuelve a la vista por
+  // defecto y el link que se manda muestra lo mismo que se está viendo.
+  // `replaceState` y no `router.replace` a propósito: los datos ya se piden
+  // por fetch, así que no hace falta navegar ni pisar el historial.
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (vista !== "rendimiento") params.set("vista", vista);
+    if (periodo !== "mes") params.set("periodo", periodo);
+    if (periodo === "mes-calendario") params.set("mes", mesElegido);
+    if (periodo === "anio-calendario") params.set("anio", anioElegido);
+    if (periodo === "rango") {
+      params.set("desde", desde);
+      params.set("hasta", hasta);
+    }
+    if (alcance) params.set("local", alcance);
+    const query = params.toString();
+    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
+  }, [vista, periodo, mesElegido, anioElegido, desde, hasta, alcance]);
 
   async function sincronizar() {
     if (!datos) return;
