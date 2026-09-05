@@ -4,6 +4,7 @@ import { intervalo } from "./backtest";
 import { calcularCarga, cargaPorHora, COEFICIENTES_CANAL_INICIALES, COEFICIENTES_INICIALES } from "./carga";
 import { recomendarDotacion, type CapacidadSectorial } from "./dotacion";
 import { componerK, calcularKCalendar } from "./k";
+import { kWeather } from "./clima";
 import { calcularKTrend, claveCelda, construirPerfil, demandIndex, type Observacion } from "./perfil";
 import { SLOTS_POR_DIA } from "./slots";
 
@@ -131,6 +132,16 @@ export async function pronosticar(
     db.capacidadSector.findMany({ where: { localId } }),
   ]);
 
+  // Clima del horizonte y sensibilidad medida para este tipo de local. Sin
+  // coordenadas o sin historia suficiente, K_weather queda neutro solo.
+  const [climas, sensibilidades] = await Promise.all([
+    db.climaDia.findMany({
+      where: { localId, fecha: { gte: fechaSql(desde), lte: fechaSql(sumarDias(desde, horizonte)) } },
+    }),
+    db.sensibilidadClima.findMany({ where: { tipoLocal: local.tipoLocal } }),
+  ]);
+  const climaPorFecha = new Map(climas.map((c) => [c.fecha.toISOString().slice(0, 10), c]));
+
   const perfil = construirPerfil(observaciones, desde);
   const trend = calcularKTrend(observaciones, desde);
   const feriadosSet = new Set(feriados.map((f) => f.fecha.toISOString().slice(0, 10)));
@@ -174,6 +185,9 @@ export async function pronosticar(
       .filter((a) => a.slot == null)
       .reduce((acc, a) => acc * a.valor, 1);
 
+    const clima = climaPorFecha.get(fecha) ?? null;
+    const meteo = kWeather(clima, sensibilidades);
+
     const slots: PronosticoSlot[] = [];
 
     for (let slot = 0; slot < SLOTS_POR_DIA; slot++) {
@@ -186,10 +200,10 @@ export async function pronosticar(
       const kManual = kManualDia * kSlot;
 
       const explicacion = componerK(
-        { K_calendar: cal.k, K_trend: trend.k },
+        { K_calendar: cal.k, K_trend: trend.k, K_weather: meteo.k },
         kManual,
         undefined,
-        cal.motivos
+        [...cal.motivos, ...(meteo.motivo ? [meteo.motivo] : [])]
       );
 
       const base = celda.tickets;

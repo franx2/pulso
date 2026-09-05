@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Info, TrendingUp } from "lucide-react";
 import { Badge, Card, EmptyState, SectionTitle, Select, Spinner } from "@/components/ui";
+import TendenciaPanel from "./TendenciaPanel";
+import Link from "next/link";
 
 type Sector = "COCINA" | "SALON" | "CAJA" | "DESPACHO" | "ENCARGADO";
 type SlotPron = {
@@ -83,6 +85,8 @@ export default function PronosticoClient() {
             15 días por franja de 30 minutos, aprendido de los últimos 90 días de cada local
           </p>
         </div>
+        <div className="flex items-center gap-2">
+        <Link href="/admin/pronostico/ajustes" className="text-sm font-medium text-emerald-700 underline dark:text-[#4ee6b0]">Ajustes del modelo</Link>
         <Select value={localId} onChange={(e) => setLocalId(e.target.value)} className="w-auto! py-1.5 text-sm">
           {datos.locales.map((l) => (
             <option key={l.id} value={l.id}>
@@ -90,7 +94,10 @@ export default function PronosticoClient() {
             </option>
           ))}
         </Select>
+        </div>
       </div>
+
+      <TendenciaPanel />
 
       {capacidadEsSupuesto && (
         <Card className="border-amber-200 bg-amber-50 dark:border-[#5a4a2f] dark:bg-[#241f14]">
