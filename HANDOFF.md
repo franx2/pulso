@@ -79,6 +79,7 @@ Creció en tres módulos que conviene entender por separado:
 | **Asistencia** | fichaje, turnos, ausencias, correcciones, reportes de horas y liquidación | la propia app |
 | **Dashboard** | centro de comando: facturación, tickets, resultado, excepciones y comparación por local | Fudo → tablas locales |
 | **Pronóstico** | demanda a 7/15/30 días, intervalo, backtest y evidencia del modelo | Fudo + clima → modelo propio |
+| **Compras** | remitos del proveedor, costo por producto y control del royalty | PDF por mail → parser propio |
 
 ---
 
@@ -144,6 +145,12 @@ lib/
   fudoResumen.ts              sync diario → ResumenDiario + ProductoDiario
   resumenDiario.ts            agregación diaria (pura, testeada)
   fudoStock.ts                foto diaria de stock
+  compras/
+    remito.ts                 parser del remito (puro, testeado con 4 reales)
+    pdf.ts                    PDF → texto con columnas, sin binarios externos
+    correo.ts                 IMAP: trae los adjuntos del proveedor
+    ingesta.ts                asigna local, clasifica y guarda
+    royalty.ts                control del 5% sobre la venta neta
   forecast/
     categorias.ts             normaliza las categorías crudas de Fudo (110 → 53)
     slots.ts                  franjas de 30 min en hora argentina
@@ -221,6 +228,7 @@ Vercel Cron y no hay `vercel.json`.
 | `/api/cron/stock` | diario, **hora fija post-cierre** | ~2 min | foto de stock |
 | `/api/cron/demanda` | semanal | ~1 min | mapa de calor de Turnos → Semana |
 | `/api/cron/alertas` | cada hora | rápido | tardanzas, faltas, salidas olvidadas |
+| `/api/cron/remitos` | cada 2 h | ~5 s por remito | lee la casilla y carga los remitos de compra (§7b) |
 
 **El resync largo va por local a propósito**: los cuatro juntos tardan 5:26 y la función corta a
 los 300 s, así que nunca terminaba. Con `?local=<nombre>` entra holgado.
@@ -361,6 +369,82 @@ Ojo con esto: **contradice el supuesto habitual** de que la lluvia hunde a los l
 calle. Lo que aparece fuerte es la temperatura — con más de 32° el shopping gana 22% y la calle
 pierde 14%. El factor aprendido se atenúa por su confianza, así que una medición hecha con seis
 días de lluvia no puede pegar un volantazo.
+
+---
+
+## 7b. Los remitos de compra (`lib/compras/`)
+
+Casi todo el costo viene de **un solo proveedor** que vende de todo, desde café
+hasta helado. Manda los remitos en PDF por mail, varios adjuntos por mensaje.
+
+**El parser es determinístico, no un modelo de lenguaje.** Son precios que se
+convierten en costo de mercadería: un parser o entiende la línea o falla
+ruidosamente, y un modelo devuelve un número plausible y equivocado que nadie
+detecta mirando un total. Los cuatro remitos reales de agosto de 2026 están
+como fixtures en `lib/compras/fixtures/`.
+
+Tres cosas del documento que habrían ensuciado los números en silencio:
+
+1. **El campo "Desc. aplicado (%) 10,50" SUMA, no resta.** En los cuatro
+   remitos el subtotal es la suma de las líneas × 1,105. Tomar el precio
+   unitario como costo deja todo un 10,5% barato. Se guardan las dos lecturas
+   (`total` y `totalConAjuste`) porque todavía no está decidido si ese recargo
+   es costo de mercadería o costo financiero.
+2. **No todo remito es mercadería.** El de "USO DE MARCA" es el royalty y salió
+   $1.124.160 en agosto, más que una semana de compras. Va como `SERVICIO` y
+   queda fuera del food cost. Ver el control abajo.
+3. **El proveedor imprime cantidades con 2 decimales y factura con 3.** Un
+   helado que figura 7,27 kg y cierra en $66.111,50 a $9.100 pesaba 7,265. La
+   tolerancia por línea es lo que ese redondeo permite (`0,005 × unitario`) y
+   no un peso fijo; `cantidadExacta` guarda la real.
+
+**Se verifica contra los totales del propio remito.** Si una línea no se leyó,
+la suma no da y el remito queda marcado en vez de entrar con costo incompleto.
+
+**Los remitos que no se pueden asignar quedan sin local**, en la bandeja de
+`/admin/compras`. No se adivina: dos locales del mismo dueño tienen razones
+sociales casi idénticas y errarle ensucia el costo de los dos a la vez. Cuando
+se asigna a mano, el CUIT queda guardado en el local y el próximo entra solo.
+Hoy sólo **Las Cañas** está mapeada: `CUMBRES Y PLACERES SAS (BIANCONERO
+GUAYMALLEN)`, CUIT 30718808975.
+
+### El control del royalty
+
+La regla, según el dueño: **(venta del local ÷ 1,21) × 0,05** — el 5% de la
+venta neta de IVA, y las ventas de Fudo vienen con IVA. El remito llega
+fechado antes de que el mes termine (para el cuadro fiscal del proveedor), así
+que el mes que se compara sale del texto ("USO DE MARCA AGOSTO"), no de la
+fecha de emisión.
+
+Sobre agosto de 2026 en Las Cañas: corresponden $988.969 y cobraron
+$1.017.340, o sea **$28.372 de más (2,87%)**. **No está confirmado que sea un
+error**: una ventana móvil de 30/07 a 30/08 suma $24.614.359, a 0,02% de la
+base que implica lo cobrado, así que podrían facturar un período que cierra el
+día del remito. Con un solo remito no se distingue. Si la regla del mes
+calendario es la buena, la diferencia va a variar mes a mes; si es la ventana
+móvil, va a quedar clavada.
+
+### La casilla
+
+IMAP y no un webhook porque un webhook necesita dominio propio y servicio de
+mail entrante, y el proyecto todavía no tiene dominio. Variables en Vercel:
+
+| Variable | Ejemplo | |
+|---|---|---|
+| `REMITOS_IMAP_HOST` | `imap.gmail.com` | |
+| `REMITOS_IMAP_USER` | la casilla | |
+| `REMITOS_IMAP_PASSWORD` | contraseña **de aplicación**, no la de la cuenta | Gmail exige 2FA |
+| `REMITOS_REMITENTE` | `@proveedor.com.ar` | **obligatorio en una casilla personal** |
+| `REMITOS_IMAP_CARPETA` | `Remitos` | opcional, por defecto INBOX |
+
+**`REMITOS_REMITENTE` no es un lujo:** los mensajes procesados se marcan como
+leídos, así que sin filtro y apuntando a INBOX el cron le marca leída la
+casilla entera al dueño. El filtro va en la búsqueda IMAP, así que los mails
+de otros ni se bajan. La respuesta del cron avisa si está leyendo INBOX sin
+filtro.
+
+Google ya no permite apagar IMAP en las cuentas de Gmail: no hay interruptor
+que activar, sólo POP lo tiene todavía.
 
 ---
 
