@@ -142,3 +142,28 @@ historia para comparar contra el promedio. El sync de 90 días tarda ~28s.
   mercadería que entra, por eso hay stocks negativos grandes (TÉ DILMAH −482). La serie
   (`StockDiario`) igual arrancó, y mide "movimiento no explicado por las ventas", que sí es
   accionable hoy; el día que carguen compras, se vuelve un "debería haber vs. hay" real.
+
+## Crons del módulo de pronóstico (2026-09-05)
+
+| Endpoint | Cuándo | Tiempo medido | Qué hace |
+|---|---|---|---|
+| `GET /api/cron/resumen?dias=7` | cada hora / varias veces al día | ~40s | refresca el resumen diario del dashboard |
+| `GET /api/cron/resumen?dias=90&local=<nombre>` | semanal, **una llamada por local** | ~1,5 min c/u | recupera días viejos corregidos en Fudo |
+| `GET /api/cron/semanal` | semanal | **106s** | refresca franjas recientes, **recalibra la ventana de cada local por backtesting** y vuelve a medir la sensibilidad al clima |
+| `GET /api/cron/stock` | diario, hora fija post-cierre | ~2 min | foto de stock |
+
+**Por qué el resync largo va por local**: 90 días de los cuatro juntos tardan 5:26 y la
+función serverless corta a los 300s. Con `?local=<nombre>` entra holgado; el scheduler hace
+cuatro llamadas.
+
+**Por qué existe la recalibración semanal**: la cantidad de historia que conviene usar para el
+perfil de demanda NO es la misma en cada local (hoy: 45, 90, 45 y 180 días) y un año pierde en
+todos — arrastra estacionalidad vieja que corre el nivel actual. `calibrarVentana()` mide las
+candidatas contra lo que realmente pasó y guarda la ganadora en `Local.ventanaForecastDias`.
+A medida que se acumule historia la respuesta puede cambiar, por eso se recalcula sola.
+
+**Trampa de la paginación de Fudo** (ya mordió dos veces, ver commits de 2026-09-05): `/sales`
+pagina por id ascendente, así que al pasarse del tope de páginas lo que se pierde son las
+ventas MÁS NUEVAS. Las dos veces terminó escribiendo ceros o borrando franjas sobre datos
+reales. Ahora ambos recorridos van en tramos de 45 días y **lanzan error en vez de devolver un
+resultado incompleto**. Si aparece "el recorrido de ventas se truncó", achicar el tramo.
