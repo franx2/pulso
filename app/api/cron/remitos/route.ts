@@ -28,9 +28,14 @@ export async function GET(request: Request) {
     );
   }
 
+  // `?reprocesar=1` vuelve a mirar mails ya etiquetados. Sirve cuando el
+  // lector mejora —abrir ZIP, por ejemplo— y hay que releer lo viejo. No
+  // duplica nada: la carga descarta los remitos ya cargados por número.
+  const reprocesar = new URL(request.url).searchParams.get("reprocesar") === "1";
+
   let adjuntos;
   try {
-    adjuntos = await traerRemitosSinLeer(config);
+    adjuntos = await traerRemitosSinLeer(config, { reprocesar });
   } catch (error) {
     // Que falle el correo no es lo mismo que no haber remitos: se distingue,
     // o un problema de credenciales pasaría meses sin que nadie lo note.
@@ -61,6 +66,7 @@ export async function GET(request: Request) {
 
   return NextResponse.json({
     carpeta: config.carpeta,
+    reprocesar,
     remitente: config.remitente ?? "(sin filtro)",
     advertencias: advertencias(config),
     revisados: adjuntos.length,

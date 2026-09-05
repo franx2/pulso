@@ -18,6 +18,7 @@
  * costos: se vuelve a leer el PDF y se descarta.
  */
 
+import { unzipSync } from "fflate";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 
@@ -117,6 +118,35 @@ async function buscar(
   return todos || [];
 }
 
+const esPdf = (nombre: string, tipo: string) =>
+  tipo === "application/pdf" || nombre.toLowerCase().endsWith(".pdf");
+
+const esZip = (nombre: string, tipo: string) =>
+  /zip|compressed/i.test(tipo) || nombre.toLowerCase().endsWith(".zip");
+
+/**
+ * Los PDF de un adjunto, abriendo el ZIP si viene comprimido.
+ *
+ * Hace falta porque el proveedor no es consistente: algunas semanas manda los
+ * remitos sueltos y otras los manda en un ZIP junto al estado de cuenta. Sin
+ * esto, esas semanas simplemente no existían — se perdieron nueve días de
+ * compras de agosto sin que nada avisara, porque un adjunto que no es PDF no
+ * genera error, genera silencio.
+ */
+function pdfsDelAdjunto(nombre: string, tipo: string, contenido: Buffer): { nombre: string; datos: Uint8Array }[] {
+  if (esPdf(nombre, tipo)) return [{ nombre, datos: new Uint8Array(contenido) }];
+  if (!esZip(nombre, tipo)) return [];
+  try {
+    const archivos = unzipSync(new Uint8Array(contenido));
+    return Object.entries(archivos)
+      .filter(([interno]) => interno.toLowerCase().endsWith(".pdf"))
+      .map(([interno, datos]) => ({ nombre: `${nombre} → ${interno.split("/").pop()}`, datos }));
+  } catch {
+    // Un ZIP roto o con contraseña no puede tumbar el resto del mail.
+    return [];
+  }
+}
+
 /** Si el mensaje es del proveedor, mirando el encabezado ya parseado. */
 function esDelProveedor(remitenteMail: string, filtro: string | null): boolean {
   if (!filtro) return true;
@@ -129,7 +159,10 @@ function esDelProveedor(remitenteMail: string, filtro: string | null): boolean {
  * Sólo se marca lo que se procesó entero: si la conexión se corta a la mitad,
  * los mensajes que faltaron entran en la corrida siguiente.
  */
-export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<AdjuntoPdf[]> {
+export async function traerRemitosSinLeer(
+  config: ConfigCorreo,
+  opciones: { reprocesar?: boolean } = {}
+): Promise<AdjuntoPdf[]> {
   const cliente = new ImapFlow({
     host: config.host,
     port: config.puerto,
@@ -157,7 +190,7 @@ export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<Adjunto
         { uid: true, flags: true },
         { uid: true }
       )) {
-        if (!mensaje.flags?.has(MARCA)) mensajes.push(mensaje.uid);
+        if (opciones.reprocesar || !mensaje.flags?.has(MARCA)) mensajes.push(mensaje.uid);
       }
       mensajes.splice(0, Math.max(0, mensajes.length - MAX_MENSAJES));
 
@@ -165,21 +198,19 @@ export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<Adjunto
         const bajado = await cliente.download(String(uid), undefined, { uid: true });
         if (!bajado?.content) continue;
         const mail = await simpleParser(bajado.content);
-        const pdfs = (mail.attachments ?? []).filter(
-          (adjunto) =>
-            adjunto.contentType === "application/pdf" ||
-            (adjunto.filename ?? "").toLowerCase().endsWith(".pdf")
-        );
         const remitente = mail.from?.text ?? "desconocido";
         // La verificación real del remitente pasa acá, sobre el encabezado ya
         // parseado, porque la búsqueda del servidor puede haber traído de más.
         if (!esDelProveedor(remitente, config.remitente)) continue;
-        for (const pdf of pdfs) {
-          adjuntos.push({
-            nombre: pdf.filename ?? "remito.pdf",
-            contenido: new Uint8Array(pdf.content),
-            origen: `${remitente} · ${mail.subject ?? "sin asunto"}`,
-          });
+        for (const adjunto of mail.attachments ?? []) {
+          const nombre = adjunto.filename ?? "adjunto";
+          for (const pdf of pdfsDelAdjunto(nombre, adjunto.contentType ?? "", adjunto.content)) {
+            adjuntos.push({
+              nombre: pdf.nombre,
+              contenido: pdf.datos,
+              origen: `${remitente} · ${mail.subject ?? "sin asunto"}`,
+            });
+          }
         }
         // Se marca aunque no traiga PDF: si no, los mails sueltos del
         // proveedor se vuelven a bajar en cada corrida para siempre. No se
