@@ -10,6 +10,7 @@ import {
   Clock,
   LayoutDashboard,
   Settings,
+  Truck,
   Users,
   Wallet,
   type LucideIcon,
@@ -25,7 +26,8 @@ export type NavActivo =
   | "configuracion"
   | "arqueos"
   | "dashboard"
-  | "pronostico";
+  | "pronostico"
+  | "compras";
 
 type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol; grupo: string };
 
@@ -36,6 +38,7 @@ export const ITEMS: Item[] = [
   { key: "arqueos", href: "/admin/arqueos", Icon: Wallet, label: "Arqueos", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "dashboard", href: "/admin/dashboard", Icon: LayoutDashboard, label: "Comando", minimo: "ADMIN", grupo: "Análisis" },
   { key: "pronostico", href: "/admin/pronostico", Icon: Brain, label: "Pronóstico", minimo: "ADMIN", grupo: "Análisis" },
+  { key: "compras", href: "/admin/compras", Icon: Truck, label: "Compras", minimo: "ADMIN", grupo: "Análisis" },
   { key: "reportes", href: "/admin/reportes", Icon: BarChart3, label: "Reportes", minimo: "ADMIN", grupo: "Análisis" },
   { key: "empleados", href: "/admin/empleados", Icon: Users, label: "Equipo", minimo: "ADMIN", grupo: "Gestión" },
   { key: "configuracion", href: "/admin/configuracion", Icon: Settings, label: "Ajustes", minimo: "ADMIN", grupo: "Gestión" },

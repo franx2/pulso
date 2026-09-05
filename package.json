@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p ${PORT:-3000}",
     "lint": "eslint",
-    "test": "tsx lib/horas.test.ts && tsx lib/geo.test.ts && tsx lib/jornada.test.ts && tsx lib/fechas.test.ts && tsx lib/periodo.test.ts && tsx lib/alertas.test.ts && tsx lib/rostro.test.ts && tsx lib/password.test.ts && tsx lib/rateLimit.test.ts && tsx lib/ganttBarra.test.ts && tsx lib/pago.test.ts && tsx lib/demanda.test.ts && tsx lib/fudo.test.ts && tsx lib/resumenDiario.test.ts && tsx lib/forecast/forecast.test.ts && tsx lib/forecast/estacionalidad.test.ts",
+    "test": "tsx lib/horas.test.ts && tsx lib/geo.test.ts && tsx lib/jornada.test.ts && tsx lib/fechas.test.ts && tsx lib/periodo.test.ts && tsx lib/alertas.test.ts && tsx lib/rostro.test.ts && tsx lib/password.test.ts && tsx lib/rateLimit.test.ts && tsx lib/ganttBarra.test.ts && tsx lib/pago.test.ts && tsx lib/demanda.test.ts && tsx lib/fudo.test.ts && tsx lib/resumenDiario.test.ts && tsx lib/compras/remito.test.ts && tsx lib/compras/royalty.test.ts && tsx lib/forecast/forecast.test.ts && tsx lib/forecast/estacionalidad.test.ts",
     "db:seed": "tsx prisma/seed.ts",
     "db:migrate": "prisma migrate dev",
     "postinstall": "prisma generate"
@@ -21,15 +21,19 @@
     "@simplewebauthn/server": "^13.3.3",
     "@vladmandic/face-api": "^1.7.15",
     "exceljs": "^4.4.0",
+    "imapflow": "^1.7.8",
     "iron-session": "^8.0.4",
     "lucide-react": "^1.35.0",
+    "mailparser": "^3.9.20",
     "next": "16.3.3",
     "prisma": "^6.19.3",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "unpdf": "^1.8.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@types/mailparser": "^3.4.6",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",

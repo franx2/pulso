@@ -143,6 +143,14 @@ model Local {
   /// para mostrar el mismo número.
   ventanaCalibracion Json?
 
+  /// Cómo figura ESTE local en los remitos del proveedor. El CUIT es la clave
+  /// buena porque no cambia; la razón social se usa de respaldo cuando el
+  /// remito no lo trae. Las Cañas es "CUMBRES Y PLACERES SAS (BIANCONERO
+  /// GUAYMALLEN)", CUIT 30718808975. Sin esto cargado, los remitos de ese
+  /// local quedan sin asignar en vez de caer en cualquier lado.
+  cuitCompras        String?
+  razonSocialCompras String?
+
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
   turnos      Turno[]
@@ -161,6 +169,7 @@ model Local {
   ajustesK         AjusteK[]
   climas           ClimaDia[]
   pronosticos      Pronostico[]
+  compras          Compra[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -758,4 +767,89 @@ model Fichaje {
   correcciones SolicitudCorreccion[]
 
   @@index([empleadoId, timestamp])
+}
+
+/// Un remito de compra del proveedor, tal como llegó.
+///
+/// Se guarda el texto extraído del PDF además del detalle parseado: si algún
+/// día el proveedor cambia el formato y el parser se equivoca, se puede volver
+/// a leer sin pedirle los PDF de nuevo. Los remitos que no se pudieron asignar
+/// a un local quedan con `localId` en null y aparecen en la bandeja, nunca se
+/// adivina de quién son.
+model Compra {
+  id     String  @id @default(cuid())
+  local  Local?  @relation(fields: [localId], references: [id], onDelete: SetNull)
+  localId String?
+
+  /// Punto de venta y número: "16-5004". Con el CUIT del cliente identifican
+  /// al remito de forma única y evitan cargar dos veces el mismo mail.
+  numero      String
+  puntoVenta  Int
+  /// Día del remito, `@db.Date` como el resto del sistema.
+  fecha       DateTime @db.Date
+  proveedor   String
+  /// Razón social del cliente en el remito, que es lo que asigna el local.
+  cliente     String
+  cuit        String?
+  observaciones String?
+
+  /// Suma del detalle, sin el ajuste.
+  sumaLineas  Float
+  /// El campo que el remito rotula "Desc. aplicado (%)" y que en realidad
+  /// SUMA: el subtotal es la suma de líneas × (1 + ajustePct/100). Se guarda
+  /// como viene y el signo se decide al leerlo.
+  ajustePct   Float?
+  subtotal    Float
+  total       Float
+
+  /// `MERCADERIA` o `SERVICIO`: el remito de "USO DE MARCA" es un royalty y
+  /// no puede entrar al food cost junto con el café.
+  tipo        TipoCompra @default(MERCADERIA)
+
+  /// Qué dijo la verificación contra los totales del propio remito. Un remito
+  /// con problemas se guarda igual pero no se suma a los costos hasta que
+  /// alguien lo mire.
+  verificado  Boolean @default(false)
+  problemas   String[]
+
+  /// De dónde salió: el remitente y el asunto del mail, para poder rastrear.
+  origen      String?
+  textoPlano  String?
+
+  creadoEn    DateTime @default(now())
+  items       CompraItem[]
+
+  @@unique([puntoVenta, numero, cuit])
+  @@index([localId, fecha])
+}
+
+enum TipoCompra {
+  MERCADERIA
+  SERVICIO
+}
+
+/// Una línea del remito.
+model CompraItem {
+  id      String @id @default(cuid())
+  compra  Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  compraId String
+
+  /// Código del proveedor. Es la clave estable entre remitos: el mismo café
+  /// aparece como "X KG" y "x kg" con distinto precio en la misma semana.
+  codigo   String
+  detalle  String
+  /// La cantidad impresa, con dos decimales.
+  cantidad Float
+  /// La que sale de dividir total por unitario. El proveedor imprime dos
+  /// decimales y factura con tres.
+  cantidadExacta Float
+  unidad   String
+  precioUnitario Float
+  /// Lo que dice la línea, que es lo que se cobra.
+  total    Float
+  /// El total con el ajuste del remito prorrateado: lo que realmente se paga.
+  totalConAjuste Float
+
+  @@index([compraId])
+  @@index([codigo])
 }
