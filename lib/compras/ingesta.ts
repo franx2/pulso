@@ -67,7 +67,7 @@ export function asignarLocal(remito: RemitoParseado, locales: LocalCompras[]): L
 
 export type ResultadoIngesta = {
   numero: string;
-  estado: "guardado" | "duplicado" | "ilegible";
+  estado: "guardado" | "duplicado" | "ilegible" | "no_es_remito";
   local: string | null;
   fecha: string | null;
   total: number | null;
@@ -86,19 +86,24 @@ export async function ingerirRemito(
   contexto: { origen?: string; proveedor?: string } = {}
 ): Promise<ResultadoIngesta> {
   let remito: RemitoParseado;
-  let texto: string;
+  let texto = "";
   try {
     texto = await textoDePdf(pdf);
     remito = parsearRemito(texto);
   } catch (error) {
+    // El proveedor manda en el mismo mail el estado de cuenta además de los
+    // remitos. Ese PDF no es un remito y nunca va a parsear: distinguirlo de
+    // un remito roto importa, porque si no cada semana aparecerían errores
+    // que no hay que investigar y los de verdad se perderían entre ellos.
+    const parece = /Nro:\s*[\d.]+\s*-/.test(texto) && /C[óo]d\.\s*Producto/i.test(texto);
     return {
       numero: "?",
-      estado: "ilegible",
+      estado: parece ? "ilegible" : "no_es_remito",
       local: null,
       fecha: null,
       total: null,
       tipo: null,
-      problemas: [error instanceof Error ? error.message : "No se pudo leer el PDF"],
+      problemas: parece ? [error instanceof Error ? error.message : "No se pudo leer el PDF"] : [],
     };
   }
 

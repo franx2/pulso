@@ -67,6 +67,8 @@ export async function GET(request: Request) {
     guardados: resultados.filter((r) => r.estado === "guardado").length,
     duplicados: resultados.filter((r) => r.estado === "duplicado").length,
     ilegibles: resultados.filter((r) => r.estado === "ilegible").length,
+    // Los estados de cuenta que vienen en el mismo mail: no son un problema.
+    noSonRemitos: resultados.filter((r) => r.estado === "no_es_remito").length,
     sinLocal: resultados.filter((r) => r.estado === "guardado" && !r.local).length,
     resultados,
   });

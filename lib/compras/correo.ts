@@ -93,6 +93,37 @@ const MARCA = "PulsoProcesado";
 const DIAS_ATRAS = 45;
 
 /**
+ * Busca los mensajes candidatos, tolerando cómo busca Gmail.
+ *
+ * `FROM` en Gmail no es la coincidencia parcial que manda el estándar: pasa
+ * por su propio buscador, que tokeniza, y un patrón como `@dominio.com` puede
+ * no devolver nada aunque los mails estén ahí. Así que si el filtro de
+ * remitente no encuentra nada se reintenta sin él —acotado por fecha— y el
+ * remitente se verifica después, sobre el mensaje ya bajado.
+ */
+async function buscar(
+  cliente: ImapFlow,
+  desde: Date,
+  remitente: string | null
+): Promise<number[]> {
+  if (remitente) {
+    // Sin el "@" inicial: Gmail lo trata como separador y con él suele no
+    // devolver nada.
+    const patron = remitente.replace(/^@/, "");
+    const conFiltro = await cliente.search({ since: desde, from: patron }, { uid: true });
+    if (conFiltro && conFiltro.length > 0) return conFiltro;
+  }
+  const todos = await cliente.search({ since: desde }, { uid: true });
+  return todos || [];
+}
+
+/** Si el mensaje es del proveedor, mirando el encabezado ya parseado. */
+function esDelProveedor(remitenteMail: string, filtro: string | null): boolean {
+  if (!filtro) return true;
+  return remitenteMail.toLowerCase().includes(filtro.replace(/^@/, "").toLowerCase());
+}
+
+/**
  * Trae los PDF adjuntos de los mails del proveedor que todavía no se leyeron.
  *
  * Sólo se marca lo que se procesó entero: si la conexión se corta a la mitad,
@@ -113,19 +144,22 @@ export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<Adjunto
     const cerrojo = await cliente.getMailboxLock(config.carpeta);
     try {
       const desde = new Date(Date.now() - DIAS_ATRAS * 86400000);
-      // El filtro de remitente va en la búsqueda y no después de bajar: así
-      // los mails de otros ni se descargan.
-      const base = config.remitente ? { since: desde, from: config.remitente } : { since: desde };
+      const candidatos = await buscar(cliente, desde, config.remitente);
 
-      let encontrados: number[] | false;
-      try {
-        encontrados = await cliente.search({ ...base, unKeyword: MARCA });
-      } catch {
-        // Si el servidor no soporta keywords, mejor traer de más y dejar que
-        // la carga descarte los repetidos por número, que quedarse mudo.
-        encontrados = await cliente.search(base);
+      // El keyword se filtra ACÁ y no en la búsqueda. Gmail no implementa
+      // `UNKEYWORD` sobre keywords propios como manda el estándar: en vez de
+      // devolver "todos los que no la tienen" devuelve vacío, y el cron leía
+      // cero mensajes teniendo la casilla llena. Traer los flags de unas
+      // pocas decenas de mensajes es barato y no depende de esa rareza.
+      const mensajes: number[] = [];
+      for await (const mensaje of cliente.fetch(
+        { uid: `${candidatos.join(",")}` },
+        { uid: true, flags: true },
+        { uid: true }
+      )) {
+        if (!mensaje.flags?.has(MARCA)) mensajes.push(mensaje.uid);
       }
-      const mensajes = (encontrados || []).slice(-MAX_MENSAJES);
+      mensajes.splice(0, Math.max(0, mensajes.length - MAX_MENSAJES));
 
       for (const uid of mensajes) {
         const bajado = await cliente.download(String(uid), undefined, { uid: true });
@@ -137,6 +171,9 @@ export async function traerRemitosSinLeer(config: ConfigCorreo): Promise<Adjunto
             (adjunto.filename ?? "").toLowerCase().endsWith(".pdf")
         );
         const remitente = mail.from?.text ?? "desconocido";
+        // La verificación real del remitente pasa acá, sobre el encabezado ya
+        // parseado, porque la búsqueda del servidor puede haber traído de más.
+        if (!esDelProveedor(remitente, config.remitente)) continue;
         for (const pdf of pdfs) {
           adjuntos.push({
             nombre: pdf.filename ?? "remito.pdf",
