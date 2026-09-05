@@ -33,9 +33,9 @@ export async function GET(request: Request) {
   // duplica nada: la carga descarta los remitos ya cargados por número.
   const reprocesar = new URL(request.url).searchParams.get("reprocesar") === "1";
 
-  let adjuntos;
+  let adjuntos, diagnostico;
   try {
-    adjuntos = await traerRemitosSinLeer(config, { reprocesar });
+    ({ adjuntos, diagnostico } = await traerRemitosSinLeer(config, { reprocesar }));
   } catch (error) {
     // Que falle el correo no es lo mismo que no haber remitos: se distingue,
     // o un problema de credenciales pasaría meses sin que nadie lo note.
@@ -67,6 +67,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     carpeta: config.carpeta,
     reprocesar,
+    correo: diagnostico,
     remitente: config.remitente ?? "(sin filtro)",
     advertencias: advertencias(config),
     revisados: adjuntos.length,

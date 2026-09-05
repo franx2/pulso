@@ -22,6 +22,23 @@ import { unzipSync } from "fflate";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 
+export type Diagnostico = {
+  /** Mensajes que la búsqueda encontró en la ventana. */
+  candidatos: number;
+  /** Los que se miraron de verdad, después del tope por corrida. */
+  procesados: number;
+  /** Los que quedaron afuera por el tope: si esto no es cero, falta data. */
+  omitidosPorTope: number;
+  /**
+   * Adjuntos de los que no salió ningún PDF, con su tipo.
+   *
+   * Existe porque no verlos ya costó caro dos veces: un adjunto que no se
+   * entiende no tira error, desaparece. Con esto, una sola corrida dice qué
+   * son los archivos que el lector no está abriendo.
+   */
+  adjuntosIgnorados: { nombre: string; tipo: string; bytes: number }[];
+};
+
 export type AdjuntoPdf = {
   nombre: string;
   contenido: Uint8Array;
@@ -162,7 +179,7 @@ function esDelProveedor(remitenteMail: string, filtro: string | null): boolean {
 export async function traerRemitosSinLeer(
   config: ConfigCorreo,
   opciones: { reprocesar?: boolean } = {}
-): Promise<AdjuntoPdf[]> {
+): Promise<{ adjuntos: AdjuntoPdf[]; diagnostico: Diagnostico }> {
   const cliente = new ImapFlow({
     host: config.host,
     port: config.puerto,
@@ -172,6 +189,7 @@ export async function traerRemitosSinLeer(
   });
 
   const adjuntos: AdjuntoPdf[] = [];
+  const diagnostico: Diagnostico = { candidatos: 0, procesados: 0, omitidosPorTope: 0, adjuntosIgnorados: [] };
   await cliente.connect();
   try {
     const cerrojo = await cliente.getMailboxLock(config.carpeta);
@@ -192,7 +210,13 @@ export async function traerRemitosSinLeer(
       )) {
         if (opciones.reprocesar || !mensaje.flags?.has(MARCA)) mensajes.push(mensaje.uid);
       }
-      mensajes.splice(0, Math.max(0, mensajes.length - MAX_MENSAJES));
+      diagnostico.candidatos = mensajes.length;
+      // Se quedan los MÁS NUEVOS. Si el tope recorta, lo que se pierde es lo
+      // viejo, y hay que poder verlo: un hueco silencioso en el histórico de
+      // compras es exactamente el error que este contador evita.
+      diagnostico.omitidosPorTope = Math.max(0, mensajes.length - MAX_MENSAJES);
+      mensajes.splice(0, diagnostico.omitidosPorTope);
+      diagnostico.procesados = mensajes.length;
 
       for (const uid of mensajes) {
         const bajado = await cliente.download(String(uid), undefined, { uid: true });
@@ -204,7 +228,12 @@ export async function traerRemitosSinLeer(
         if (!esDelProveedor(remitente, config.remitente)) continue;
         for (const adjunto of mail.attachments ?? []) {
           const nombre = adjunto.filename ?? "adjunto";
-          for (const pdf of pdfsDelAdjunto(nombre, adjunto.contentType ?? "", adjunto.content)) {
+          const tipo = adjunto.contentType ?? "";
+          const salida = pdfsDelAdjunto(nombre, tipo, adjunto.content);
+          if (salida.length === 0) {
+            diagnostico.adjuntosIgnorados.push({ nombre, tipo, bytes: adjunto.content?.length ?? 0 });
+          }
+          for (const pdf of salida) {
             adjuntos.push({
               nombre: pdf.nombre,
               contenido: pdf.datos,
@@ -227,5 +256,5 @@ export async function traerRemitosSinLeer(
     await cliente.logout();
   }
 
-  return adjuntos;
+  return { adjuntos, diagnostico };
 }
