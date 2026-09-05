@@ -127,3 +127,51 @@ export async function backtestLocal(
       })),
   };
 }
+
+/** Ventanas candidatas. Un año está incluido a propósito para que el propio
+ * backtest muestre si conviene, no para descartarlo por prejuicio. */
+export const VENTANAS_CANDIDATAS = [45, 90, 180, 365];
+
+/**
+ * Elige, por local, cuánta historia conviene usar para el perfil, midiendo
+ * cada candidata contra lo que realmente pasó.
+ *
+ * Hace falta porque la respuesta NO es la misma para todos: en la primera
+ * medición dio 45 días para dos locales, 90 para otro y 180 para el cuarto.
+ * Un año perdió en los cuatro — arrastra estacionalidad vieja que corre el
+ * nivel actual. Con más historia acumulada esto puede cambiar, y por eso se
+ * recalcula en vez de quedar fijo.
+ */
+export async function calibrarVentana(
+  localId: string,
+  opciones: { corte: string; horizonte?: number } = { corte: "" }
+): Promise<{ ventana: number; wape: number; ranking: { ventana: number; wape: number }[] }> {
+  const resultados: { ventana: number; wape: number }[] = [];
+
+  for (const ventana of VENTANAS_CANDIDATAS) {
+    const r = await backtestLocal(localId, {
+      corte: opciones.corte,
+      horizonte: opciones.horizonte ?? 15,
+      ventana,
+    });
+    // Se calibra contra el error del DÍA, no de la franja: es el nivel en el
+    // que se decide, y el de la franja está dominado por ruido de conteo.
+    const pares = r.porDia.map((d) => ({ pronosticado: d.pronosticado, real: d.realTickets }));
+    resultados.push({ ventana, wape: calcularMetricas(pares).wape });
+  }
+
+  const ranking = [...resultados].sort((a, b) => a.wape - b.wape);
+  return { ventana: ranking[0].ventana, wape: ranking[0].wape, ranking };
+}
+
+/** Calibra todos los locales y guarda la ventana elegida en cada uno. */
+export async function calibrarVentanaTodos(corte: string) {
+  const locales = await db.local.findMany({ where: { fudoApiKey: { not: null } }, orderBy: { nombre: "asc" } });
+  const out: { local: string; ventana: number; wape: number }[] = [];
+  for (const l of locales) {
+    const r = await calibrarVentana(l.id, { corte });
+    await db.local.update({ where: { id: l.id }, data: { ventanaForecastDias: r.ventana } });
+    out.push({ local: l.nombre, ventana: r.ventana, wape: r.wape });
+  }
+  return out;
+}

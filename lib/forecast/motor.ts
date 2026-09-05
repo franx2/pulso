@@ -121,7 +121,10 @@ export async function pronosticar(
 ): Promise<{ dias: PronosticoDia[]; diagnostico: Record<string, unknown> }> {
   const desde = opciones.desde ?? hoyAR();
   const horizonte = opciones.dias ?? 15;
-  const ventana = opciones.ventanaHistorica ?? 90;
+  // La ventana la elige el backtest por local (Local.ventanaForecastDias):
+  // un año dilata el nivel actual con estacionalidad vieja y empeora el error.
+  const localBase = await db.local.findUniqueOrThrow({ where: { id: localId }, select: { ventanaForecastDias: true } });
+  const ventana = opciones.ventanaHistorica ?? localBase.ventanaForecastDias;
 
   const [local, observaciones, mezcla, feriados, ajustes, capacidadesDb] = await Promise.all([
     db.local.findUniqueOrThrow({ where: { id: localId } }),

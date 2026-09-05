@@ -131,6 +131,12 @@ model Local {
   /// día de lluvia mueve a un local y al otro no.
   tipoLocal TipoLocal @default(OPEN_AIR)
 
+  /// Cuántos días de historia usa el perfil de demanda de ESTE local. No es
+  /// una preferencia: se elige por backtesting y da distinto en cada sucursal
+  /// (45, 90 y 180 en la medición inicial). Un año nunca ganó: arrastra
+  /// estacionalidad vieja que corre el nivel actual.
+  ventanaForecastDias Int @default(90)
+
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
   turnos      Turno[]
