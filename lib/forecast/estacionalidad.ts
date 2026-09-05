@@ -46,6 +46,45 @@ export const MIN_MESES_ESTACIONALIDAD = 12;
 /** Hueco máximo entre el último día con datos y el arranque de la proyección. */
 const MAX_DIAS_SIN_DATOS = 45;
 
+/**
+ * Días seguidos sin una sola venta a partir de los cuales se asume que el
+ * local estuvo cerrado y no que fue un día flojo.
+ *
+ * Tres, porque los feriados de esta cadena son de un día (1 de mayo, 25 de
+ * diciembre, 1 de enero) y a veces cae un fin de semana largo de dos. Tres
+ * seguidos ya es otra cosa: reforma, mudanza, obra.
+ */
+const DIAS_PARA_CIERRE = 3;
+
+/** Días de reapertura por debajo de los cuales el nivel nuevo es un rumor. */
+const MIN_DIAS_REAPERTURA = 5;
+
+export type Cierre = { desde: string; hasta: string; dias: number };
+
+/**
+ * Último cierre largo de la serie.
+ *
+ * Importa para el nivel de arranque, no para el índice. Un local que estuvo
+ * seis días cerrado por reforma y reabrió no vende hoy lo que vendía antes:
+ * anclar la proyección en un promedio que mezcla los dos lados del cierre da
+ * un número que no describe a ninguno de los dos.
+ */
+export function ultimoCierre(serie: DiaVentas[], desde?: string): Cierre | null {
+  const dias = serie
+    .filter((d) => d.ventas > 0 && (!desde || d.fecha < desde))
+    .map((d) => d.fecha)
+    .sort();
+  if (dias.length < 2) return null;
+
+  for (let i = dias.length - 1; i > 0; i--) {
+    const hueco = diasEntre(dias[i - 1], dias[i]) - 2;
+    if (hueco >= DIAS_PARA_CIERRE) {
+      return { desde: sumarDias(dias[i - 1], 1), hasta: sumarDias(dias[i], -1), dias: hueco };
+    }
+  }
+  return null;
+}
+
 const mesDe = (fecha: string) => Number(fecha.slice(5, 7));
 const diaSemanaDe = (fecha: string) => new Date(`${fecha}T12:00:00.000Z`).getUTCDay();
 const mediana = (valores: number[]): number => {
@@ -230,6 +269,10 @@ export type ProyeccionEstacional = {
   /** Lo mismo proyectado sin estacionalidad, para poder comparar. */
   totalSinTemporada: number;
   perfil: PerfilEstacional;
+  /** Cuántos días se usaron para fijar el nivel de arranque. */
+  diasDeNivel: number;
+  /** Cierre largo que obligó a apoyarse sólo en la reapertura, si lo hubo. */
+  cierre: (Cierre & { diasDesdeReapertura: number }) | null;
 };
 
 /**
@@ -261,12 +304,22 @@ export function proyectarConTemporada(
   const anteriores = serie
     .filter((d) => d.ventas > 0 && d.fecha < opciones.desde)
     .sort((a, b) => a.fecha.localeCompare(b.fecha));
-  const recientes = anteriores.slice(-28);
-  if (recientes.length < 14) return null;
+  if (anteriores.length < 14) return null;
   // Y que sean recientes de verdad. Sin este corte, una serie que termina
   // hace meses proyecta igual, tomando como "nivel actual" un promedio viejo
   // — el error más caro posible acá, porque no se nota mirando el gráfico.
   if (diasEntre(anteriores[anteriores.length - 1].fecha, opciones.desde) > MAX_DIAS_SIN_DATOS) return null;
+
+  // Si hubo un cierre largo dentro de la ventana de arranque, el nivel se
+  // toma SÓLO de lo que pasó después. QuickPoint estuvo seis días cerrado por
+  // reforma en agosto de 2026 y reabrió un 15% abajo: promediar los dos lados
+  // describe un local que no existe.
+  const cierre = ultimoCierre(anteriores, opciones.desde);
+  const desdeReapertura = cierre ? anteriores.filter((d) => d.fecha > cierre.hasta) : [];
+  const reaperturaUsable = cierre != null && desdeReapertura.length >= MIN_DIAS_REAPERTURA;
+  const base = reaperturaUsable ? desdeReapertura : anteriores;
+  const recientes = base.slice(-28);
+  if (recientes.length < MIN_DIAS_REAPERTURA) return null;
   const nivel =
     recientes.reduce((s, d) => {
       const ajuste = (indicePorMes.get(mesDe(d.fecha)) ?? 1) * (dow[diaSemanaDe(d.fecha)] || 1);
@@ -312,6 +365,8 @@ export function proyectarConTemporada(
       0
     ),
     perfil,
+    diasDeNivel: recientes.length,
+    cierre: reaperturaUsable && cierre ? { ...cierre, diasDesdeReapertura: desdeReapertura.length } : null,
   };
 }
 
@@ -382,5 +437,70 @@ export function backtestEstacional(
     sinTemporada,
     // Positivo = la estacionalidad achicó el error.
     mejora: sinTemporada.wape > 0 ? ((sinTemporada.wape - conTemporada.wape) / sinTemporada.wape) * 100 : 0,
+  };
+}
+
+export type VentanaMedida = {
+  corte: string;
+  wapeConTemporada: number;
+  wapeSinTemporada: number;
+  mejora: number;
+  dias: number;
+};
+
+export type MedicionEstacional = {
+  ventanas: VentanaMedida[];
+  /** Medianas: una ventana rara no puede definir el veredicto. */
+  medianaConTemporada: number;
+  medianaSinTemporada: number;
+  medianaMejora: number;
+  /** En cuántas de las ventanas medidas la temporada bajó el error. */
+  ventanasQueMejoran: number;
+  /** El peor caso observado, que es lo que hay que poder tolerar. */
+  peorMejora: number;
+};
+
+/**
+ * La misma medición repetida sobre varias ventanas, y no una sola.
+ *
+ * Existe porque una sola ventana no dice nada y es fácil quedarse con la que
+ * quedó linda: midiendo cuatro orígenes distintos en los mismos locales, la
+ * mejora de la estacionalidad fue de +7% a +32% en uno y de +36% a −11% en
+ * otro. Reportar cualquiera de esos números solo es contar la mitad.
+ *
+ * También protege de un evento puntual: si un local estuvo cerrado por reforma
+ * dentro de una ventana, esa ventana miente, pero la mediana de las demás no.
+ */
+export function medirEstacionalidad(
+  serie: DiaVentas[],
+  opciones: { hasta: string; horizonte?: number; ventanas?: number }
+): MedicionEstacional | null {
+  const horizonte = opciones.horizonte ?? 45;
+  const cantidad = opciones.ventanas ?? 4;
+  const medidas: VentanaMedida[] = [];
+
+  // Ventanas pegadas hacia atrás desde el final de la serie: la más reciente
+  // primero, porque es la que más se parece a lo que viene.
+  for (let i = 0; i < cantidad; i++) {
+    const corte = sumarDias(opciones.hasta, -horizonte * (i + 1));
+    const medicion = backtestEstacional(serie, { corte, horizonte });
+    if (!medicion) continue;
+    medidas.push({
+      corte,
+      wapeConTemporada: medicion.conTemporada.wape,
+      wapeSinTemporada: medicion.sinTemporada.wape,
+      mejora: medicion.mejora,
+      dias: medicion.conTemporada.dias,
+    });
+  }
+  if (medidas.length === 0) return null;
+
+  return {
+    ventanas: medidas,
+    medianaConTemporada: mediana(medidas.map((m) => m.wapeConTemporada)),
+    medianaSinTemporada: mediana(medidas.map((m) => m.wapeSinTemporada)),
+    medianaMejora: mediana(medidas.map((m) => m.mejora)),
+    ventanasQueMejoran: medidas.filter((m) => m.mejora > 0).length,
+    peorMejora: Math.min(...medidas.map((m) => m.mejora)),
   };
 }

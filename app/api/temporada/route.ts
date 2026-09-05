@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { diaDeFechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
 import { requireAdminApi } from "@/lib/session";
 import {
-  backtestEstacional,
   construirPerfilEstacional,
+  medirEstacionalidad,
   MIN_MESES_ESTACIONALIDAD,
   proyectarConTemporada,
   type DiaVentas,
@@ -15,6 +15,11 @@ export const maxDuration = 60;
 
 /** Cuánto se mide contra lo que realmente pasó antes de mostrar el número. */
 const HORIZONTE_BACKTEST = 45;
+
+/** Cuántas ventanas se miden. Una sola no dice nada: sobre los mismos locales
+ * la mejora fue de +36% a -11% según dónde caiga el corte, y una ventana que
+ * contiene un cierre por reforma miente sin avisar. */
+const VENTANAS_BACKTEST = 4;
 
 export async function GET(request: Request) {
   const session = await requireAdminApi();
@@ -47,9 +52,10 @@ export async function GET(request: Request) {
 
     const perfil = construirPerfilEstacional(serie);
     const proyeccion = proyectarConTemporada(serie, { desde: hoy, dias });
-    const medicion = backtestEstacional(serie, {
-      corte: sumarDias(hoy, -HORIZONTE_BACKTEST),
+    const medicion = medirEstacionalidad(serie, {
+      hasta: hoy,
       horizonte: HORIZONTE_BACKTEST,
+      ventanas: VENTANAS_BACKTEST,
     });
 
     return {
@@ -73,6 +79,8 @@ export async function GET(request: Request) {
             total: proyeccion.total,
             totalSinTemporada: proyeccion.totalSinTemporada,
             porMes: proyeccion.porMes,
+            diasDeNivel: proyeccion.diasDeNivel,
+            cierre: proyeccion.cierre,
           }
         : null,
       backtest: medicion,

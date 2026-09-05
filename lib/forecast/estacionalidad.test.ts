@@ -4,7 +4,9 @@ import {
   ajustarTendencia,
   backtestEstacional,
   construirPerfilEstacional,
+  medirEstacionalidad,
   proyectarConTemporada,
+  ultimoCierre,
   type DiaVentas,
 } from "./estacionalidad";
 
@@ -139,5 +141,75 @@ assert.ok(medicion.sinTemporada.sesgoPct < 0, "el promedio simple se queda corto
 
 // Sin horizonte real no se inventa una medición.
 assert.strictEqual(backtestEstacional(conRuido, { corte: "2027-06-01", horizonte: 30 }), null);
+
+// --- Cierres largos ---
+
+// Un feriado suelto no es un cierre.
+const conFeriado = serieSintetica("2025-01-01", 400).filter((d) => d.fecha !== "2025-05-01");
+assert.strictEqual(ultimoCierre(conFeriado), null, "un día suelto no es un cierre");
+
+// Seis días seguidos sí, y se reporta con sus fechas exactas.
+const conReforma = serieSintetica("2025-01-01", 400).filter(
+  (d) => d.fecha < "2025-06-10" || d.fecha > "2025-06-15"
+);
+const cierre = ultimoCierre(conReforma);
+assert.ok(cierre);
+assert.deepStrictEqual(
+  { desde: cierre.desde, hasta: cierre.hasta, dias: cierre.dias },
+  { desde: "2025-06-10", hasta: "2025-06-15", dias: 6 }
+);
+
+// EL CASO REAL: seis días cerrado y reapertura un 30% abajo, con el cierre
+// ADENTRO de la ventana de 28 días que fija el nivel de arranque. Que esté
+// adentro es lo que hace al test: con el cierre más atrás, los dos caminos
+// dan lo mismo y el test pasa sin probar nada — pasó en el primer intento.
+// La serie va del 2025-01-01 al 2026-07-14; el cierre queda a seis días del
+// final, igual que el de QuickPoint cuando se detectó.
+const cierreDesde = "2026-07-03";
+const cierreHasta = "2026-07-08";
+const conEscalon = serieSintetica("2025-01-01", 560)
+  .filter((d) => d.fecha < cierreDesde || d.fecha > cierreHasta)
+  .map((d) => (d.fecha > cierreHasta ? { ...d, ventas: d.ventas * 0.7 } : d));
+const desde = sumarDias(conEscalon[conEscalon.length - 1].fecha, 1);
+const conCierre = proyectarConTemporada(conEscalon, { desde, dias: 30 });
+assert.ok(conCierre);
+assert.ok(conCierre.cierre, "tiene que declarar el cierre");
+assert.strictEqual(conCierre.cierre.dias, 6);
+
+// Contra la misma serie sin el escalón: la proyección post-reforma tiene que
+// quedar cerca del 70%, no a mitad de camino.
+const sinEscalon = serieSintetica("2025-01-01", 560).filter(
+  (d) => d.fecha < cierreDesde || d.fecha > cierreHasta
+);
+const referencia = proyectarConTemporada(sinEscalon, { desde, dias: 30 });
+assert.ok(referencia);
+const razon = conCierre.total / referencia.total;
+assert.ok(
+  Math.abs(razon - 0.7) < 0.06,
+  `la proyección tiene que seguir al nivel nuevo (~0,70) y dio ${razon.toFixed(2)}`
+);
+
+// Con menos de 5 días de reapertura no se salta al nivel nuevo: son pocos
+// datos para declarar un escalón, y se dice que no hubo corte.
+const reciénReabierto = serieSintetica("2025-01-01", 560).filter(
+  (d) => d.fecha < "2026-07-08" || d.fecha > "2026-07-13"
+);
+const apenas = proyectarConTemporada(reciénReabierto, { desde: "2026-07-17", dias: 30 });
+assert.ok(apenas);
+assert.strictEqual(apenas.cierre, null, "3 días de reapertura no alcanzan para redefinir el nivel");
+
+// --- Medición sobre varias ventanas ---
+
+const medicion4 = medirEstacionalidad(conRuido, { hasta: "2026-12-31", horizonte: 45, ventanas: 4 });
+assert.ok(medicion4);
+assert.strictEqual(medicion4.ventanas.length, 4, "mide las cuatro ventanas pedidas");
+assert.ok(medicion4.medianaMejora > 0, "con estacionalidad real la mediana tiene que mejorar");
+assert.ok(medicion4.ventanasQueMejoran >= 3, "y tiene que ganar en casi todas");
+assert.ok(medicion4.peorMejora <= medicion4.medianaMejora, "el peor caso no puede superar a la mediana");
+// Los cortes van hacia atrás desde el final, el más reciente primero.
+assert.deepStrictEqual(
+  medicion4.ventanas.map((v) => v.corte),
+  ["2026-11-16", "2026-10-02", "2026-08-18", "2026-07-04"]
+);
 
 console.log("lib/forecast/estacionalidad.test.ts: todos los checks pasaron");

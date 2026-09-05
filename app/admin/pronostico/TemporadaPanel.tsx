@@ -5,7 +5,16 @@ import { ArrowRight } from "lucide-react";
 
 type Mes = { mes: number; indice: number; dias: number; anios: number; confiable: boolean; repetido: boolean };
 type MesProyectado = { mes: string; ventas: number; dias: number; indice: number; confiable: boolean; repetido: boolean };
-type Comparacion = { wape: number; dias: number; sesgoPct: number };
+type Ventana = { corte: string; wapeConTemporada: number; wapeSinTemporada: number; mejora: number; dias: number };
+type Medicion = {
+  ventanas: Ventana[];
+  medianaConTemporada: number;
+  medianaSinTemporada: number;
+  medianaMejora: number;
+  ventanasQueMejoran: number;
+  peorMejora: number;
+};
+type Cierre = { desde: string; hasta: string; dias: number; diasDesdeReapertura: number };
 type Temporada = {
   localId: string;
   local: string;
@@ -18,8 +27,14 @@ type Temporada = {
   mesesRepetidos: number;
   crecimientoMensualPct: number | null;
   meses: Mes[];
-  proyeccion: { total: number; totalSinTemporada: number; porMes: MesProyectado[] } | null;
-  backtest: { conTemporada: Comparacion; sinTemporada: Comparacion; mejora: number } | null;
+  proyeccion: {
+    total: number;
+    totalSinTemporada: number;
+    porMes: MesProyectado[];
+    diasDeNivel: number;
+    cierre: Cierre | null;
+  } | null;
+  backtest: Medicion | null;
 };
 type Respuesta = {
   dias: number;
@@ -162,6 +177,21 @@ export default function TemporadaPanel({
             Sin proyección: {datos.cadena.sinProyeccion.join(", ")} — falta historia reciente sincronizada.
           </p>
         )}
+        {datos.temporadas
+          .filter((temporada) => temporada.proyeccion?.cierre)
+          .map((temporada) => (
+            <p
+              key={temporada.localId}
+              className="border-b border-slate-100 px-4 py-2 text-xs text-amber-700 dark:border-[#1c2521] dark:text-amber-300"
+            >
+              <strong className="font-semibold">{temporada.local}</strong> estuvo{" "}
+              {temporada.proyeccion!.cierre!.dias} días sin vender (
+              {fechaCorta(temporada.proyeccion!.cierre!.desde)} a{" "}
+              {fechaCorta(temporada.proyeccion!.cierre!.hasta)}). Su proyección se apoya sólo en los{" "}
+              {temporada.proyeccion!.cierre!.diasDesdeReapertura} días desde que volvió a abrir, no en el
+              promedio de los dos lados: después de un cierre largo el nivel puede ser otro.
+            </p>
+          ))}
         <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
           {datos.temporadas.map((temporada) => (
             <button
@@ -292,47 +322,85 @@ export default function TemporadaPanel({
         <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
           <h2 className="font-semibold">¿Sirve ajustar por temporada?</h2>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
-            Se aparta el último mes y medio, se proyecta sin mirarlo y se compara contra lo que pasó de
-            verdad. Al lado, la alternativa boba: repetir el promedio de los últimos 28 días.
+            Se miden {elegido.backtest?.ventanas.length ?? 4} ventanas de 45 días hacia atrás. En cada una
+            se proyecta sin mirar lo que pasó y se compara contra lo real, al lado de la alternativa boba:
+            repetir el promedio de los últimos 28 días. Son varias y no una porque una sola ventana puede
+            caer sobre un cierre o un mes raro y decir cualquier cosa.
           </p>
         </div>
         {elegido.backtest ? (
-          <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-[#1c2521]">
-            <div className="px-4 py-3">
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Con temporada</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums">
-                {(elegido.backtest.conTemporada.wape * 100).toFixed(1)}%
-              </p>
-              <p className="text-xs text-slate-400 dark:text-[#74817b]">
-                error medio · sesgo {pct(elegido.backtest.conTemporada.sesgoPct)}
-              </p>
+          <>
+            <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-[#1c2521]">
+              <div className="px-4 py-3">
+                <p className="text-xs text-slate-500 dark:text-[#94a19c]">Con temporada · mediana</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums">
+                  {(elegido.backtest.medianaConTemporada * 100).toFixed(1)}%
+                </p>
+                <p className="text-xs text-slate-400 dark:text-[#74817b]">error medio por día</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-xs text-slate-500 dark:text-[#94a19c]">Repitiendo 28 días · mediana</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums text-slate-500 dark:text-[#94a19c]">
+                  {(elegido.backtest.medianaSinTemporada * 100).toFixed(1)}%
+                </p>
+                <p className="text-xs text-slate-400 dark:text-[#74817b]">error medio por día</p>
+              </div>
+              <div className="px-4 py-3">
+                <p className="text-xs text-slate-500 dark:text-[#94a19c]">Diferencia</p>
+                <p
+                  className={`mt-1 text-xl font-semibold tabular-nums ${
+                    elegido.backtest.medianaMejora > 0
+                      ? "text-emerald-700 dark:text-[#4ee6b0]"
+                      : "text-rose-600 dark:text-rose-400"
+                  }`}
+                >
+                  {pct(elegido.backtest.medianaMejora)}
+                </p>
+                <p className="text-xs text-slate-400 dark:text-[#74817b]">
+                  gana en {elegido.backtest.ventanasQueMejoran} de {elegido.backtest.ventanas.length} ·
+                  peor caso {pct(elegido.backtest.peorMejora)}
+                </p>
+              </div>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Repitiendo los últimos 28 días</p>
-              <p className="mt-1 text-xl font-semibold tabular-nums text-slate-500 dark:text-[#94a19c]">
-                {(elegido.backtest.sinTemporada.wape * 100).toFixed(1)}%
-              </p>
-              <p className="text-xs text-slate-400 dark:text-[#74817b]">
-                error medio · sesgo {pct(elegido.backtest.sinTemporada.sesgoPct)}
-              </p>
+            <div className="overflow-x-auto border-t border-slate-100 dark:border-[#1c2521]">
+              <table className="w-full min-w-[30rem] text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+                    <th className="px-4 py-2.5 font-semibold">Ventana desde</th>
+                    <th className="px-3 py-2.5 text-right font-semibold">Días</th>
+                    <th className="px-3 py-2.5 text-right font-semibold">Con temporada</th>
+                    <th className="px-3 py-2.5 text-right font-semibold">Promedio 28 d</th>
+                    <th className="px-4 py-2.5 text-right font-semibold">Diferencia</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                  {elegido.backtest.ventanas.map((ventana) => (
+                    <tr key={ventana.corte}>
+                      <td className="px-4 py-2.5">{fechaCorta(ventana.corte)}</td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                        {ventana.dias}
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums">
+                        {(ventana.wapeConTemporada * 100).toFixed(1)}%
+                      </td>
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                        {(ventana.wapeSinTemporada * 100).toFixed(1)}%
+                      </td>
+                      <td
+                        className={`px-4 py-2.5 text-right font-semibold tabular-nums ${
+                          ventana.mejora > 0
+                            ? "text-emerald-700 dark:text-[#4ee6b0]"
+                            : "text-rose-600 dark:text-rose-400"
+                        }`}
+                      >
+                        {pct(ventana.mejora)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
-            <div className="px-4 py-3">
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Diferencia</p>
-              <p
-                className={`mt-1 text-xl font-semibold tabular-nums ${
-                  elegido.backtest.mejora > 0
-                    ? "text-emerald-700 dark:text-[#4ee6b0]"
-                    : "text-rose-600 dark:text-rose-400"
-                }`}
-              >
-                {pct(elegido.backtest.mejora)}
-              </p>
-              <p className="text-xs text-slate-400 dark:text-[#74817b]">
-                {elegido.backtest.mejora > 0 ? "de error que se saca" : "el modelo simple gana acá"} ·{" "}
-                {elegido.backtest.conTemporada.dias} días
-              </p>
-            </div>
-          </div>
+          </>
         ) : (
           <p className="px-4 py-3 text-sm text-slate-500 dark:text-[#94a19c]">
             Todavía no hay 45 días recientes completos para medirlo en {elegido.local}.

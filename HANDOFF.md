@@ -314,19 +314,38 @@ diciembre tienen 30 días observados cada uno y son **un solo** octubre, noviemb
 el índice no puede distinguir "así es diciembre" de "así fue diciembre de 2025". La pantalla lo
 marca como "un solo año". En enero de 2027 esto se arregla solo.
 
-Medido el 2026-09-05, con el backtest de 45 días reservados:
+**Se mide sobre cuatro ventanas de 45 días, no sobre una.** Esto no es prolijidad: la primera
+versión medía una sola ventana y daba mejoras del 41-51%, que es el mejor caso y no el modelo.
+Con cuatro ventanas, medido el 2026-09-05:
 
-| Local | WAPE con temporada | Repitiendo 28 días | Mejora |
-|---|---:|---:|---:|
-| Jumbo | 10,8% | 22,2% | **−51%** |
-| Chacras | 17,3% | 30,5% | **−43%** |
-| Las cañas | 17,6% | 29,6% | **−41%** |
-| QuickPoint | 19,8% | 19,2% | **+3%** |
+| Local | Con temporada (mediana) | Repitiendo 28 días | Mejora mediana | Gana en | Peor ventana |
+|---|---:|---:|---:|:-:|---:|
+| Las cañas | 25,7% | 34,4% | **−31%** | 4/4 | +15,5% |
+| Jumbo | 20,4% | 27,7% | **−27%** | 4/4 | +20,5% |
+| Chacras | 36,3% | 42,1% | **−15%** | 3/4 | −4,5% |
+| QuickPoint | 19,3% | 22,7% | **−12%** | 3/4 | −3,3% |
 
-**QuickPoint es la excepción y hay que dejarla dicha**: ajustar por temporada ahí *empeora* el
-pronóstico. Su curva es casi plana (0,92-1,21 contra 0,73-1,28 de Chacras) y los dos métodos se
-pasan un 12%. Es también el local con días que Fudo no registra (ver §11): probablemente no sea
-que no tiene estacionalidad, sino que su serie tiene agujeros.
+Ajustar por temporada gana en 14 de las 16 ventanas medidas, pero **el rango va de +45% a −5%**
+según dónde caiga el corte. Cualquier número suelto de esta tabla, sin el resto, exagera.
+
+### Cierres largos
+
+`ultimoCierre()` detecta tres o más días seguidos sin una sola venta y, si caen dentro de la
+ventana que fija el nivel de arranque, la proyección se apoya **sólo en los días posteriores a
+la reapertura**.
+
+Existe por un caso real: **QuickPoint cerró por reformas del 23 al 28 de agosto de 2026** y
+reabrió un 15% abajo. Promediar los dos lados del cierre describía un local que no existe — su
+proyección a 120 días bajó de $147,0M a $129,8M al anclarla bien. Y la ventana de backtest que
+contenía ese cierre era justamente la que decía que la estacionalidad no le servía a QuickPoint:
+medido en las otras tres ventanas, le sirve.
+
+Tres días y no dos porque los feriados de esta cadena son de un día (1 de mayo, 25 de diciembre,
+1 de enero) y a veces caen fines de semana largos. Y hacen falta al menos 5 días de reapertura
+para cambiar el nivel: con menos, el escalón todavía es un rumor. La pantalla avisa el cierre,
+las fechas y sobre cuántos días se apoya.
+
+**QuickPoint hoy proyecta sobre 7 días.** Es poco y está declarado; se vuelve normal solo.
 
 ### Clima
 
@@ -460,8 +479,12 @@ Notas de entorno que ahorran tiempo:
 - **Cargar los costos por producto en Fudo.** Sin eso el food cost y el margen no sirven.
 - **Cargar las compras en Fudo con detalle de producto.** Convierte la serie de stock en un
   control de faltantes real.
-- **QuickPoint tiene días que Fudo no registra** (3 de 7 en una semana de agosto). No es el
-  modelo, es la fuente: ver si el local cerró o si su cuenta tiene un problema.
+- ~~QuickPoint tiene días que Fudo no registra~~ **Resuelto: cerró por reformas del 23 al 28 de
+  agosto de 2026.** No era un problema de sincronización. Los otros huecos de los cuatro locales
+  son feriados de un día (1 de mayo, 25 de diciembre, 1 de enero). El modelo ahora lo detecta
+  solo, pero **no hay forma de declarar un cierre a mano**: si el próximo dura menos de 3 días,
+  o si se quiere marcar una reforma que igual mantuvo el local abierto a media máquina, hay que
+  cargarlo. Sería una tabla `CierreLocal` (localId, desde, hasta, motivo) que el modelo excluya.
 
 **Mejoras**
 
