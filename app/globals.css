@@ -35,6 +35,15 @@ body {
   color: #17211e;
 }
 
+.scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hidden::-webkit-scrollbar {
+  display: none;
+}
+
 /* Pulso Operativo: fondo profundo, superficies teal y acento menta. */
 .dark {
   color-scheme: dark;

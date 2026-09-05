@@ -109,10 +109,10 @@ export function PageTitle({
   return (
     <div className="sticky top-0 z-10 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-[#F6F8F5]/95 px-4 py-3.5 backdrop-blur-sm supports-backdrop-blur:bg-[#F6F8F5]/85 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 dark:border-[#26312d] dark:bg-[#0B1412]/95 dark:supports-backdrop-blur:bg-[#0B1412]/85">
       <div className="min-w-0">
-        <h1 className="flex items-center gap-2 truncate text-xl font-bold tracking-tight md:text-2xl">
+        <h1 className="flex items-center gap-2 text-xl font-bold md:text-2xl">
           {children}
         </h1>
-        {subtitle && <p className="mt-0.5 truncate text-sm text-slate-500 dark:text-[#94a19c]">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </div>

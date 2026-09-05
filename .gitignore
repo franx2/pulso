@@ -45,3 +45,6 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# capturas de revisión: tienen datos reales de ventas y el repo es público
+.impeccable/review/

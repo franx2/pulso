@@ -16,7 +16,7 @@ export function PageShell({
   rol?: Rol;
   /** Sin `nav` no se muestra la barra inferior. */
   nav?: NavActivo;
-  width?: "wide" | "narrow";
+  width?: "wide" | "narrow" | "full";
 }) {
   // Encargado/admin planifican turnos y miran reportes desde una notebook:
   // en escritorio se les da una consola propia (rail fijo agrupado) en vez
@@ -40,7 +40,13 @@ export function PageShell({
       >
         <div
           className={
-            width === "narrow" ? "mx-auto w-full max-w-lg" : conSidebar ? "mx-auto w-full max-w-6xl" : ""
+            width === "narrow"
+              ? "mx-auto w-full max-w-lg"
+              : width === "full"
+                ? "mx-auto w-full max-w-[90rem]"
+                : conSidebar
+                  ? "mx-auto w-full max-w-6xl"
+                  : ""
           }
         >
           {children}

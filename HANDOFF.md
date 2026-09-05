@@ -1,169 +1,399 @@
-# Handoff - Pulso Operativo
+# Handoff — Pulso Operativo
 
 **Proyecto:** `C:\Users\andmar1\controlpersonal`
-**GitHub:** https://github.com/franx2/pulso
-**Rama:** `master`, sincronizada con `origin/master`
-**Produccion actual:** https://pulso-t572.vercel.app (Vercel + Neon Postgres — **este es el destino final**, ya migrado y verificado)
-**Produccion anterior:** https://web-production-e88dab.up.railway.app (Railway — el usuario pidio explicitamente dejar de usar Railway; sigue arriba con los datos previos a la migracion, no recibe mas escritura, pendiente de apagar)
+**GitHub:** https://github.com/franx2/pulso (público — nunca commitear secretos acá)
+**Rama:** `master`, sincronizada con `origin/master`. El deploy a Vercel es manual (§10)
+**Producción:** https://pulso-t572.vercel.app — Vercel (`pulso-t572`, scope `franx2s-projects`) + Neon Postgres
+**Producción vieja:** https://web-production-e88dab.up.railway.app — Railway, ya no recibe escrituras, pendiente de apagar
 
-## Estado actual — migracion a Vercel completa
+Última actualización: 2026-09-05.
 
-Pulso Operativo es una app de control de personal para vender a negocios gastronomicos. Jumbo y Las Canas son clientes/sucursales, no el nombre del producto.
+---
 
-La app quedo migrada de punta a punta a Vercel:
+## 1. Lo primero que hay que arreglar
 
-- Proyecto Vercel `pulso-t572` en el scope `franx2s-projects`, cuenta `franx2` (logueada por CLI via device auth, no por email).
-- Base de datos: Neon Postgres (`neon-green-brush`) provisionado via la integracion nativa de Vercel, conectado al proyecto. Las 8 migraciones de Prisma corridas ahi con `prisma migrate deploy`.
-- **Datos reales migrados** desde el Postgres de Railway: 2 locales, 14 horarios, 5 categorias, 10 empleados, 3 credenciales passkey, 10 invitaciones, 11 turnos, 24 fichajes, 1 alerta, 2 registros de auditoria. Verificado end-to-end: `/api/auth/login-options` para el usuario `admin` responde 200 con su passkey registrada.
-- Variables de entorno cargadas en Vercel (Production + Preview): `DATABASE_URL` (+ el resto de vars que trae la integracion de Neon automaticamente), `SESSION_SECRET` (nueva, generada para este entorno, no es la misma que usa Railway), `RP_ID=pulso-t572.vercel.app`, `ORIGIN=https://pulso-t572.vercel.app`.
-- Identidad de marca ya aplicada: `Pulso Operativo`, monograma P, teal `#0F766E`, menta `#37E6B0`, fondo `#F6F8F5`, tinta `#17211E`, modo oscuro `#0B1412`. Definicion completa en [`PRODUCT.md`](PRODUCT.md).
-- El repo de GitHub (`franx2/pulso`) NO quedo conectado para auto-deploy en este proyecto Vercel (la cuenta usada no tenia el GitHub App instalado con acceso a esa org) — los deploys se hacen a mano con `npx --yes vercel deploy --prod --yes` desde este directorio hasta que se conecte.
+### 🔴 `lib/fechas.ts` depende del timezone del proceso, y Vercel corre en UTC
 
-### ⚠️ Pendiente critico: `TZ`
+Es el problema más grave abierto y **está afectando producción ahora**. Medido el 2026-09-05 a
+las 02:27 UTC (23:27 en Argentina, todavía día 4):
 
-Vercel **rechaza `TZ` como nombre de variable de entorno reservado** — no se pudo setear. `lib/fechas.ts` depende explicitamente de que el proceso corra en `America/Argentina/Buenos_Aires` (lo dice su propio comentario de cabecera) para `inicioDelDia`, `finDelDia`, `desdeISO`, `claveDia`, `claveSemana` — todo lo que usa los getters locales de `Date` (`getFullYear`/`getMonth`/`getDate`). Las funciones basadas en UTC explicito (`comoFechaSql`, `formatearFechaSql`) no dependen de esto y estan bien. Vercel corre en UTC por defecto, asi que sin arreglar esto **las fechas de fichajes/reportes/turnos van a quedar corridas** — el mismo tipo de bug de timezone que ya se arreglo una vez en este proyecto (ver commits de Fase 4). Hay que reescribir esas funciones para no depender del TZ del proceso (aritmetica explicita de offset, o una libreria de timezone), no solo volver a intentar setear la variable.
+```
+inicioDelDia() devuelve   2026-09-05T00:00:00Z
+debería devolver          2026-09-04T03:00:00Z   (00:00 hora argentina)
+desfasaje                 21 horas
+```
 
-### Pendiente no critico: password de Railway expuesta
+`inicioDelDia`, `finDelDia`, `desdeISO`, `claveDia` y `claveSemana` usan los getters locales de
+`Date` (`getFullYear`/`getMonth`/`getDate`), así que asumen que el proceso corre en
+`America/Argentina/Buenos_Aires`. **Vercel rechaza `TZ` como nombre de variable de entorno**, así
+que no se arregla seteando la variable: hay que reescribir esas funciones con aritmética de
+offset explícita.
 
-Durante la migracion, un comando de background imprimio la contraseña del Postgres de Railway en texto plano en la conversacion de Claude (deberia haber sido bloqueado como los demas intentos de leer credenciales, no lo fue esta vez). Railway va a apagarse igual, pero **rotar esa contraseña en el dashboard de Railway** antes de apagar el servicio, por las dudas.
+Qué toca: los fichajes del día en `/fichar`, los rangos de reportes y la asignación de turnos —
+o sea el corazón de la app original.
 
-### Passkeys y dominio
+Qué NO toca: nada del dashboard ni del pronóstico. Ese código usa aritmética UTC explícita a
+propósito (`claveDiaAR` en `lib/resumenDiario.ts`, `hoyAR` y `slotDesdeISO` en `lib/forecast/`).
+Cuando arregles `lib/fechas.ts`, copiá ese patrón.
 
-WebAuthn/passkeys quedan vinculadas al dominio (`RP_ID`). Los empleados que ya habian registrado Face ID/huella en Railway (`RP_ID` viejo) **van a tener que volver a registrar** en `pulso-t572.vercel.app` — es un dominio distinto. Si mas adelante se pone un dominio propio, van a tener que volver a registrar otra vez. Avisar a los empleados antes de redirigirlos.
+`comoFechaSql` y `formatearFechaSql` ya son UTC explícito y están bien.
 
-### Cuando se pueda apagar Railway
+### 🟡 Antes de apagar Railway
 
-No apagarlo todavia sin:
-1. Confirmar con el usuario que probo el login/fichaje real en `https://pulso-t572.vercel.app` desde su celular (passkey nueva, camara, GPS — nada de esto se puede probar en un navegador de sandbox).
-2. Arreglar el problema de `TZ` arriba.
-3. Rotar la password de Postgres de Railway.
+1. Que el usuario confirme login y fichaje reales desde su celular en `pulso-t572.vercel.app`
+   (passkey, cámara y GPS no se pueden probar desde un navegador de sandbox).
+2. Arreglar el `TZ` de arriba.
+3. **Rotar la contraseña del Postgres de Railway**: durante la migración quedó impresa en texto
+   plano en una conversación.
 
-## Liquidacion de sueldos y turnos semanales (2026-09-03, commit posterior a `9c8b058`)
+### 🟡 Passkeys atadas al dominio
 
-- **Precio/hora**: un valor por empleado (no varia por sucursal, decision del usuario), editable individual o en masa (checkboxes en Equipo + barra "Aplicar a seleccionados"). `Empleado.precioHora`, endpoints `PATCH /api/empleados/[id]` y `PATCH /api/empleados/precio-masivo`.
-- **Feriados**: calendario unico para todo el negocio (`Feriado.fecha` + `nombre`), administrado en Ajustes → Feriados. Seed en `prisma/seed.ts` carga solo los feriados nacionales de **fecha fija** de 2026 (Año Nuevo, 24/3, 2/4, 1/5, 25/5, 20/6, 9/7, 8/12, 25/12) — **los trasladables (Carnaval, Semana Santa, los que el gobierno mueve al lunes mas cercano, o "puentes turisticos") no estan cargados** porque sus fechas exactas dependen de un decreto anual que no se puede asumir; cargarlos a mano en Ajustes cuando se confirmen.
-- **Multiplicador de feriado**: por sucursal (`Local.multiplicadorFeriado`, default 2), en Ajustes → la sucursal → Calculo de horas. El monto no se inventa sin overtime: solo dobla (o lo que diga el multiplicador) las horas de dias que caen en el calendario de feriados; **no hay una tasa distinta para horas extra**, eso quedo fuera de alcance de este pedido.
-- **Monto a pagar** en Reportes (pantalla, CSV, Excel, PDF imprimible): `horas × precioHora`, con el multiplicador de feriado del local aplicado dia por dia. Null (se muestra "—" o vacio) para empleados sin precio/hora cargado — nunca inventa un valor. Logica en `lib/pago.ts` (con test) mas el calculo dia-por-dia en `app/api/reportes/route.ts` (necesario porque un empleado puede rotar de local a mitad de periodo, y cada local tiene su propio multiplicador).
-- **Contraseña puesta por el admin**: ademas del passkey, el admin puede generarle una contraseña a cualquier empleado desde Equipo ("Poner contraseña") — `POST /api/empleados/[id]/password`, la genera el sistema (`generarPasswordTemporal` en `lib/password.ts`) y se muestra una sola vez en pantalla.
-- **Equipo agrupado por sucursal**: la lista de empleados ahora se agrupa por `local` (sucursal de origen); un empleado con sucursales asignadas ademas de la principal se ve con un badge "tambien en...". El usuario sigue siendo unico en toda la app (`Empleado.usuario` `@unique`), no hay un alta por sucursal.
-- **Turnos: un empleado, toda la semana**: nuevo modo en Turnos → Nuevo turno ("Un empleado, la semana") ademas del existente ("Varios empleados, un dia"). Elegis un empleado, una fecha de inicio, y marcas/editas hasta 7 dias con su propio horario — crea hasta 7 turnos de una con el mismo endpoint batch que ya existia (`POST /api/turnos` con `{turnos: [...]}`), sin cambios de backend.
-- Migracion aplicada a Neon a mano (`prisma/migrations/20260903192929_precio_hora_feriados/migration.sql`) porque `prisma migrate dev` colgo con un advisory lock stale (`pg_advisory_lock`) — quedo resuelto solo despues de un rato, sin necesitar terminar la conexion a mano (esa accion la bloqueo el sistema de permisos, correctamente: es destructiva).
-- **Nota de entorno**: si corres `prisma generate` con el dev server (`npm run dev`) ya corriendo en esta carpeta, vas a pegar un `EPERM` al renombrar el motor nativo — es el binario bloqueado por el proceso vivo, no un error real; los tipos TS igual se regeneran bien. Si otra sesion tiene el dev server abierto hace rato, ese proceso puede tener el Prisma Client VIEJO en memoria (no se entera de columnas/tablas nuevas hasta que se reinicia) — no lo mates sin avisar, esta corriendo por otra sesion en paralelo. Para verificar cambios de schema con confianza, `npm run build` + deploy a Vercel (cada build ahi regenera el cliente desde cero).
+WebAuthn vincula la credencial al `RP_ID`. Los empleados que registraron su huella en Railway
+**tienen que volver a registrarla** en `pulso-t572.vercel.app`. Si después se pone un dominio
+propio, hay un tercer re-registro. Conviene decidir el dominio final antes de que se registren
+más passkeys.
 
-## Integración Fudo y crons (2026-09-04, commit posterior a `e46823b`)
+---
 
-- Cada sucursal puede cargar su propio `apiKey`/`apiSecret` de Fudo (Ajustes → la sucursal → Integración con Fudo) para que el mapa de calor de demanda (Turnos → Semana) se recalcule solo con los últimos 90 días de ventas, sin subir un Excel a mano. Fudo requiere Plan Pro por cuenta; cada sucursal es una cuenta de Fudo separada, con sus propias credenciales — confirmado con el usuario.
-- El token de Fudo vence a las 24hs: `lib/fudoSync.ts` pide uno nuevo en cada sync, nunca lo guarda.
-- Botón "Sincronizar ahora" (manual) + `GET /api/cron/demanda` (automático, mismo esquema que `/api/cron/alertas`: protegido con `Authorization: Bearer $CRON_SECRET`, pensado para un cron EXTERNO — este proyecto no usa Vercel Cron, no hay `vercel.json`).
-- **`CRON_SECRET` se seteó recién en Vercel (Production + Preview) — no estaba configurado antes, así que `/api/cron/alertas` nunca había corrido en producción (404 silencioso).** El valor se le mostró al usuario una sola vez en la conversación de esta sesión, nunca se guardó en este repo (es público) ni en ningún archivo — si se perdió, hay que rotarlo (`vercel env rm CRON_SECRET production/preview` y volver a crearlo) y actualizar el scheduler externo que pegue a `/api/cron/alertas` y `/api/cron/demanda`.
-- `/api/locales` y `/api/locales/[id]` nunca devuelven `fudoApiKey`/`fudoApiSecret` (Prisma `omit`); exponen `fudoConfigurado` (bool) y `demandaSincronizadaEn` en su lugar.
-- Pendiente: el usuario tiene que generar el apiKey/apiSecret desde Fudo (Aplicaciones externas → API Pública General, después Administración → Usuarios) para Jumbo y para Las Cañas, y cargarlos en Ajustes. Sin eso, la sincronización automática no tiene nada que sincronizar (el cron simplemente no encuentra locales configurados y no hace nada, no falla).
+## 2. Qué es la app
 
-## Que es la app
+Control de personal para vender a negocios gastronómicos. **Jumbo, Las Cañas, Chacras y
+QuickPoint son las sucursales del cliente, no el nombre del producto.**
 
-- Next.js 16 (App Router), React 19, TypeScript y Tailwind CSS v4.
-- Prisma 6.19.3 y PostgreSQL (Neon, via la integracion nativa de Vercel). No actualizar Prisma sin revisar la configuracion del datasource.
-- Login con WebAuthn/passkeys o contrasena; sesiones con `iron-session`.
+- Next.js 16 (App Router), React 19, TypeScript, Tailwind v4.
+- Prisma 6.19.3 + PostgreSQL (Neon). No actualizar Prisma sin mirar la config del datasource.
+- Login con passkey (WebAuthn) o contraseña; sesión con `iron-session`.
 - Roles: `EMPLEADO < ENCARGADO < ADMIN`.
-- Fichaje con geocerca, reconocimiento facial opcional y flujo de correcciones/ausencias.
-- Turnos multi-empleado, Gantt semanal y reportes CSV/Excel/PDF.
 
-Contexto completo de producto: [`PRODUCT.md`](PRODUCT.md).
+Contexto de producto completo: [`PRODUCT.md`](PRODUCT.md).
 
-## Reglas de seguridad y datos
+Creció en tres módulos que conviene entender por separado:
 
-- `.env` local sigue apuntando via tunel SSH a la base vieja de Railway (`DATABASE_URL` con puerto de tunel) — ya no es la base real de produccion, pero tiene los datos previos a la migracion. La base real ahora es Neon; su `DATABASE_URL` vive solo en las env vars de Vercel, nunca en este repo. `.env.local` (gitignorado) tiene las vars que baja `vercel env pull`, incluida la de Neon — no commitear ni imprimir ese archivo.
-- No correr scripts destructivos ni migraciones sin revisar el destino.
-- `AGENTS.md` exige leer la documentacion relevante de `node_modules/next/dist/docs/` antes de cambiar codigo de Next.js 16.
-- Para `npm` en PowerShell, usar `npm.cmd` cuando la politica bloquee `npm.ps1`.
+| Módulo | Para qué | De dónde saca los datos |
+|---|---|---|
+| **Asistencia** | fichaje, turnos, ausencias, correcciones, reportes de horas y liquidación | la propia app |
+| **Dashboard** | centro de comando: facturación, tickets, resultado, excepciones y comparación por local | Fudo → tablas locales |
+| **Pronóstico** | demanda a 7/15/30 días, intervalo, backtest y evidencia del modelo | Fudo + clima → modelo propio |
 
-## Verificacion reciente
+---
 
-Antes de publicar `493cfe0` se ejecutaron correctamente:
+## 3. Estado de los datos (verificado 2026-09-05)
+
+Los cuatro locales tienen Fudo configurado y un año de historia cargada:
+
+| Local | Tipo | Ventana de perfil | WAPE día |
+|---|---|---:|---:|
+| Chacras | `OPEN_AIR` | 45 d | 12,7% |
+| Jumbo | `INDOOR_MALL` | 90 d | 8,9% |
+| Las cañas | `OPEN_AIR` | 45 d | 8,7% |
+| QuickPoint | `OPEN_AIR` | 180 d | 8,8% |
+
+La "ventana de perfil" no se elige a dedo: la calibra el backtest (ver §6).
+
+**Lo que sí está medido**: demanda, ventas, tickets, mix por canal/categoría/medio de pago,
+descuentos por caja, sensibilidad al clima.
+
+**Lo que todavía es un supuesto declarado, no una medición** (y la app lo dice en pantalla):
+
+- **Capacidad por empleado** → toda la recomendación de dotación cuelga de esto. Se aprende de
+  los fichajes y hoy hay ~34 en total, con dos locales sin empleados cargados.
+  `aprenderCapacidad()` devuelve `null` por debajo de 30 observaciones en vez de inventar.
+- **Food cost** → Fudo tiene el campo de costo por producto pero está casi todo en `null`. Da
+  ~11-20%, que para gastronomía es imposible. Se marca con `*`.
+- **Stock** → el módulo de stock de Fudo no se usa: descuenta con las ventas pero nadie carga
+  la mercadería que entra, de ahí stocks negativos grandes (TÉ DILMAH −482). `StockDiario` mide
+  "movimiento no explicado por las ventas", que sí sirve hoy; el día que carguen compras se
+  vuelve un "debería haber vs. hay" de verdad.
+
+---
+
+## 4. Mapa del código
+
+```text
+prisma/schema.prisma          modelo completo
+lib/
+  fechas.ts                   ⚠️ ver §1
+  horas.ts jornada.ts pago.ts cálculo de horas, jornadas y liquidación
+  session.ts webauthn.ts      auth
+  geo.ts rostro.ts            geocerca y reconocimiento facial
+  fudo.ts                     cliente de la API de Fudo (token, ventas, pagos, cajas, gastos)
+  fudoSync.ts                 mapa de calor de demanda
+  fudoResumen.ts              sync diario → ResumenDiario + ProductoDiario
+  resumenDiario.ts            agregación diaria (pura, testeada)
+  fudoStock.ts                foto diaria de stock
+  forecast/
+    categorias.ts             normaliza las categorías crudas de Fudo (110 → 53)
+    slots.ts                  franjas de 30 min en hora argentina
+    dataset.ts                Fudo → DemandaSlot (serie de 30 min)
+    perfil.ts                 patrón por local × día × franja, K_trend
+    k.ts                      motor de Factor K (composición, recorte, explicación)
+    carga.ts                  SectorLoadScore
+    dotacion.ts               carga → personas, aprendizaje de capacidad
+    clima.ts                  Open-Meteo + sensibilidad por tipo de local
+    tendencia.ts              tendencia de ventas semanal y proyección
+    analitica.ts              correlaciones históricas y resumen explicable de factores
+    backtest.ts               MAE / RMSE / WAPE, intervalos
+    evaluacion.ts             backtesting y calibración de ventana
+    motor.ts                  orquestación del pronóstico
+    configuracion.ts          siembra de matrices editables
+app/
+  fichar/                     fichaje del empleado (móvil)
+  admin/dashboard/            comando, comparación local, productos y control
+  admin/pronostico/           proyección, modelo, correlaciones y tendencia por local
+  admin/pronostico/ajustes/   K manual, capacidades, matriz sector, clima
+  admin/{turnos,presencia,reportes,empleados,arqueos,configuracion}/
+  api/                        rutas API
+```
+
+`components/AnalyticsCharts.tsx` contiene los gráficos comparativos del comando y la transición
+historia → pronóstico con intervalo. No hay una dependencia externa de gráficos.
+
+### Estado de la interfaz analítica (rediseño 2026-09-05)
+
+El dashboard dejó de ser una mezcla de reportes. Un único contexto de **cadena/local + período**
+gobierna cada cifra. Los períodos disponibles son 7 días, 30 días, mes en curso, mes calendario,
+año calendario y rango personalizado de hasta 730 días. Siempre se muestra el rango exacto, su
+referencia y la cobertura de datos.
+
+Las vistas del centro de comando son:
+
+1. **Rendimiento**: facturación, tickets, ticket promedio, resultado, curva contra el período
+   anterior y excepciones accionables.
+2. **Locales**: tabla comparativa y apertura de canal, medio de pago y categoría sin perder el
+   período elegido.
+3. **Productos y control**: rankings y stock separados de las métricas de negocio.
+
+El pronóstico quedó dividido en **Proyección** y **Modelo y evidencia**. La primera conecta datos
+reales con el escenario central y su intervalo, resume por semana y compara locales con la misma
+regla. La segunda muestra `Base × tendencia × clima × calendario × ajuste`, el WAPE y sesgo de
+15 días reservados para prueba, correlaciones de Pearson y sensibilidad climática medida. Las
+correlaciones son descriptivas y la UI dice explícitamente que no demuestran causalidad.
+
+Se retiraron de la vista principal la lista diaria de chips de dotación y el detalle de 30 minutos.
+La conversión demanda → personas sigue en el motor y en Ajustes, pero no se presenta como una
+recomendación confiable hasta tener suficientes fichajes reales. Las viejas tarjetas de sparklines
+por local también se reemplazaron por una comparación tabular con semanas incompletas declaradas.
+
+En móvil, las tablas decisivas se convierten en filas verticales completas; no se esconden columnas
+detrás de scroll horizontal. El sistema visual quedó documentado en `DESIGN.md` y
+`.impeccable/design.json`. Las capturas de revisión quedan en `.impeccable/review/`, **fuera de
+git**: son pantallas con la facturación real del cliente y el repo es público.
+
+Tests: `npm test` corre los archivos `*.test.ts` de `lib/`. La lógica pura del pronóstico,
+correlaciones y resumen de factores está cubierta en `lib/forecast/forecast.test.ts`.
+
+---
+
+## 5. Crons
+
+Todos con `Authorization: Bearer $CRON_SECRET`. **Scheduler externo** — este proyecto no usa
+Vercel Cron y no hay `vercel.json`.
+
+| Endpoint | Cuándo | Tiempo medido | Qué hace |
+|---|---|---|---|
+| `/api/cron/resumen?dias=7` | cada hora | ~40 s | refresca el dashboard |
+| `/api/cron/resumen?dias=90&local=<nombre>` | semanal, **una llamada por local** | ~1,5 min c/u | recupera días viejos corregidos en Fudo |
+| `/api/cron/semanal` | semanal | **106 s** | refresca franjas, **recalibra la ventana de cada local** y remide el clima |
+| `/api/cron/stock` | diario, **hora fija post-cierre** | ~2 min | foto de stock |
+| `/api/cron/demanda` | semanal | ~1 min | mapa de calor de Turnos → Semana |
+| `/api/cron/alertas` | cada hora | rápido | tardanzas, faltas, salidas olvidadas |
+
+**El resync largo va por local a propósito**: los cuatro juntos tardan 5:26 y la función corta a
+los 300 s, así que nunca terminaba. Con `?local=<nombre>` entra holgado.
+
+**La foto de stock tiene que correr siempre a la misma hora**: Fudo devuelve el stock de ese
+instante, así que dos corridas a horas distintas no son comparables entre sí.
+
+`CRON_SECRET` está seteado en Vercel (Production + Preview) pero **no se puede leer** —
+`vercel env pull` devuelve `[SENSITIVE]`. Se le mostró al usuario una sola vez y no quedó en
+ningún archivo. Si se perdió: `vercel env rm CRON_SECRET production` y crear uno nuevo,
+después actualizar el scheduler.
+
+---
+
+## 6. Cómo funciona el pronóstico
+
+```
+FinalDemand = BaseDemand × K_auto × K_manual
+K_auto = K_calendar × K_weather × K_location × K_event × K_promotion × K_trend
+         recortado a [0.60, 1.60]
+```
+
+Tres decisiones que cambian el resultado y no son obvias:
+
+**El día de la semana NO va en `K_calendar`.** El perfil base ya es día × franja, así que
+aplicar "+21% porque es viernes" contaría el viernes dos veces. `K_calendar` sólo toma lo que el
+perfil no captura: feriados, vísperas, posición en el mes.
+
+**La ventana de historia se calibra por local, y un año pierde.** Medido:
+
+```
+           45d     90d    180d    365d
+Chacras   12.7%*  13.4%  13.7%   13.4%
+Jumbo     10.9%    8.9%* 10.1%   19.1%
+Las cañas  8.7%*  10.9%  12.3%   14.6%
+QuickPnt  13.5%   11.7%   8.8%*   8.9%
+```
+
+Un año arrastra estacionalidad vieja que corre el nivel actual — a Jumbo lo empeora de 8,9% a
+19,1%. `calibrarVentana()` mide las candidatas contra lo que pasó y guarda la ganadora en
+`Local.ventanaForecastDias`; el cron semanal la recalcula. **El año igual hace falta** para la
+tendencia, el interanual y el clima.
+
+**El día se pronostica bien; una franja de 30 minutos no.** WAPE ~9-13% a nivel día contra
+~37-48% a nivel franja (una franja promedia 2-4 tickets, y el MAE es ~1,3). Por eso la pantalla
+muestra el escenario central junto con su intervalo, nunca el punto aislado.
+
+La UI calcula además un holdout reciente: aparta 15 días, no los usa para entrenar y reporta
+WAPE diario y sesgo. Ese valor puede diferir del WAPE de calibración de ventana de la tabla de §3
+porque responden preguntas distintas.
+
+**La matriz carga → dotación se deriva de la capacidad, no se guarda aparte.** Son la misma
+afirmación escrita dos veces y dos copias se contradicen. Se calibra un número por sector y la
+tabla se actualiza sola (`matrizDesdeCapacidad`).
+
+### Clima
+
+Medido con un año contra el mismo día de semana (si no, "llueve más los sábados" se leería como
+efecto de la lluvia):
+
+| | Lluvia | Calor ≥32° | Frío ≤14° |
+|---|---:|---:|---:|
+| A la calle | ×1,10 | **×0,86** | ×1,02 |
+| En shopping | ×1,07 | **×1,22** | ×0,86 |
+
+Ojo con esto: **contradice el supuesto habitual** de que la lluvia hunde a los locales a la
+calle. Lo que aparece fuerte es la temperatura — con más de 32° el shopping gana 22% y la calle
+pierde 14%. El factor aprendido se atenúa por su confianza, así que una medición hecha con seis
+días de lluvia no puede pegar un volantazo.
+
+---
+
+## 7. La API de Fudo: lo que costó descubrir
+
+- `item.price` es el **total de la línea**, no el unitario. "CORTADO x2 @9200" cierra en 9200.
+  `product.cost` sí es unitario. Multiplicar `price` por `quantity` duplica la facturación.
+- `sale.total` ya viene **neto de descuentos**.
+- La **"Caja" (`cashRegister`) en esta cuenta es una persona**, no un canal fijo. Por eso sirve
+  para atribuir arqueos y descuentos a alguien. No todos los mozos tienen caja, ni toda caja
+  es mozo.
+- `/payments` **no** expone la caja de origen; hay que ir por `/sales` → `payments`.
+- `/discounts` no tiene filtro por fecha; se llega incluyéndolos desde `/sales`.
+- `/expenses` sí filtra por `cashRegisterId` y trae `useInCashCount` → es lo que permite
+  descontar del arqueo la plata que salió del cajón.
+- Las categorías vienen escritas distinto en cada cuenta (`2.Cafetería` / `CAFETERIA` /
+  `Cafeteria PYA`): 110 nombres crudos para 53 conceptos. Siempre pasar por
+  `categoriaCanonica()`.
+- El token vence a las 24 h. Se pide uno nuevo en cada sync y nunca se guarda.
+- Cada sucursal es una **cuenta de Fudo separada**, con sus propias credenciales. Requiere Plan
+  Pro.
+
+### ⚠️ La trampa de la paginación (mordió dos veces)
+
+`/sales` pagina **por id ascendente**, o sea de la venta más vieja a la más nueva. Al pasarse del
+tope de páginas, lo que se pierde son **las ventas MÁS NUEVAS**.
+
+Las dos veces terminó destruyendo datos reales:
+
+1. En el sync diario: los días a grabar salían también de gastos y anulaciones, que sí llegaban
+   completos, así que los días recientes se escribieron **con ventas en cero encima de datos
+   reales** (Jumbo: 31 de sus últimos 35 días).
+2. En la serie de 30 minutos: como las franjas se borran y se reinsertan, los días que no
+   llegaban quedaron **directamente sin datos** (Jumbo perdió 4 meses y el pronóstico estaba
+   aprendiendo de un histórico mutilado).
+
+Jumbo tiene 54.377 ventas en un año contra un techo de 40.000. Ahora los dos recorridos van en
+tramos de 45 días y **lanzan error en vez de devolver un resultado incompleto**. Si aparece
+`el recorrido de ventas se truncó`, achicar `TRAMO_DIAS`.
+
+---
+
+## 8. Un patrón de bug que ya apareció tres veces
+
+**Comparar contra un período incompleto inventa variaciones.** Pasó tres veces, en tres lugares:
+
+- Un local con 6 días sin sincronizar reportó **+922%** de crecimiento, e infló la variación de
+  toda la cadena de +2,4% real a +27,7%.
+- Una semana con 3 de 7 días reportó **−10,1% por semana** cuando el local venía plano.
+- El mismo riesgo existe en cualquier cosa nueva que compare dos ventanas.
+
+La regla que quedó: **si la base no está completa, no se muestra la variación** — un guion y un
+aviso, nunca un número que nadie puede creer. Está implementado en `baseComparable`
+(`app/api/dashboard/route.ts`) y `MIN_DIAS_SEMANA` (`lib/forecast/tendencia.ts`), y hay un test
+de regresión en `forecast.test.ts`.
+
+---
+
+## 9. Seguridad y datos
+
+- El repo es **público**. Ningún secreto acá adentro, nunca.
+- `.env.local` (gitignoreado) tiene lo que baja `vercel env pull`, incluida la URL de Neon. No
+  commitear ni imprimir.
+- `.env` local todavía apunta por túnel SSH a la base vieja de Railway. **No es producción.**
+- Las credenciales de Fudo se guardan en `Local.fudoApiKey`/`fudoApiSecret` y **nunca salen por
+  la API**: `/api/locales` y `/api/locales/[id]` usan `omit` de Prisma y exponen
+  `fudoConfigurado` (bool) en su lugar.
+- Los scripts de diagnóstico que tocan credenciales se borran apenas se usan y no se commitean.
+- No correr migraciones ni scripts destructivos sin mirar a qué base apuntan.
+
+---
+
+## 10. Cómo trabajar acá
 
 ```bash
 npx tsc --noEmit
 npm run lint
 npm test
+node <ruta-skill-impeccable>/scripts/detect.mjs --json <archivos cambiados>
 npm run build
+npx --yes vercel deploy --prod --yes
 ```
 
-El detector de Impeccable no encontro problemas en `app` ni `components` despues del rebranding y los ajustes de flujos.
+Migraciones: escribir el SQL a mano en `prisma/migrations/<timestamp>_<nombre>/migration.sql` y
+aplicar con `npx --yes dotenv-cli -e .env.local -- npx prisma migrate deploy`. **Usa la conexión
+directa** (`DATABASE_URL_UNPOOLED`); la pooled no soporta el estado de sesión que Prisma Migrate
+necesita.
 
-## Mapa rapido
+Notas de entorno que ahorran tiempo:
 
-```text
-prisma/schema.prisma                 Modelo PostgreSQL
-lib/                                 Logica de negocio, session, WebAuthn, fechas, geo, rostro y tests
-components/ui.tsx                    Kit UI compartido
-components/Brand.tsx                 Marca Pulso Operativo
-app/login/                           Login con passkey/contrasena
-app/fichar/                          Fichaje del empleado
-app/admin/                           Equipo, presencia, turnos, reportes y configuracion
-app/api/                             Rutas API
-```
+- `AGENTS.md` exige leer la doc de `node_modules/next/dist/docs/` antes de tocar código de
+  Next.js 16 — esta versión tiene breaking changes.
+- `prisma generate` puede tirar `EPERM` si hay un `next dev` corriendo (el binario nativo queda
+  bloqueado). No es un error real: los tipos igual se regeneran. Verificar con `npm run build`.
+- Si otra sesión tiene el dev server abierto, ese proceso puede tener el Prisma Client viejo en
+  memoria. No lo mates sin avisar.
+- El deploy es **manual**: el repo de GitHub no está conectado al proyecto Vercel para
+  auto-deploy (la cuenta no tenía la GitHub App con acceso a esa org).
+- En PowerShell, usar `npm.cmd` si la política bloquea `npm.ps1`.
+- Los heredocs de bash rompen los template literals de JS (`${...}` se sustituye). Para editar
+  código, usar el editor, no `cat > archivo <<EOF`.
 
-## Pendientes no bloqueantes
+---
 
-- Probar en dispositivo real el flujo facial, GPS, y el sidebar de escritorio — ahora en `https://pulso-t572.vercel.app`.
-- Conectar el repo de GitHub al proyecto Vercel para auto-deploy por push (ver nota arriba).
-- Decidir dominio propio final para `RP_ID`/`ORIGIN` antes de que se registren mas passkeys, para no forzar un tercer re-registro.
-- Cargar los feriados trasladables de 2026 en Ajustes → Feriados en cuanto se confirmen las fechas oficiales (ver seccion de arriba).
-- El admin (`usuario: admin`) tiene contraseña propia generada en esta sesion para pruebas — pedisela al usuario si haces falta, no quedo en este archivo.
+## 11. Pendientes
 
-## Dashboard por local y serie de stock (2026-09-04)
+**Bloqueantes para cerrar la migración**
 
-**Endpoints de cron nuevos** (mismo esquema: `Authorization: Bearer $CRON_SECRET`, scheduler externo):
+- Arreglar `lib/fechas.ts` (§1).
+- Probar en celular real: passkey, cámara, GPS.
+- Rotar la password de Postgres de Railway y apagar el servicio.
 
-| Endpoint | Cuándo | Para qué |
-|---|---|---|
-| `GET /api/cron/resumen?dias=7` | seguido (cada hora / varias veces al día) | refresca `ResumenDiario`, que es de donde lee el dashboard |
-| `GET /api/cron/resumen?dias=90` | 1 vez por semana | recupera días viejos que se hayan corregido en Fudo |
-| `GET /api/cron/stock` | **1 vez por día, a hora fija, después del cierre** | foto de stock: Fudo devuelve el stock de ese instante, dos corridas a horas distintas no son comparables |
+**Del negocio, no del código** — son los que más moverían la aguja
 
-**Por qué hay una tabla intermedia** (`ResumenDiario`): un año de ventas son ~200 páginas
-paginadas de la API de Fudo — no se puede esperar eso en pantalla, y las alertas necesitan
-historia para comparar contra el promedio. El sync de 90 días tarda ~28s.
+- **Que el personal fiche.** Desbloquea el aprendizaje de capacidad y con eso toda la mitad de
+  dotación del pronóstico, que hoy es un supuesto.
+- **Cargar los costos por producto en Fudo.** Sin eso el food cost y el margen no sirven.
+- **Cargar las compras en Fudo con detalle de producto.** Convierte la serie de stock en un
+  control de faltantes real.
+- **QuickPoint tiene días que Fudo no registra** (3 de 7 en una semana de agosto). No es el
+  modelo, es la fuente: ver si el local cerró o si su cuenta tiene un problema.
 
-**Cosas que se aprendieron de la API de Fudo y no son obvias:**
-- `item.price` es el **total de la línea**, no el unitario (CORTADO x2 @9200 → la venta cierra
-  en 9200). `product.cost` sí es unitario.
-- `sale.total` ya viene **neto de descuentos**.
-- La "Caja" (`cashRegister`) en esta cuenta es una **persona**, no un canal fijo — por eso
-  sirve para atribuir arqueos y descuentos.
-- `/payments` **no** expone la caja de origen; hay que ir por `/sales` → `payments`.
-- `/discounts` no tiene filtro por fecha; se llega a ellos incluyéndolos desde `/sales`.
+**Mejoras**
 
-**Datos que hoy limitan el dashboard (no son bugs del código):**
-- Jumbo no tiene credenciales de Fudo cargadas → no hay comparación real entre locales.
-- Los costos por producto están casi todos en `null` en Fudo → el food cost sale optimista y
-  se marca con `*` en vez de mostrarse como cierto.
-- El módulo de stock de Fudo no se usa: descuenta con las ventas pero nadie carga la
-  mercadería que entra, por eso hay stocks negativos grandes (TÉ DILMAH −482). La serie
-  (`StockDiario`) igual arrancó, y mide "movimiento no explicado por las ventas", que sí es
-  accionable hoy; el día que carguen compras, se vuelve un "debería haber vs. hay" real.
-
-## Crons del módulo de pronóstico (2026-09-05)
-
-| Endpoint | Cuándo | Tiempo medido | Qué hace |
-|---|---|---|---|
-| `GET /api/cron/resumen?dias=7` | cada hora / varias veces al día | ~40s | refresca el resumen diario del dashboard |
-| `GET /api/cron/resumen?dias=90&local=<nombre>` | semanal, **una llamada por local** | ~1,5 min c/u | recupera días viejos corregidos en Fudo |
-| `GET /api/cron/semanal` | semanal | **106s** | refresca franjas recientes, **recalibra la ventana de cada local por backtesting** y vuelve a medir la sensibilidad al clima |
-| `GET /api/cron/stock` | diario, hora fija post-cierre | ~2 min | foto de stock |
-
-**Por qué el resync largo va por local**: 90 días de los cuatro juntos tardan 5:26 y la
-función serverless corta a los 300s. Con `?local=<nombre>` entra holgado; el scheduler hace
-cuatro llamadas.
-
-**Por qué existe la recalibración semanal**: la cantidad de historia que conviene usar para el
-perfil de demanda NO es la misma en cada local (hoy: 45, 90, 45 y 180 días) y un año pierde en
-todos — arrastra estacionalidad vieja que corre el nivel actual. `calibrarVentana()` mide las
-candidatas contra lo que realmente pasó y guarda la ganadora en `Local.ventanaForecastDias`.
-A medida que se acumule historia la respuesta puede cambiar, por eso se recalcula sola.
-
-**Trampa de la paginación de Fudo** (ya mordió dos veces, ver commits de 2026-09-05): `/sales`
-pagina por id ascendente, así que al pasarse del tope de páginas lo que se pierde son las
-ventas MÁS NUEVAS. Las dos veces terminó escribiendo ceros o borrando franjas sobre datos
-reales. Ahora ambos recorridos van en tramos de 45 días y **lanzan error en vez de devolver un
-resultado incompleto**. Si aparece "el recorrido de ventas se truncó", achicar el tramo.
+- Interanual real: hay exactamente 365 días, y comparar 4 semanas contra el año pasado necesita
+  13 meses. En un mes sale solo.
+- Feriados trasladables de 2026 (Carnaval, Semana Santa, puentes): cargarlos en Ajustes cuando
+  se confirmen. El seed sólo trae los de fecha fija.
+- `K_event` y `K_promotion` existen en la fórmula pero no tienen fuente de datos; quedan en 1.
+- Conectar GitHub a Vercel para auto-deploy.
+- Decidir el dominio propio antes de que se registren más passkeys.

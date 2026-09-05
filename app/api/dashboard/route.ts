@@ -2,8 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/session";
 
-/** Ventanas móviles, no meses calendario: así el período anterior siempre
- * tiene la misma cantidad de días y la comparación es pareja. */
+/** Los presets rápidos son ventanas móviles; mes y año calendario se
+ * resuelven aparte para poder navegar historia sin mezclar criterios. */
 const DIAS_POR_PERIODO: Record<string, number> = { hoy: 1, semana: 7, mes: 30, anio: 365 };
 
 type Mapa = Record<string, number>;
@@ -115,6 +115,15 @@ function hoyAR(): string {
 
 const fechaSql = (dia: string) => new Date(`${dia}T00:00:00.000Z`);
 const diasEntre = (a: Date, b: Date) => Math.round((b.getTime() - a.getTime()) / 86400000) + 1;
+const pad = (n: number) => String(n).padStart(2, "0");
+
+function ultimoDia(anio: number, mes: number) {
+  return new Date(Date.UTC(anio, mes, 0)).getUTCDate();
+}
+
+function fechaValida(valor: string | null): valor is string {
+  return Boolean(valor && /^\d{4}-\d{2}-\d{2}$/.test(valor) && !Number.isNaN(fechaSql(valor).getTime()));
+}
 
 /**
  * Resuelve qué se compara contra qué.
@@ -131,6 +140,51 @@ function resolverRango(params: URLSearchParams) {
   const desdeParam = params.get("desde");
   const hastaParam = params.get("hasta");
 
+  if (periodo === "mes-calendario" && /^\d{4}-\d{2}$/.test(params.get("mes") ?? "")) {
+    const [anio, mes] = params.get("mes")!.split("-").map(Number);
+    if (mes >= 1 && mes <= 12) {
+      const hoy = hoyAR();
+      const esMesActual = hoy.startsWith(`${anio}-${pad(mes)}`);
+      const diaFin = esMesActual ? Number(hoy.slice(8, 10)) : ultimoDia(anio, mes);
+      const inicioActual = fechaSql(`${anio}-${pad(mes)}-01`);
+      const finActual = fechaSql(`${anio}-${pad(mes)}-${pad(diaFin)}`);
+      const fechaMesPrevio = new Date(Date.UTC(anio, mes - 2, 1));
+      const anioPrevio = fechaMesPrevio.getUTCFullYear();
+      const mesPrevio = fechaMesPrevio.getUTCMonth() + 1;
+      const inicioPrevio = fechaSql(`${anioPrevio}-${pad(mesPrevio)}-01`);
+      const finPrevio = fechaSql(
+        `${anioPrevio}-${pad(mesPrevio)}-${pad(Math.min(diaFin, ultimoDia(anioPrevio, mesPrevio)))}`
+      );
+      return {
+        periodo,
+        inicioActual,
+        finActual,
+        inicioPrevio,
+        finPrevio,
+        dias: diasEntre(inicioActual, finActual),
+      };
+    }
+  }
+
+  if (periodo === "anio-calendario" && /^\d{4}$/.test(params.get("anio") ?? "")) {
+    const anio = Number(params.get("anio"));
+    const hoy = hoyAR();
+    const anioActual = Number(hoy.slice(0, 4));
+    const fin = anio === anioActual ? hoy.slice(5) : "12-31";
+    const finPrevio = fin === "02-29" ? "02-28" : fin;
+    const inicioActual = fechaSql(`${anio}-01-01`);
+    const finActual = fechaSql(`${anio}-${fin}`);
+    const inicioPrevio = fechaSql(`${anio - 1}-01-01`);
+    return {
+      periodo,
+      inicioActual,
+      finActual,
+      inicioPrevio,
+      finPrevio: fechaSql(`${anio - 1}-${finPrevio}`),
+      dias: diasEntre(inicioActual, finActual),
+    };
+  }
+
   if (periodo === "mtd") {
     const hoy = hoyAR();
     const [anio, mes, dia] = hoy.split("-").map(Number);
@@ -138,7 +192,6 @@ function resolverRango(params: URLSearchParams) {
     const finActual = fechaSql(hoy);
     const mesPrevio = mes === 1 ? 12 : mes - 1;
     const anioPrevio = mes === 1 ? anio - 1 : anio;
-    const pad = (n: number) => String(n).padStart(2, "0");
     const inicioPrevio = fechaSql(`${anioPrevio}-${pad(mesPrevio)}-01`);
     // El mes pasado puede tener menos días (31/3 vs. febrero): se recorta al
     // último día que exista, en vez de saltar de mes.
@@ -147,10 +200,14 @@ function resolverRango(params: URLSearchParams) {
     return { periodo, inicioActual, finActual, inicioPrevio, finPrevio, dias: dia };
   }
 
-  if (desdeParam && hastaParam) {
+  if (fechaValida(desdeParam) && fechaValida(hastaParam) && desdeParam <= hastaParam) {
     const inicioActual = fechaSql(desdeParam);
     const finActual = fechaSql(hastaParam);
-    const dias = Math.max(diasEntre(inicioActual, finActual), 1);
+    const dias = Math.min(Math.max(diasEntre(inicioActual, finActual), 1), 730);
+    if (diasEntre(inicioActual, finActual) > 730) {
+      finActual.setTime(inicioActual.getTime());
+      finActual.setUTCDate(finActual.getUTCDate() + 729);
+    }
     const finPrevio = new Date(inicioActual);
     finPrevio.setUTCDate(finPrevio.getUTCDate() - 1);
     const inicioPrevio = new Date(finPrevio);
@@ -167,6 +224,43 @@ function resolverRango(params: URLSearchParams) {
     finPrevio: fechaDesdeHoy(dias),
     dias,
   };
+}
+
+type FilaSerie = { localId: string; fecha: Date; ventas: number; tickets: number };
+
+function construirSerie(filas: FilaSerie[], inicio: Date, fin: Date, localesEsperados = 1) {
+  const porFecha = new Map<string, { ventas: number; tickets: number; locales: Set<string> }>();
+  for (const fila of filas) {
+    if (fila.fecha < inicio || fila.fecha > fin) continue;
+    const fecha = fila.fecha.toISOString().slice(0, 10);
+    const acumulado = porFecha.get(fecha) ?? { ventas: 0, tickets: 0, locales: new Set<string>() };
+    acumulado.ventas += fila.ventas;
+    acumulado.tickets += fila.tickets;
+    acumulado.locales.add(fila.localId);
+    porFecha.set(fecha, acumulado);
+  }
+
+  const puntos: {
+    fecha: string;
+    ventas: number | null;
+    tickets: number | null;
+    ticketPromedio: number | null;
+    completo: boolean;
+  }[] = [];
+  const cursor = new Date(inicio);
+  while (cursor <= fin) {
+    const fecha = cursor.toISOString().slice(0, 10);
+    const punto = porFecha.get(fecha);
+    puntos.push({
+      fecha,
+      ventas: punto?.ventas ?? null,
+      tickets: punto?.tickets ?? null,
+      ticketPromedio: punto && punto.tickets > 0 ? punto.ventas / punto.tickets : null,
+      completo: Boolean(punto && punto.locales.size >= localesEsperados),
+    });
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return puntos;
 }
 
 export async function GET(request: Request) {
@@ -220,6 +314,7 @@ export async function GET(request: Request) {
       ventasPrevio: previo.ventas,
       variacionVentas: baseComparable ? variacion(actual.ventas, previo.ventas) : null,
       tickets: actual.tickets,
+      ticketsPrevio: previo.tickets,
       ticketPromedio: actual.tickets > 0 ? actual.ventas / actual.tickets : 0,
       ticketPromedioPrevio: previo.tickets > 0 ? previo.ventas / previo.tickets : 0,
       personas: actual.personas,
@@ -227,15 +322,22 @@ export async function GET(request: Request) {
       porcentajeDescuentos: actual.ventas > 0 ? (actual.descuentos / actual.ventas) * 100 : 0,
       anulaciones: actual.anulaciones,
       gastos: actual.gastos,
+      gastosPrevio: previo.gastos,
       costo: actual.costo,
+      costoPrevio: previo.costo,
       costoIncompleto: actual.costoIncompleto,
       foodCost: actual.ventas > 0 ? (actual.costo / actual.ventas) * 100 : 0,
       resultado: actual.ventas - actual.costo - actual.gastos,
+      resultadoPrevio: previo.ventas - previo.costo - previo.gastos,
       porMedioPago: actual.porMedioPago,
       porCanal: actual.porCanal,
       porCategoria: actual.porCategoria,
       descuentosPorCaja: actual.descuentosPorCaja,
       topProductos: top(actual.productos, 10),
+      serie: {
+        actual: construirSerie(suyas, inicioActual, finActual),
+        previo: construirSerie(suyas, inicioPrevio, finPrevio),
+      },
       promedioDiarioHistorico,
       promedioDiarioActual: actual.ventas / dias,
     };
@@ -251,12 +353,17 @@ export async function GET(request: Request) {
     ventas: conDatos.reduce((s, l) => s + l.ventas, 0),
     ventasPrevio: conDatos.reduce((s, l) => s + l.ventasPrevio, 0),
     tickets: conDatos.reduce((s, l) => s + l.tickets, 0),
+    ticketsPrevio: conDatos.reduce((s, l) => s + l.ticketsPrevio, 0),
     descuentos: conDatos.reduce((s, l) => s + l.descuentos, 0),
     anulaciones: conDatos.reduce((s, l) => s + l.anulaciones, 0),
     gastos: conDatos.reduce((s, l) => s + l.gastos, 0),
+    gastosPrevio: conDatos.reduce((s, l) => s + l.gastosPrevio, 0),
     costo: conDatos.reduce((s, l) => s + l.costo, 0),
+    costoPrevio: conDatos.reduce((s, l) => s + l.costoPrevio, 0),
     localesSinFudo: porLocal.filter((l) => !l.tieneFudo).map((l) => l.nombre),
   };
+  const idsConFudo = new Set(conDatos.map((local) => local.localId));
+  const filasCadena = filas.filter((fila) => idsConFudo.has(fila.localId));
 
   return NextResponse.json({
     periodo,
@@ -268,7 +375,13 @@ export async function GET(request: Request) {
       variacionVentas: variacion(ventasComparables, ventasComparablesPrevio),
       localesSinBase: conDatos.filter((l) => !l.baseComparable).map((l) => l.nombre),
       ticketPromedio: cadena.tickets > 0 ? cadena.ventas / cadena.tickets : 0,
+      ticketPromedioPrevio: cadena.ticketsPrevio > 0 ? cadena.ventasPrevio / cadena.ticketsPrevio : 0,
       resultado: cadena.ventas - cadena.costo - cadena.gastos,
+      resultadoPrevio: cadena.ventasPrevio - cadena.costoPrevio - cadena.gastosPrevio,
+      serie: {
+        actual: construirSerie(filasCadena, inicioActual, finActual, Math.max(conDatos.length, 1)),
+        previo: construirSerie(filasCadena, inicioPrevio, finPrevio, Math.max(conDatos.length, 1)),
+      },
     },
     locales: porLocal,
     alertas: [...armarAlertas(porLocal, dias), ...alertasDePrecio(productos, locales)],
@@ -276,6 +389,7 @@ export async function GET(request: Request) {
 }
 
 type LocalCalculado = {
+  localId: string;
   nombre: string;
   tieneFudo: boolean;
   diasConDatos: number;
@@ -296,7 +410,7 @@ const DESCUENTOS_ALTOS = 5;
 const FOOD_COST_ALTO = 40;
 
 function armarAlertas(locales: LocalCalculado[], dias: number) {
-  const alertas: { tono: "rose" | "amber"; texto: string }[] = [];
+  const alertas: { tono: "rose" | "amber"; texto: string; localId: string }[] = [];
 
   for (const l of locales) {
     if (!l.tieneFudo) continue;
@@ -307,6 +421,7 @@ function armarAlertas(locales: LocalCalculado[], dias: number) {
         alertas.push({
           tono: "rose",
           texto: `${l.nombre} vende ${Math.abs(vsHistorico).toFixed(0)}% menos que su promedio`,
+          localId: l.localId,
         });
       }
     }
@@ -315,6 +430,7 @@ function armarAlertas(locales: LocalCalculado[], dias: number) {
       alertas.push({
         tono: "amber",
         texto: `${l.nombre} tiene descuentos altos: ${l.porcentajeDescuentos.toFixed(1)}% de la facturación`,
+        localId: l.localId,
       });
     }
 
@@ -322,6 +438,7 @@ function armarAlertas(locales: LocalCalculado[], dias: number) {
       alertas.push({
         tono: "amber",
         texto: `${l.nombre} anuló ${((l.anulaciones / l.ventas) * 100).toFixed(1)}% de lo que facturó`,
+        localId: l.localId,
       });
     }
 
@@ -329,6 +446,7 @@ function armarAlertas(locales: LocalCalculado[], dias: number) {
       alertas.push({
         tono: "amber",
         texto: `${l.nombre} tiene food cost de ${l.foodCost.toFixed(0)}%, por encima del 40%`,
+        localId: l.localId,
       });
     }
 
@@ -336,15 +454,17 @@ function armarAlertas(locales: LocalCalculado[], dias: number) {
       alertas.push({
         tono: "amber",
         texto: `${l.nombre}: al período anterior le faltan días sincronizados, no se puede comparar el crecimiento`,
+        localId: l.localId,
       });
     }
 
     if (l.diasConDatos === 0) {
-      alertas.push({ tono: "amber", texto: `${l.nombre} no tiene datos sincronizados en el período` });
+      alertas.push({ tono: "amber", texto: `${l.nombre} no tiene datos sincronizados en el período`, localId: l.localId });
     } else if (l.diasConDatos < dias && dias > 1) {
       alertas.push({
         tono: "amber",
         texto: `${l.nombre} tiene datos de ${l.diasConDatos} de ${dias} días: sincronizá para completar`,
+        localId: l.localId,
       });
     }
   }
@@ -360,7 +480,7 @@ const DIF_PRECIO_ALERTA = 25;
 function alertasDePrecio(
   productos: { localId: string; producto: string; cantidad: number; facturacion: number }[],
   locales: { id: string; nombre: string }[]
-): { tono: "rose" | "amber"; texto: string }[] {
+): { tono: "rose" | "amber"; texto: string; localId: null }[] {
   const nombreLocal = new Map(locales.map((l) => [l.id, l.nombre]));
   const porProducto = new Map<string, { nombre: string; porLocal: Map<string, { c: number; f: number }> }>();
 
@@ -397,5 +517,6 @@ function alertasDePrecio(
       texto: `"${p.nombre}" se cobra ${p.dif.toFixed(0)}% más caro en ${p.caro.local} ($${Math.round(
         p.caro.precio
       ).toLocaleString("es-AR")}) que en ${p.barato.local} ($${Math.round(p.barato.precio).toLocaleString("es-AR")})`,
+      localId: null,
     }));
 }

@@ -1,0 +1,130 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-05T00:24:16.5126861-03:00",
+  "title": "Design System: Pulso Operativo",
+  "extensions": {
+    "colorMeta": {
+      "pulse-teal": { "role": "primary", "displayName": "Teal Pulso", "canonical": "#0F766E", "tonalRamp": ["#0B2927", "#134E4A", "#115E59", "#0F766E", "#25B98C", "#79E6BC", "#D1FAE5", "#ECFDF5"] },
+      "pulse-teal-deep": { "role": "primary", "displayName": "Teal Profundo", "canonical": "#115E59", "tonalRamp": ["#071F1D", "#0B2927", "#134E4A", "#115E59", "#159A78", "#52D3A7", "#A7F3D0", "#ECFDF5"] },
+      "pulse-mint": { "role": "secondary", "displayName": "Menta de Actividad", "canonical": "#37E6B0", "tonalRamp": ["#062419", "#0B4031", "#0F766E", "#159A78", "#37E6B0", "#79E6BC", "#B7F7DD", "#ECFDF5"] },
+      "pulse-paper": { "role": "neutral", "displayName": "Papel Operativo", "canonical": "#F6F8F5", "tonalRamp": ["#17211E", "#34433E", "#63726D", "#94A19C", "#C1CBC6", "#E0E7E3", "#F2F7F4", "#F6F8F5"] },
+      "pulse-ink": { "role": "neutral", "displayName": "Tinta Pulso", "canonical": "#17211E", "tonalRamp": ["#0B1412", "#17211E", "#34433E", "#63726D", "#94A19C", "#C1CBC6", "#E0E7E3", "#F2F7F4"] },
+      "surface": { "role": "neutral", "displayName": "Superficie", "canonical": "#FFFFFF", "tonalRamp": ["#171717", "#404040", "#737373", "#A3A3A3", "#D4D4D4", "#E5E5E5", "#F5F5F5", "#FFFFFF"] },
+      "line": { "role": "neutral", "displayName": "Línea", "canonical": "#E2E8F0", "tonalRamp": ["#0F172A", "#1E293B", "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#E2E8F0", "#F8FAFC"] },
+      "muted": { "role": "neutral", "displayName": "Texto Secundario", "canonical": "#64748B", "tonalRamp": ["#0F172A", "#1E293B", "#334155", "#475569", "#64748B", "#94A3B8", "#CBD5E1", "#F1F5F9"] },
+      "dark-ground": { "role": "neutral", "displayName": "Noche Operativa", "canonical": "#0B1412", "tonalRamp": ["#050A09", "#0B1412", "#101C19", "#172724", "#29403B", "#53615C", "#94A19C", "#F2F7F4"] },
+      "dark-surface": { "role": "neutral", "displayName": "Superficie Nocturna", "canonical": "#101C19", "tonalRamp": ["#050A09", "#0B1412", "#101C19", "#172724", "#29403B", "#53615C", "#94A19C", "#F2F7F4"] },
+      "dark-line": { "role": "neutral", "displayName": "Línea Nocturna", "canonical": "#29403B", "tonalRamp": ["#07100E", "#0B1412", "#101C19", "#172724", "#29403B", "#53615C", "#94A19C", "#E0E7E3"] },
+      "dark-muted": { "role": "neutral", "displayName": "Texto Nocturno Secundario", "canonical": "#94A19C", "tonalRamp": ["#0B1412", "#101C19", "#29403B", "#53615C", "#74817B", "#94A19C", "#C1CBC6", "#F2F7F4"] },
+      "warning": { "role": "tertiary", "displayName": "Ámbar de Revisión", "canonical": "#B45309", "tonalRamp": ["#451A03", "#78350F", "#92400E", "#B45309", "#D97706", "#F59E0B", "#FDE68A", "#FFFBEB"] },
+      "danger": { "role": "tertiary", "displayName": "Rosa de Excepción", "canonical": "#E11D48", "tonalRamp": ["#4C0519", "#881337", "#9F1239", "#BE123C", "#E11D48", "#FB7185", "#FECDD3", "#FFF1F2"] }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Título de pantalla", "purpose": "Nombre único de la vista en móvil." },
+      "headline-wide": { "displayName": "Título de pantalla ancho", "purpose": "Nombre único de la vista desde tablet." },
+      "title": { "displayName": "Título de panel", "purpose": "Lecturas, paneles y grupos de decisión." },
+      "body": { "displayName": "Cuerpo operativo", "purpose": "Explicación y contenido de trabajo." },
+      "label": { "displayName": "Etiqueta", "purpose": "Tabs, metadatos y encabezados de tabla." },
+      "data": { "displayName": "Dato principal", "purpose": "KPI y resultados con cifras tabulares." }
+    },
+    "shadows": [
+      { "name": "control-low", "value": "0 1px 2px rgba(15, 23, 42, 0.05)", "purpose": "Selección de controles y tarjetas heredadas." },
+      { "name": "mobile-nav", "value": "0 12px 35px rgba(15, 23, 42, 0.22)", "purpose": "Barra inferior que flota sobre contenido móvil." }
+    ],
+    "motion": [
+      { "name": "state-fast", "value": "150ms ease", "purpose": "Hover, foco y selección de controles." },
+      { "name": "active-scroll", "value": "instant", "purpose": "Centra el destino activo de la navegación móvil sin animación distractora." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Comando principal teal con altura táctil estable.",
+      "html": "<button class=\"ds-btn-primary\">Abrir pronóstico</button>",
+      "css": ".ds-btn-primary { min-height:44px; display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:8px 16px; border:0; border-radius:8px; background:#0F766E; color:#FFFFFF; font:600 14px/1.5 Geist,Arial,sans-serif; letter-spacing:0; transition:background 150ms ease; } .ds-btn-primary:hover { background:#115E59; } .ds-btn-primary:focus-visible { outline:2px solid #159A78; outline-offset:2px; }"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Acción secundaria contenida por línea, no por sombra.",
+      "html": "<button class=\"ds-btn-ghost\">Actualizar</button>",
+      "css": ".ds-btn-ghost { min-height:44px; padding:8px 16px; border:1px solid #E2E8F0; border-radius:8px; background:#FFFFFF; color:#334155; font:600 14px/1.5 Geist,Arial,sans-serif; letter-spacing:0; transition:background 150ms ease; } .ds-btn-ghost:hover { background:#F8FAFC; } .ds-btn-ghost:focus-visible { outline:2px solid #159A78; outline-offset:2px; }"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Campo sólido y táctil con foco teal explícito.",
+      "html": "<input class=\"ds-field\" value=\"Septiembre 2026\" aria-label=\"Período\" />",
+      "css": ".ds-field { width:100%; min-height:44px; padding:10px 12px; border:1px solid #E2E8F0; border-radius:12px; background:#FFFFFF; color:#17211E; font:400 16px/1.5 Geist,Arial,sans-serif; letter-spacing:0; } .ds-field:focus { border-color:#25B98C; outline:2px solid #D1FAE5; outline-offset:0; }"
+    },
+    {
+      "name": "Segmented Control",
+      "kind": "custom",
+      "description": "Conjunto compacto para alcance, período y modo.",
+      "html": "<div class=\"ds-segmented\"><button class=\"ds-segmented-active\">30 días</button><button>Mes actual</button><button>Elegir mes</button></div>",
+      "css": ".ds-segmented { display:inline-flex; gap:0; padding:4px; border:1px solid #E2E8F0; border-radius:8px; background:#F8FAFC; } .ds-segmented button { min-height:36px; padding:0 12px; border:0; border-radius:6px; background:transparent; color:#64748B; font:600 12px/1.35 Geist,Arial,sans-serif; letter-spacing:0; } .ds-segmented button:hover { color:#17211E; } .ds-segmented .ds-segmented-active { background:#FFFFFF; color:#17211E; box-shadow:0 1px 2px rgba(15,23,42,.05); } .ds-segmented button:focus-visible { outline:2px solid #159A78; }"
+    },
+    {
+      "name": "Analytics Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Superficie plana para una unidad de lectura completa.",
+      "html": "<section class=\"ds-panel\"><h2>Requiere atención</h2><p>Sólo excepciones del alcance elegido.</p></section>",
+      "css": ".ds-panel { padding:16px; border:1px solid #E2E8F0; border-radius:8px; background:#FFFFFF; color:#17211E; font:400 14px/1.5 Geist,Arial,sans-serif; } .ds-panel h2 { margin:0; font-size:16px; line-height:1.4; font-weight:600; letter-spacing:0; } .ds-panel p { margin:4px 0 0; color:#64748B; }"
+    },
+    {
+      "name": "Metric Band",
+      "kind": "custom",
+      "description": "Cuatro señales alineadas, separadas por reglas y sin tarjetas individuales.",
+      "html": "<div class=\"ds-metrics\"><div><span>Facturación</span><strong>$132,2 M</strong></div><div><span>Tickets</span><strong>8.245</strong></div></div>",
+      "css": ".ds-metrics { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-block:1px solid #E2E8F0; color:#17211E; font-family:Geist,Arial,sans-serif; } .ds-metrics div { min-width:0; padding:16px; border-right:1px solid #17211E; } .ds-metrics div:last-child { border-right:0; } .ds-metrics span { display:block; color:#64748B; font-size:12px; line-height:1.35; } .ds-metrics strong { display:block; margin-top:4px; font-size:24px; line-height:1.2; font-variant-numeric:tabular-nums; }"
+    },
+    {
+      "name": "Mobile Navigation Item",
+      "kind": "nav",
+      "description": "Destino táctil con icono Lucide y etiqueta siempre visible.",
+      "html": "<a class=\"ds-nav-active\" href=\"#\"><svg viewBox=\"0 0 24 24\" aria-hidden=\"true\"><rect x=\"3\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"3\" width=\"7\" height=\"7\"/><rect x=\"3\" y=\"14\" width=\"7\" height=\"7\"/><rect x=\"14\" y=\"14\" width=\"7\" height=\"7\"/></svg><span>Comando</span></a>",
+      "css": ".ds-nav-active { min-width:64px; min-height:58px; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; padding:8px 4px; border-radius:12px; background:#0F766E; color:#FFFFFF; text-decoration:none; font:700 10px/1.2 Geist,Arial,sans-serif; letter-spacing:0; } .ds-nav-active svg { width:20px; height:20px; fill:none; stroke:currentColor; stroke-width:2; } .ds-nav-active:focus-visible { outline:2px solid #159A78; outline-offset:2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "El pulso de la operación",
+    "overview": "Pulso es una consola de trabajo serena y precisa. La interfaz prioriza contexto, lectura comparativa y acción. La densidad es deliberada, pero nunca amontonada; la incertidumbre, los datos parciales y las estimaciones se nombran en pantalla.",
+    "keyCharacteristics": [
+      "Teal escaso y funcional para acciones, selección y lectura positiva.",
+      "Números tabulares, jerarquía compacta y comparaciones con base explícita.",
+      "Paneles planos de borde fino; profundidad sólo para navegación flotante y modales.",
+      "Desktop denso con rail fijo; móvil vertical con navegación inferior desplazable."
+    ],
+    "rules": [
+      { "name": "Semantic Restraint", "body": "Teal indica acción o selección; menta indica actividad o pronóstico; ámbar y rosa sólo aparecen cuando existe una condición verificable.", "section": "colors" },
+      { "name": "Numeric Alignment", "body": "Montos, porcentajes, conteos y fechas comparables usan cifras tabulares y alineación consistente; el signo va antes del símbolo monetario.", "section": "typography" },
+      { "name": "One Context", "body": "Un único alcance y período gobiernan todas las cifras de una vista; la referencia comparativa debe mostrarse junto al rango activo.", "section": "layout" },
+      { "name": "Flat by Default", "body": "Si un bloque ya tiene borde, no sumar sombra salvo que cambie de plano o flote sobre contenido desplazable.", "section": "elevation" }
+    ],
+    "dos": [
+      "Mantener alcance, período, referencia y cobertura visibles antes de interpretar una variación.",
+      "Separar rendimiento, comparación por local y control de productos en modos claros.",
+      "Nombrar estimaciones, datos parciales, WAPE, sesgo e intervalos en lenguaje de negocio.",
+      "Usar iconos Lucide consistentes, foco visible y controles táctiles de al menos 44px.",
+      "Transformar tablas anchas en filas móviles completas cuando sus columnas deciden una acción."
+    ],
+    "donts": [
+      "No usar sparklines sin ejes, tarjetas repetidas o mini-gráficos como sustituto de una comparación explicada.",
+      "No presentar correlación como causa ni el intervalo de pronóstico como certeza.",
+      "No mezclar locales o ventanas temporales dentro de una misma banda de métricas.",
+      "No usar gradientes, texto con tracking decorativo, sombras duras, iconos de texto o color semántico ornamental.",
+      "No mostrar dotación sugerida hasta que la capacidad por empleado tenga suficientes fichajes reales."
+    ]
+  }
+}

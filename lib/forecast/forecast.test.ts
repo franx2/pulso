@@ -6,6 +6,7 @@ import { componerK, calcularKCalendar, LIMITES_K } from "./k";
 import { calcularCarga, cargaPorHora } from "./carga";
 import { recomendarDotacion, aprenderCapacidad, matrizDesdeCapacidad } from "./dotacion";
 import { calcularMetricas, intervalo, elegirMejorMetodo } from "./backtest";
+import { correlacionPearson, correlacionesHistoricas, resumirFactores } from "./analitica";
 
 // ── categorías: el mismo rubro escrito de cuatro formas es un solo rubro
 assert.strictEqual(categoriaCanonica("2.Cafetería"), "cafeteria");
@@ -155,3 +156,55 @@ console.log("forecast.test.ts: todos los checks pasaron");
 }
 
 console.log("forecast.test.ts: regresión de semanas incompletas OK");
+
+// ── analítica explicable
+assert.strictEqual(
+  correlacionPearson([
+    { x: 1, y: 2 },
+    { x: 2, y: 4 },
+    { x: 3, y: 6 },
+  ]),
+  1,
+  "una relación lineal perfecta tiene r=1"
+);
+assert.strictEqual(
+  correlacionPearson([
+    { x: 1, y: 3 },
+    { x: 1, y: 4 },
+    { x: 1, y: 5 },
+  ]),
+  null,
+  "sin variación no se inventa una correlación"
+);
+
+const muestraCorrelaciones = Array.from({ length: 21 }, (_, i) => ({
+  fecha: `2026-08-${String(i + 1).padStart(2, "0")}`,
+  ventas: 1000 + i * 100,
+  tickets: 10 + i,
+  personas: 5 + i,
+  tempMax: 12 + i,
+  lluviaMm: i % 3 === 0 ? 4 : 0,
+}));
+const correlaciones = correlacionesHistoricas(muestraCorrelaciones);
+assert.ok((correlaciones.find((c) => c.id === "tickets")?.r ?? 0) > 0.99);
+assert.ok(correlaciones.some((c) => c.id === "temperatura"));
+
+const factores = resumirFactores([
+  {
+    demandaBase: 100,
+    tickets: 110,
+    kManual: 1,
+    kDetalle: { K_trend: 1.1, K_weather: 1, K_calendar: 1 },
+  },
+  {
+    demandaBase: 50,
+    tickets: 45,
+    kManual: 0.9,
+    kDetalle: { K_trend: 1, K_weather: 0.9, K_calendar: 1 },
+  },
+]);
+assert.strictEqual(factores.baseTickets, 150);
+assert.strictEqual(factores.finalTickets, 155);
+assert.ok(factores.factorFinal > 1.03 && factores.factorFinal < 1.04);
+
+console.log("forecast.test.ts: analítica explicable OK");

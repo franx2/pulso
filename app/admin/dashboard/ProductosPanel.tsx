@@ -139,7 +139,7 @@ export default function ProductosPanel({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[34rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
                 <th className="py-2 pr-3 font-semibold">Producto</th>
                 <th className="py-2 pr-3 text-right font-semibold">Unidades</th>
                 <th className="py-2 pr-3 text-right font-semibold">Facturación</th>
@@ -177,7 +177,7 @@ export default function ProductosPanel({
 
       {vista !== "precios" && datos.desparejos.length > 0 && (
         <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-3 dark:border-[#1c2521]">
-          <p className="text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-[#5d6d67]">
+          <p className="text-xs font-semibold uppercase text-slate-400 dark:text-[#5d6d67]">
             Se venden en un solo local
           </p>
           <p className="text-xs text-slate-400 dark:text-[#74817b]">

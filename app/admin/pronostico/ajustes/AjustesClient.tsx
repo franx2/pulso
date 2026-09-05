@@ -206,7 +206,7 @@ export default function AjustesClient() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
                 <th className="py-2 pr-3 font-semibold">Local</th>
                 <th className="py-2 pr-3 font-semibold">Sector</th>
                 <th className="py-2 pr-3 text-right font-semibold">Carga/hora por persona</th>
@@ -261,7 +261,7 @@ export default function AjustesClient() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[36rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wide text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
                 <th className="py-2 pr-3 font-semibold">Categoría</th>
                 {sectores.map((s) => (
                   <th key={s} className="py-2 pr-3 text-right font-semibold">
