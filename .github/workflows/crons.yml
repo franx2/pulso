@@ -1,0 +1,94 @@
+# Los cron jobs del sistema.
+#
+# Viven acá y no en un servicio externo por una razón concreta: el scheduler
+# anterior se perdió de vista y con él el CRON_SECRET, y no había forma de
+# saber qué se estaba ejecutando ni cada cuánto. Un archivo en el repo se lee,
+# se versiona y viaja con el código.
+#
+# GitHub Actions es gratis e ilimitado en repos públicos, que es el caso. El
+# plan Hobby de Vercel sólo permite 2 crons una vez por día, así que Vercel
+# Cron no alcanzaba.
+#
+# El secreto vive en Settings → Secrets and variables → Actions → CRON_SECRET.
+# NUNCA en este archivo: el repo es público.
+#
+# Los horarios son UTC. Argentina es UTC-3, así que restá 3 para leerlos.
+# GitHub puede demorar una corrida bajo carga; ninguno de estos jobs es
+# sensible a unos minutos, salvo el de stock (ver abajo).
+
+name: Crons
+
+on:
+  schedule:
+    # Refresco del dashboard: cada hora en punto.
+    - cron: "0 * * * *"
+    # Alertas de tardanza y salidas olvidadas: cada hora, corrido 15 minutos
+    # para no pelear con el anterior.
+    - cron: "15 * * * *"
+    # Remitos de compra que llegan por mail: cada dos horas.
+    - cron: "30 */2 * * *"
+    # Foto de stock: 03:00 argentinas, después del cierre. TIENE que ser
+    # siempre a la misma hora — Fudo devuelve el stock de ese instante, así
+    # que dos corridas a horas distintas no se pueden comparar entre sí.
+    - cron: "0 6 * * *"
+    # Mantenimiento semanal, lunes de madrugada.
+    - cron: "0 7 * * 1"
+    - cron: "30 7 * * 1"
+    # Resync largo de ventas, un local por llamada y espaciados: los cuatro
+    # juntos tardan más de 5 minutos y la función se corta a los 300 s.
+    - cron: "0 8 * * 1"
+    - cron: "20 8 * * 1"
+    - cron: "40 8 * * 1"
+    - cron: "0 9 * * 1"
+  # Para poder dispararlos a mano desde la pestaña Actions.
+  workflow_dispatch:
+    inputs:
+      ruta:
+        description: "Ruta a llamar, por ejemplo /api/cron/remitos"
+        required: true
+        default: "/api/cron/remitos"
+
+env:
+  BASE: https://pulso-t572.vercel.app
+
+jobs:
+  llamar:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Elegir qué corresponde a este horario
+        id: ruta
+        run: |
+          case "${{ github.event.schedule }}" in
+            "0 * * * *")    RUTA="/api/cron/resumen?dias=7" ;;
+            "15 * * * *")   RUTA="/api/cron/alertas" ;;
+            "30 */2 * * *") RUTA="/api/cron/remitos" ;;
+            "0 6 * * *")    RUTA="/api/cron/stock" ;;
+            "0 7 * * 1")    RUTA="/api/cron/demanda" ;;
+            "30 7 * * 1")   RUTA="/api/cron/semanal" ;;
+            "0 8 * * 1")    RUTA="/api/cron/resumen?dias=90&local=Chacras" ;;
+            "20 8 * * 1")   RUTA="/api/cron/resumen?dias=90&local=Jumbo" ;;
+            "40 8 * * 1")   RUTA="/api/cron/resumen?dias=90&local=Las%20ca%C3%B1as" ;;
+            "0 9 * * 1")    RUTA="/api/cron/resumen?dias=90&local=QuickPoint" ;;
+            *)              RUTA="${{ github.event.inputs.ruta }}" ;;
+          esac
+          echo "ruta=$RUTA" >> "$GITHUB_OUTPUT"
+          echo "Voy a llamar a $RUTA"
+
+      - name: Llamar
+        run: |
+          # --max-time acompaña al tope de la función (300 s) con margen.
+          CODIGO=$(curl -sS --max-time 320 -w "%{http_code}" -o respuesta.json \
+            -H "Authorization: Bearer $CRON_SECRET" \
+            "$BASE${{ steps.ruta.outputs.ruta }}")
+          echo "HTTP $CODIGO"
+          cat respuesta.json || true
+          echo
+          # Un cron que falla en silencio es peor que uno que no existe: si el
+          # secreto queda mal o la ruta rompe, el job tiene que ponerse rojo y
+          # mandar el mail de GitHub.
+          if [ "$CODIGO" -ge 300 ]; then
+            echo "::error::$BASE${{ steps.ruta.outputs.ruta }} respondió $CODIGO"
+            exit 1
+          fi
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}

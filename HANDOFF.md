@@ -217,8 +217,20 @@ correlaciones y resumen de factores está cubierta en `lib/forecast/forecast.tes
 
 ## 5. Crons
 
-Todos con `Authorization: Bearer $CRON_SECRET`. **Scheduler externo** — este proyecto no usa
-Vercel Cron y no hay `vercel.json`.
+Todos con `Authorization: Bearer $CRON_SECRET`, y los dispara **GitHub Actions**:
+[`.github/workflows/crons.yml`](.github/workflows/crons.yml). El archivo es la única fuente de
+verdad de qué corre y cuándo — antes había un scheduler externo del que se perdió el rastro,
+y con él el secreto.
+
+No se usa Vercel Cron porque el plan es **Hobby**: permite 2 jobs una vez por día, y acá hay 10,
+dos de ellos cada hora. GitHub Actions es gratis e ilimitado en repos públicos, que es el caso.
+
+El secreto vive en GitHub → Settings → Secrets and variables → Actions → `CRON_SECRET`, y tiene
+que ser **el mismo** que la variable `CRON_SECRET` de Vercel. Para dispararlos a mano: pestaña
+Actions → Crons → Run workflow, poniendo la ruta.
+
+⚠️ **GitHub apaga los workflows programados de un repo público tras 60 días sin commits.** Avisa
+por mail antes. Si el proyecto queda quieto un par de meses, hay que reactivarlos desde Actions.
 
 | Endpoint | Cuándo | Tiempo medido | Qué hace |
 |---|---|---|---|
