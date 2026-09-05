@@ -44,7 +44,17 @@ export type TendenciaLocal = {
   /** Proyección simple a 30 días, sólo desde la tendencia de ventas. */
   proyeccion30Dias: number;
   diasConDatos: number;
+  /** Semanas descartadas por incompletas (ver MIN_DIAS_SEMANA). */
+  semanasIncompletas: number;
 };
+
+/**
+ * Una semana con menos de 6 días de datos no es una semana floja: es una
+ * semana a la que le faltan datos. Contarla hunde la pendiente e inventa una
+ * caída. Pasó de verdad: un local con 3/7 días en una semana reportaba
+ * "-10% por semana" cuando en realidad venía plano.
+ */
+const MIN_DIAS_SEMANA = 6;
 
 /** Lunes de la semana a la que pertenece una fecha. */
 function lunesDe(fecha: string): string {
@@ -100,8 +110,10 @@ export async function tendenciaDeVentas(opciones: { semanas?: number } = {}): Pr
     }
 
     const semanaEnCurso = lunesDe(hoy);
-    const semanas: PuntoSemana[] = [...porSemana.entries()]
-      .filter(([semana]) => semana !== semanaEnCurso)
+    const todas = [...porSemana.entries()].filter(([semana]) => semana !== semanaEnCurso);
+    const semanasIncompletas = todas.filter(([, v]) => v.dias < MIN_DIAS_SEMANA).length;
+    const semanas: PuntoSemana[] = todas
+      .filter(([, v]) => v.dias >= MIN_DIAS_SEMANA)
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([semana, v]) => ({
         semana,
@@ -148,6 +160,7 @@ export async function tendenciaDeVentas(opciones: { semanas?: number } = {}): Pr
         ventasAnioAnterior && ventasAnioAnterior > 0 ? ((ultimas4 - ventasAnioAnterior) / ventasAnioAnterior) * 100 : null,
       proyeccion30Dias: Math.max(0, proyeccion30Dias),
       diasConDatos: suyas.length,
+      semanasIncompletas,
     };
   });
 }

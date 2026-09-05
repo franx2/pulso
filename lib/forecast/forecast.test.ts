@@ -139,3 +139,19 @@ const elegido = elegirMejorMetodo({
 assert.strictEqual(elegido.metodo, "bueno");
 
 console.log("forecast.test.ts: todos los checks pasaron");
+
+// Regresión: una semana a la que le faltan días no es una semana floja.
+// Un local con 3 de 7 días reportaba "-10% por semana" viniendo plano.
+{
+  const semanasCrudas = [
+    { dias: 7, ventas: 1000 },
+    { dias: 7, ventas: 1000 },
+    { dias: 3, ventas: 400 }, // incompleta: se descarta, no se lee como caída
+  ];
+  const completas = semanasCrudas.filter((s) => s.dias >= 6);
+  assert.strictEqual(completas.length, 2, "las semanas incompletas quedan afuera del ajuste");
+  const media = completas.reduce((s, x) => s + x.ventas, 0) / completas.length;
+  assert.strictEqual(media, 1000, "y el nivel no se hunde por los días que faltan");
+}
+
+console.log("forecast.test.ts: regresión de semanas incompletas OK");

@@ -18,6 +18,7 @@ type Tendencia = {
   variacionInteranual: number | null;
   proyeccion30Dias: number;
   diasConDatos: number;
+  semanasIncompletas: number;
 };
 
 const plata = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
@@ -154,6 +155,14 @@ export default function TendenciaPanel() {
 
               <p className="mt-2 text-xs text-slate-400 dark:text-[#74817b]">
                 {t.semanas.length} semanas completas · {t.diasConDatos} días con datos
+                {t.semanasIncompletas > 0 && (
+                  <>
+                    {" · "}
+                    {t.semanasIncompletas}{" "}
+                    {t.semanasIncompletas === 1 ? "semana quedó" : "semanas quedaron"} afuera por
+                    datos faltantes
+                  </>
+                )}
               </p>
             </div>
           );

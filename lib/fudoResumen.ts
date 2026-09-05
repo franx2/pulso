@@ -16,8 +16,27 @@ import {
 
 const API_URL = "https://api.fu.do/v1alpha1";
 const TAMANO_PAGINA = 100;
-/** 90 días son ~19 páginas por local: pesado pero tolerable en un cron. */
+/** Tope de seguridad por tramo. Ya no es el límite real del histórico: la
+ * ventana se parte en tramos (ver TRAMO_DIAS), así que ningún pedido se
+ * acerca a esto. Antes era el límite duro y provocó un bug feo — ver abajo. */
 const MAX_PAGINAS = 400;
+
+/**
+ * Tamaño de tramo para recorrer el histórico.
+ *
+ * Por qué existe: la paginación de Fudo va ordenada por id ascendente, o sea
+ * de la venta más vieja a la más nueva. Al pedir un año de un local grande
+ * (~43k ventas) se pasaba el tope de páginas, el recorrido se cortaba y las
+ * ventas que faltaban eran justamente LAS MÁS NUEVAS. Como los días a grabar
+ * salían también de gastos y anulaciones (que sí llegaban completos), los
+ * días recientes se escribían con ventas en cero: pisó datos reales con ceros.
+ *
+ * Con tramos de 45 días ningún pedido llega ni cerca del tope, y además
+ * `traerVentasConDetalle` ahora avisa si se trunca en vez de devolver a medias.
+ */
+const TRAMO_DIAS = 45;
+
+class TruncadoFudo extends FudoError {}
 
 const iso = (d: Date) => d.toISOString().replace(/\.\d{3}Z$/, "Z");
 
@@ -64,7 +83,13 @@ async function traerVentasConDetalle(token: string, desde: Date, hasta: Date) {
 
     if (lote.length < TAMANO_PAGINA) break;
     pagina++;
-    if (pagina > MAX_PAGINAS) break;
+    // Callarse acá fue el bug: devolver un recorrido incompleto hacía que
+    // los días sin ventas leídas se grabaran en cero encima de datos reales.
+    if (pagina > MAX_PAGINAS) {
+      throw new TruncadoFudo(
+        `El recorrido de ventas se truncó en ${MAX_PAGINAS} páginas: achicá el tramo de fechas`
+      );
+    }
   }
 
   return { ventas, items, productos, pagos, mediosPago, descuentos };
@@ -161,13 +186,41 @@ export async function sincronizarResumenLocal(
   const desde = new Date(hasta.getTime() - dias * 86400000);
   const token = await obtenerTokenFudo(local.fudoApiKey, local.fudoApiSecret);
 
-  const [detalle, categorias, cajas, anulaciones, gastos] = await Promise.all([
-    traerVentasConDetalle(token, desde, hasta),
+  // El histórico se recorre en tramos: un pedido de un año en un local
+  // grande superaba el tope de páginas y volvía incompleto (ver TRAMO_DIAS).
+  const [categorias, cajas] = await Promise.all([
     traerCategorias(token),
     obtenerCajas(token).catch((): { id: string; nombre: string }[] => []),
-    traerAnulacionesPorDia(token, desde, hasta),
-    traerGastosPorDia(token, desde, hasta),
   ]);
+
+  const detalle = {
+    ventas: [] as VentaCruda[],
+    items: new Map<string, ItemCrudo>(),
+    productos: new Map<string, ProductoCrudo>(),
+    pagos: new Map<string, PagoCrudo>(),
+    mediosPago: new Map<string, MedioPagoCrudo>(),
+    descuentos: new Map<string, DescuentoCrudo>(),
+  };
+  const anulaciones = new Map<string, number>();
+  const gastos = new Map<string, number>();
+
+  for (let inicio = new Date(desde); inicio < hasta; ) {
+    const fin = new Date(Math.min(inicio.getTime() + TRAMO_DIAS * 86400000, hasta.getTime()));
+    const [d, a, g] = await Promise.all([
+      traerVentasConDetalle(token, inicio, fin),
+      traerAnulacionesPorDia(token, inicio, fin),
+      traerGastosPorDia(token, inicio, fin),
+    ]);
+    detalle.ventas.push(...d.ventas);
+    for (const [k, v] of d.items) detalle.items.set(k, v);
+    for (const [k, v] of d.productos) detalle.productos.set(k, v);
+    for (const [k, v] of d.pagos) detalle.pagos.set(k, v);
+    for (const [k, v] of d.mediosPago) detalle.mediosPago.set(k, v);
+    for (const [k, v] of d.descuentos) detalle.descuentos.set(k, v);
+    for (const [k, v] of a) anulaciones.set(k, (anulaciones.get(k) ?? 0) + v);
+    for (const [k, v] of g) gastos.set(k, (gastos.get(k) ?? 0) + v);
+    inicio = fin;
+  }
   const cajasCrudas: CajaCruda[] = cajas.map((c) => ({ id: c.id, attributes: { name: c.nombre } }));
 
   const filas: FilaResumen[] = agregarPorDia({
