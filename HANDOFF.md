@@ -2,7 +2,7 @@
 
 **Proyecto:** `C:\Users\andmar1\controlpersonal`
 **GitHub:** https://github.com/franx2/pulso (público — nunca commitear secretos acá)
-**Rama:** `master`, sincronizada con `origin/master`. El deploy a Vercel es manual (§10)
+**Rama:** `master`, sincronizada con `origin/master`. Vercel despliega automáticamente (§10)
 **Producción:** https://pulso-t572.vercel.app — Vercel (`pulso-t572`, scope `franx2s-projects`) + Neon Postgres
 **Producción vieja:** https://web-production-e88dab.up.railway.app — Railway, ya no recibe escrituras, pendiente de apagar
 
@@ -549,8 +549,11 @@ de regresión en `forecast.test.ts`.
 ## 9. Seguridad y datos
 
 - El repo es **público**. Ningún secreto acá adentro, nunca.
-- `.env.local` (gitignoreado) tiene lo que baja `vercel env pull`, incluida la URL de Neon. No
-  commitear ni imprimir.
+- `.env.local` está gitignoreado. `vercel env pull` no puede recuperar el contenido de las
+  variables marcadas como Secret: escribe `[SENSITIVE]`. Ese marcador nunca es un valor válido
+  para volver a cargar en Vercel.
+- En producción, `DATABASE_URL`, `DATABASE_URL_UNPOOLED`, `REMITOS_IMAP_PASSWORD`,
+  `SESSION_SECRET` y `CRON_SECRET` son secretos de escritura única. No commitear ni imprimir.
 - `.env` local todavía apunta por túnel SSH a la base vieja de Railway. **No es producción.**
 - Las credenciales de Fudo se guardan en `Local.fudoApiKey`/`fudoApiSecret` y **nunca salen por
   la API**: `/api/locales` y `/api/locales/[id]` usan `omit` de Prisma y exponen
@@ -561,6 +564,23 @@ de regresión en `forecast.test.ts`.
 ---
 
 ## 10. Cómo trabajar acá
+
+### Producción oficial en Vercel
+
+- **Proyecto:** `franx2s-projects/pulso-t572`
+- **Project ID:** `prj_miVtqCFNQJqSDob8lo8Zsw1hfWzC`
+- **URL estable:** https://pulso-t572.vercel.app
+- `.vercel/project.json` está vinculado a ese proyecto.
+- La rama `master` de GitHub despliega automáticamente a Production. El 2026-09-05 se verificó
+  el deployment `READY` del commit `693e6c1`.
+- Verificación de salud del 2026-09-05: `/login` respondió `200`, `/admin/compras` redirigió a
+  `/login` sin sesión, `/api/compras` respondió `403` sin sesión y una consulta de autenticación
+  con usuario inexistente llegó a Neon y devolvió el `400` esperado.
+
+Hay otro proyecto Vercel llamado `franx2s-projects/pulso` (`prj_RbpisPftxYmJKD9A3il5L0mmL9PQ`,
+URL `pulso-sigma-six.vercel.app`). **No es producción y no debe usarse ni recibir deploys.** Su
+configuración de entorno/base quedó incompleta durante las pruebas. No borrarlo sin autorización
+explícita del usuario; simplemente ignorarlo hasta que decida limpiarlo o eliminarlo.
 
 ```bash
 npx tsc --noEmit
@@ -584,8 +604,9 @@ Notas de entorno que ahorran tiempo:
   bloqueado). No es un error real: los tipos igual se regeneran. Verificar con `npm run build`.
 - Si otra sesión tiene el dev server abierto, ese proceso puede tener el Prisma Client viejo en
   memoria. No lo mates sin avisar.
-- El deploy es **manual**: el repo de GitHub no está conectado al proyecto Vercel para
-  auto-deploy (la cuenta no tenía la GitHub App con acceso a esa org).
+- El deploy normal es automático al pushear `master`. El comando `vercel deploy --prod` queda
+  sólo para una publicación manual intencional y siempre debe ejecutarse con el proyecto local
+  vinculado a `pulso-t572`.
 - En PowerShell, usar `npm.cmd` si la política bloquea `npm.ps1`.
 - Los heredocs de bash rompen los template literals de JS (`${...}` se sustituye). Para editar
   código, usar el editor, no `cat > archivo <<EOF`.
@@ -622,5 +643,4 @@ Notas de entorno que ahorran tiempo:
 - Feriados trasladables de 2026 (Carnaval, Semana Santa, puentes): cargarlos en Ajustes cuando
   se confirmen. El seed sólo trae los de fecha fija.
 - `K_event` y `K_promotion` existen en la fórmula pero no tienen fuente de datos; quedan en 1.
-- Conectar GitHub a Vercel para auto-deploy.
 - Decidir el dominio propio antes de que se registren más passkeys.
