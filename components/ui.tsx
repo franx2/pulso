@@ -10,7 +10,7 @@ import {
   type SelectHTMLAttributes,
   type TextareaHTMLAttributes,
 } from "react";
-import { X } from "lucide-react";
+import { TrendingDown, TrendingUp, X } from "lucide-react";
 
 export function Button({
   variant = "primary",
@@ -322,4 +322,163 @@ export function useDarkMode() {
   }
 
   return { dark, mode, setMode, toggle };
+}
+
+/**
+ * Panel analítico: plano, borde fino, esquinas de 8px.
+ *
+ * Distinto de `Card`, que es la tarjeta heredada de 12px con sombra y que
+ * sigue en las pantallas de operación. Estaba redeclarado igual en tres
+ * clientes de análisis; ahora es uno solo.
+ */
+export function Panel({
+  children,
+  className = "",
+  ...props
+}: HTMLAttributes<HTMLElement> & { children: ReactNode }) {
+  return (
+    <section
+      className={`rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19] ${className}`}
+      {...props}
+    >
+      {children}
+    </section>
+  );
+}
+
+/** Encabezado de panel: título, explicación y una cifra o acción a la derecha. */
+export function PanelHeader({
+  titulo,
+  descripcion,
+  action,
+}: {
+  titulo: ReactNode;
+  descripcion?: ReactNode;
+  action?: ReactNode;
+}) {
+  return (
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <div className="min-w-0">
+        <h2 className="font-semibold text-slate-950 dark:text-[#f2f7f4]">{titulo}</h2>
+        {descripcion && (
+          <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">{descripcion}</p>
+        )}
+      </div>
+      {action && <div className="shrink-0 text-right">{action}</div>}
+    </div>
+  );
+}
+
+/**
+ * Control segmentado para elegir un modo. Estaba copiado en tres pantallas con
+ * tres alturas distintas; el mismo control tiene que verse igual en todas.
+ */
+export function SelectorSegmentado<T extends string | number>({
+  opciones,
+  valor,
+  onChange,
+  label,
+}: {
+  opciones: { clave: T; label: string }[];
+  valor: T;
+  onChange: (valor: T) => void;
+  label: string;
+}) {
+  return (
+    <div
+      className="scrollbar-hidden inline-flex max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-[#29403b] dark:bg-[#0b1412]"
+      role="tablist"
+      aria-label={label}
+    >
+      {opciones.map((opcion) => (
+        <button
+          key={String(opcion.clave)}
+          type="button"
+          role="tab"
+          aria-selected={valor === opcion.clave}
+          onClick={() => onChange(opcion.clave)}
+          className={`min-h-8 whitespace-nowrap rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${
+            valor === opcion.clave
+              ? "bg-white text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
+              : "text-slate-500 hover:text-slate-900 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+          }`}
+        >
+          {opcion.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+
+/**
+ * Variación contra el período anterior.
+ *
+ * `null` NO se dibuja como 0%: es "no se puede comparar", que es distinto de
+ * "no cambió". Confundirlos ya produjo tres bugs en este proyecto.
+ */
+export function Delta({ valor, texto = "vs. período anterior" }: { valor: number | null; texto?: string }) {
+  if (valor == null) {
+    return <span className="text-xs text-slate-400 dark:text-[#74817b]">sin base comparable</span>;
+  }
+  const sube = valor >= 0;
+  const Icono = sube ? TrendingUp : TrendingDown;
+  return (
+    <span
+      className={`inline-flex items-center gap-1 text-xs font-semibold ${
+        sube ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"
+      }`}
+    >
+      <Icono size={13} aria-hidden />
+      {sube ? "+" : ""}
+      {valor.toFixed(1)}% {texto}
+    </span>
+  );
+}
+
+/**
+ * Una cifra de la banda métrica.
+ *
+ * `nota` es para contexto y `delta` para una variación; nunca los dos, porque
+ * la línea de abajo tiene una sola altura reservada y dos cosas ahí se pisan.
+ */
+export function Metrica({
+  label,
+  valor,
+  valorCompleto,
+  nota,
+  delta,
+  textoDelta,
+  tono = "normal",
+}: {
+  label: string;
+  valor: string;
+  valorCompleto?: string;
+  nota?: ReactNode;
+  delta?: number | null;
+  textoDelta?: string;
+  tono?: "normal" | "positivo" | "negativo" | "advertencia";
+}) {
+  const color =
+    tono === "negativo"
+      ? "text-rose-600 dark:text-rose-400"
+      : tono === "advertencia"
+        ? "text-amber-700 dark:text-amber-300"
+        : tono === "positivo"
+          ? "text-emerald-700 dark:text-[#4ee6b0]"
+          : "text-slate-950 dark:text-[#f2f7f4]";
+  return (
+    <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0 md:px-5">
+      <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">{label}</p>
+      <p
+        title={valorCompleto ?? valor}
+        className={`mt-1 whitespace-nowrap text-xl font-bold tabular-nums md:text-2xl ${color}`}
+      >
+        {valor}
+      </p>
+      <div className="mt-1 min-h-5 text-xs text-slate-400 dark:text-[#74817b]">
+        {delta !== undefined ? <Delta valor={delta} texto={textoDelta} /> : nota}
+      </div>
+    </div>
+  );
 }

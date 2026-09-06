@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { diaDeFechaSql, fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
+import { diaDeFechaSql, fechaSql } from "@/lib/fechaAR";
+import { rangoDias } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
 import {
   REGLAS_HELADO,
@@ -16,9 +17,10 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const params = new URL(request.url).searchParams;
-  const dias = Math.min(Math.max(Number(params.get("dias")) || 90, 7), 730);
-  const desde = sumarDias(hoyAR(), -(dias - 1));
-  const hasta = hoyAR();
+  // Mismo período que el resto del tablero: antes esta pantalla hablaba en
+  // "días" y las otras en "período", y comparar dos pantallas obligaba a
+  // traducir de cabeza.
+  const { desde, hasta, dias } = rangoDias(params);
 
   const [compras, locales, ventasHelado, diasConVentas] = await Promise.all([
     db.compra.findMany({

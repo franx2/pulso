@@ -14,6 +14,8 @@ colors:
   dark-surface: "#101C19"
   dark-line: "#29403B"
   dark-muted: "#94A19C"
+  dark-selected: "#1D4E48"
+  scrim: "rgba(0,0,0,0.45)"
   warning: "#B45309"
   danger: "#E11D48"
 typography:
@@ -52,6 +54,12 @@ typography:
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.2
+    letterSpacing: "0"
+  micro:
+    fontFamily: "Geist, Arial, Helvetica, sans-serif"
+    fontSize: "0.6875rem"
+    fontWeight: 600
+    lineHeight: 1.3
     letterSpacing: "0"
 rounded:
   control: "8px"
@@ -137,6 +145,8 @@ La paleta mezcla un teal sobrio con menta activa, papel apenas cálido y señale
 - **Superficie** (`surface`): controles y paneles.
 - **Línea y Texto Secundario** (`line`, `muted`): estructura, ejes y explicación.
 - **Noche Operativa** (`dark-ground`, `dark-surface`, `dark-line`, `dark-muted`): equivalentes oscuros, activados por clase y no por categoría de pantalla.
+- **Teal Seleccionado** (`#1d4e48`): el relleno de un segmento activo en modo oscuro. Es el único tono entre `dark-surface` y `pulse-teal`: en oscuro el blanco del control claro encandila y el teal pleno grita.
+- **Velo** (`rgba(0,0,0,0.45)`): el fondo de un modal a pantalla completa. No es un color de la paleta a propósito — atenúa la pantalla que está detrás, no pinta una superficie.
 
 **The Semantic Restraint Rule.** Teal indica acción o selección; menta indica actividad o pronóstico; ámbar y rosa sólo aparecen cuando existe una condición verificable.
 
@@ -153,6 +163,7 @@ La paleta mezcla un teal sobrio con menta activa, papel apenas cálido y señale
 - **Body** (400, 14px, 1.5): explicación y contenido operativo; limitar párrafos a unos 70 caracteres.
 - **Label** (600, 12px, 1.35): pestañas, encabezados de tabla y metadatos.
 - **Data** (700, hasta 24px, 1.2): KPI y resultados; siempre con cifras tabulares.
+- **Micro** (600, 11px, 1.3): anotaciones dentro de un gráfico — marcas de eje, globos de pico, etiquetas de la barra inferior. Es el único paso por debajo de Label y existe porque un eje de 24 horas o una barra de turno no admiten 12px sin chocar. Nunca para texto que se lee en prosa, y nunca para una cifra que alguien tenga que comparar.
 
 **The Numeric Alignment Rule.** Montos, porcentajes, conteos y fechas comparables usan cifras tabulares y alineación consistente; el signo va antes del símbolo monetario.
 

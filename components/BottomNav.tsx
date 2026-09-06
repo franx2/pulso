@@ -89,7 +89,7 @@ function NavItem({
   return (
     <Link ref={ref} href={href} className={cls}>
       <Icon size={20} strokeWidth={2.3} />
-      <span className="block truncate text-[10px] font-bold leading-tight">{label}</span>
+      <span className="block truncate text-[11px] font-bold leading-tight">{label}</span>
     </Link>
   );
 }

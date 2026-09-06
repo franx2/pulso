@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { fechaCorta, mesLargo, plata, plataCompacta } from "@/lib/formato";
 
 type Mes = { mes: number; indice: number; dias: number; anios: number; confiable: boolean; repetido: boolean };
 type MesProyectado = { mes: string; ventas: number; dias: number; indice: number; confiable: boolean; repetido: boolean };
@@ -45,14 +46,7 @@ type Respuesta = {
 };
 
 const NOMBRE_MES = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"];
-const plata = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
-const plataCorta = (n: number) =>
-  n >= 1_000_000 ? `$${(n / 1_000_000).toFixed(1)}M` : `$${Math.round(n / 1000)}k`;
 const pct = (n: number) => `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`;
-const mesLargo = (clave: string) =>
-  `${NOMBRE_MES[Number(clave.slice(5, 7)) - 1]} ${clave.slice(0, 4)}`;
-const fechaCorta = (fecha: string) =>
-  new Date(`${fecha}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 
 /**
  * Índice por mes: cuánto vende un día de ese mes contra un día promedio del
@@ -72,7 +66,7 @@ function CurvaEstacional({ meses, mesActual }: { meses: Mes[]; mesActual: number
           return (
             <div key={mes.mes} className="flex flex-1 flex-col items-center justify-end gap-1">
               <span
-                className={`text-[10px] font-semibold tabular-nums ${
+                className={`text-[11px] font-semibold tabular-nums ${
                   mes.confiable ? "text-slate-500 dark:text-[#94a19c]" : "text-slate-300 dark:text-[#53615c]"
                 }`}
               >
@@ -97,7 +91,7 @@ function CurvaEstacional({ meses, mesActual }: { meses: Mes[]; mesActual: number
         {meses.map((mes) => (
           <span
             key={mes.mes}
-            className={`flex-1 text-center text-[10px] ${
+            className={`flex-1 text-center text-[11px] ${
               mes.mes === mesActual
                 ? "font-semibold text-emerald-700 dark:text-[#4ee6b0]"
                 : "text-slate-400 dark:text-[#74817b]"
@@ -303,7 +297,7 @@ export default function TemporadaPanel({
                       ×{mes.indice.toFixed(2)}
                     </td>
                     <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
-                      {plataCorta(mes.ventas / mes.dias)}
+                      {plataCompacta(mes.ventas / mes.dias)}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums">{plata(mes.ventas)}</td>
                   </tr>

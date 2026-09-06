@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { diaDeFechaSql, diasEntre } from "./fechaAR";
-import { resolverRango, ultimoDiaDelMes, MAX_DIAS_RANGO } from "./periodo";
+import { rangoDias, resolverRango, ultimoDiaDelMes, MAX_DIAS_RANGO } from "./periodo";
 
 /**
  * Comparar contra una ventana incompleta inventa variaciones. Ya pasó tres
@@ -128,5 +128,21 @@ for (const query of ["periodo=hoy", "periodo=semana", "periodo=mes", "periodo=an
   assert.strictEqual(largo(r.actual), largo(r.previo), `${query}: ventanas desparejas`);
   assert.ok(r.previo[1] < r.actual[0], `${query}: el período previo tiene que terminar antes del actual`);
 }
+
+// --- rangoDias ---
+
+// Compras y sectores consumen días calendario, no `Date`. Que devuelva el
+// rango YA RESUELTO es lo que hace que la pantalla pueda mostrar lo que se
+// midió: acá el mes en curso se corta hoy y no el 30.
+const dias = (query: string, hoy: string) => rangoDias(new URLSearchParams(query), hoy);
+assert.deepStrictEqual(dias("periodo=hoy", "2026-09-05"), {
+  periodo: "hoy",
+  desde: "2026-09-05",
+  hasta: "2026-09-05",
+  dias: 1,
+});
+assert.strictEqual(dias("periodo=mes-calendario&mes=2026-09", "2026-09-05").hasta, "2026-09-05");
+assert.strictEqual(dias("periodo=mes-calendario&mes=2026-08", "2026-09-05").hasta, "2026-08-31");
+assert.strictEqual(dias("desde=2020-01-01&hasta=2026-01-01", "2026-09-05").hasta, "2021-12-30", "se recorta al tope");
 
 console.log("lib/periodo.test.ts: todos los checks pasaron");

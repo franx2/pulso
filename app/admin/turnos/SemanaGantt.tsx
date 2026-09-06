@@ -279,7 +279,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                                       style={{ left: `${pico.xPct}%`, top: pico.y }}
                                     />
                                     <span
-                                      className="absolute -translate-x-1/2 whitespace-nowrap rounded bg-amber-700 px-1 py-0.5 text-[10px] font-semibold leading-none text-white shadow-sm dark:bg-amber-600"
+                                      className="absolute -translate-x-1/2 whitespace-nowrap rounded bg-amber-700 px-1 py-0.5 text-[11px] font-semibold leading-none text-white shadow-sm dark:bg-amber-600"
                                       style={{ left: `${Math.min(Math.max(pico.xPct, 8), 92)}%`, top: topBadgePx }}
                                     >
                                       pico {pico.valor.toFixed(1)} ventas/h
@@ -295,7 +295,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                                 {marcas.map((m) => (
                                   <span
                                     key={m.label}
-                                    className="absolute -translate-x-1/2 text-[9px] text-slate-400 dark:text-[#5d6d67]"
+                                    className="absolute -translate-x-1/2 text-[11px] text-slate-400 dark:text-[#5d6d67]"
                                     style={{ left: `${m.xPct}%` }}
                                   >
                                     {m.label}

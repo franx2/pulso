@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { hoyAR } from "@/lib/fechaAR";
 import { requireAdminApi, requireEncargadoApi } from "@/lib/session";
 import { readJsonBody } from "@/lib/http";
 
@@ -23,8 +24,29 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   });
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 404 });
 
+  // Qué está cargado y qué no. La pantalla de ajustes creció a siete solapas
+  // y desde afuera todas se ven iguales: sin esto, "por qué este local no
+  // tiene compras" se contesta abriendo las siete y mirando adentro.
+  const mes = hoyAR().slice(0, 7);
+  const [horarios, categorias, costosDelMes] = await Promise.all([
+    db.horarioLocal.count({ where: { localId: id } }),
+    db.categoria.count({ where: { localId: id } }),
+    db.costoFijo.count({ where: { localId: id, mes, monto: { gt: 0 } } }),
+  ]);
+
   return NextResponse.json({
     local: { ...local, fudoConfigurado: await tieneCredencialesFudo(id) },
+    estado: {
+      ubicacion: local.lat != null && local.lng != null,
+      fudo: await tieneCredencialesFudo(id),
+      horario: horarios > 0,
+      categorias: categorias > 0,
+      // Sin CUIT ni razón social, los remitos de este local caen en "sin
+      // asignar": es la causa concreta de que tres sucursales no tengan compras.
+      compras: Boolean(local.cuitCompras || local.razonSocialCompras),
+      costos: costosDelMes > 0,
+      mes,
+    },
   });
 }
 
@@ -50,6 +72,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     comisionDebito?: number;
     comisionBilletera?: number;
     comisionDelivery?: number;
+    cuitCompras?: string | null;
+    razonSocialCompras?: string | null;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
@@ -112,6 +136,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(body.comisionDebito !== undefined ? { comisionDebito: body.comisionDebito } : {}),
       ...(body.comisionBilletera !== undefined ? { comisionBilletera: body.comisionBilletera } : {}),
       ...(body.comisionDelivery !== undefined ? { comisionDelivery: body.comisionDelivery } : {}),
+      // El CUIT se guarda sin puntos ni guiones: es la clave contra la que se
+      // compara el remito, y el proveedor lo escribe de las dos formas.
+      ...(body.cuitCompras !== undefined
+        ? { cuitCompras: body.cuitCompras?.replace(/\D/g, "") || null }
+        : {}),
+      ...(body.razonSocialCompras !== undefined
+        ? { razonSocialCompras: body.razonSocialCompras?.trim() || null }
+        : {}),
     },
   });
 

@@ -391,7 +391,7 @@ export function ForecastChart({
               />
             )}
             <span
-              className="pointer-events-none absolute top-1 rounded bg-white/90 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500 dark:bg-[#101c19]/90 dark:text-[#94a19c]"
+              className="pointer-events-none absolute top-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-[#101c19]/90 dark:text-[#94a19c]"
               style={{ left: `${fronteraPct}%`, transform: "translateX(-50%)" }}
             >
               Hoy

@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { AlertTriangle, Check } from "lucide-react";
+import { plata } from "@/lib/formato";
 
 type SectorClave = "HELADOS" | "CAFETERIA" | "CHOCOLATERIA" | "PROMOCION" | "SIN_CLASIFICAR";
 type ResumenSector = {
@@ -60,18 +62,10 @@ const COLOR: Record<SectorClave, string> = {
   SIN_CLASIFICAR: "bg-rose-500 dark:bg-rose-400",
 };
 
-const PERIODOS = [
-  { clave: "30", label: "30 días" },
-  { clave: "90", label: "90 días" },
-  { clave: "365", label: "1 año" },
-];
-
-const plata = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
-const fecha = (f: string) => new Date(`${f}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 
 export default function SectoresClient() {
   const [datos, setDatos] = useState<Respuesta | null>(null);
-  const [dias, setDias] = useState("30");
+  const { valor, setValor, params: periodo, hoy } = usePeriodo("mes");
   const [localId, setLocalId] = useState("");
   const [error, setError] = useState("");
   const [guardando, setGuardando] = useState<string | null>(null);
@@ -79,7 +73,8 @@ export default function SectoresClient() {
 
   useEffect(() => {
     const controlador = new AbortController();
-    const params = new URLSearchParams({ dias, ...(localId ? { localId } : {}) });
+    const params = new URLSearchParams(periodo);
+    if (localId) params.set("localId", localId);
     fetch(`/api/sectores?${params}`, { signal: controlador.signal })
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("fallo"))))
       .then(setDatos)
@@ -87,7 +82,7 @@ export default function SectoresClient() {
         if (!(e instanceof DOMException && e.name === "AbortError")) setError("No pudimos cargar los sectores.");
       });
     return () => controlador.abort();
-  }, [dias, localId, revision]);
+  }, [periodo.toString(), localId, revision]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function asignar(producto: string, sector: string) {
     setGuardando(producto);
@@ -110,36 +105,18 @@ export default function SectoresClient() {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
-        <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]">
-          {PERIODOS.map((p) => (
-            <button
-              key={p.clave}
-              type="button"
-              aria-pressed={dias === p.clave}
-              onClick={() => setDias(p.clave)}
-              className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors ${
-                dias === p.clave
-                  ? "bg-white text-slate-900 shadow-sm dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-                  : "text-slate-500 hover:text-slate-800 dark:text-[#94a19c]"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+        <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} />
         <select
           value={localId}
           onChange={(e) => setLocalId(e.target.value)}
-          className="min-h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm dark:border-[#29403b] dark:bg-[#101c19]"
+          aria-label="Local"
+          className="min-h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600/25 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4]"
         >
           <option value="">Toda la cadena</option>
           {datos.locales.map((l) => (
             <option key={l.id} value={l.id}>{l.nombre}</option>
           ))}
         </select>
-        <span className="text-xs text-slate-500 dark:text-[#94a19c]">
-          {fecha(datos.desde)} a {fecha(datos.hasta)}
-        </span>
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">

@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { Button, Input, Label } from "@/components/ui";
+import { mesLargo, plata } from "@/lib/formato";
+import { hoyAR } from "@/lib/fechaAR";
 
 type Concepto = { concepto: string; monto: number; nota: string | null; cargado: boolean };
 type Comisiones = {
@@ -18,58 +20,60 @@ const CAMPOS: { clave: keyof Comisiones; label: string; ayuda: string }[] = [
   { clave: "comisionDelivery", label: "Delivery (PedidosYa, Uber)", ayuda: "La más cara con diferencia" },
 ];
 
-const mesActual = () => new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 7);
-const plata = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
+const mesActual = () => hoyAR().slice(0, 7);
 
 export default function CostosLocal({ localId }: { localId: string }) {
   const [comisiones, setComisiones] = useState<Comisiones | null>(null);
   const [mes, setMes] = useState(mesActual());
   const [conceptos, setConceptos] = useState<Concepto[]>([]);
   const [guardando, setGuardando] = useState(false);
-  const [aviso, setAviso] = useState("");
+  const [aviso, setAviso] = useState<{ texto: string; ok: boolean } | null>(null);
 
   useEffect(() => {
     fetch(`/api/locales/${localId}`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => d && setComisiones({
-        comisionCredito: d.comisionCredito ?? 0.04,
-        comisionDebito: d.comisionDebito ?? 0.02,
-        comisionBilletera: d.comisionBilletera ?? 0.02,
-        comisionDelivery: d.comisionDelivery ?? 0.27,
+      // La respuesta viene envuelta en `{ local }`. Leído plano, cada campo
+      // daba undefined y la pantalla mostraba SIEMPRE los valores por defecto:
+      // se guardaba 3% de débito, se volvía a entrar y decía 2% otra vez.
+      .then((d) => d?.local && setComisiones({
+        comisionCredito: d.local.comisionCredito,
+        comisionDebito: d.local.comisionDebito,
+        comisionBilletera: d.local.comisionBilletera,
+        comisionDelivery: d.local.comisionDelivery,
       }))
-      .catch(() => setAviso("No pudimos cargar las comisiones."));
+      .catch(() => setAviso({ texto: "No pudimos cargar las comisiones.", ok: false }));
   }, [localId]);
 
   useEffect(() => {
     fetch(`/api/locales/${localId}/costos?mes=${mes}`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => d && setConceptos(d.conceptos))
-      .catch(() => setAviso("No pudimos cargar los costos del mes."));
+      .catch(() => setAviso({ texto: "No pudimos cargar los costos del mes.", ok: false }));
   }, [localId, mes]);
 
   async function guardarComisiones() {
     if (!comisiones) return;
     setGuardando(true);
-    setAviso("");
+    setAviso(null);
     const res = await fetch(`/api/locales/${localId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(comisiones),
     });
     setGuardando(false);
-    setAviso(res.ok ? "Comisiones guardadas." : "No se pudieron guardar.");
+    setAviso(res.ok ? { texto: "Comisiones guardadas.", ok: true } : { texto: "No se pudieron guardar.", ok: false });
   }
 
   async function guardarCostos() {
     setGuardando(true);
-    setAviso("");
+    setAviso(null);
     const res = await fetch(`/api/locales/${localId}/costos`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ mes, conceptos }),
     });
     setGuardando(false);
-    setAviso(res.ok ? `Costos de ${mes} guardados.` : "No se pudieron guardar.");
+    setAviso(res.ok ? { texto: `Costos de ${mesLargo(mes)} guardados.`, ok: true } : { texto: "No se pudieron guardar.", ok: false });
   }
 
   const total = conceptos.reduce((s, c) => s + c.monto, 0);
@@ -167,7 +171,7 @@ export default function CostosLocal({ localId }: { localId: string }) {
 
         <div className="mt-3 flex flex-wrap items-center gap-3">
           <Button type="button" disabled={guardando} onClick={guardarCostos}>
-            Guardar costos de {mes}
+            Guardar costos de {mesLargo(mes)}
           </Button>
           <span className="text-sm text-slate-500 dark:text-[#94a19c]">
             Total {plata(total)}
@@ -176,7 +180,16 @@ export default function CostosLocal({ localId }: { localId: string }) {
         </div>
       </section>
 
-      {aviso && <p className="text-sm text-emerald-700 dark:text-[#4ee6b0]">{aviso}</p>}
+      {aviso && (
+        <p
+          role="status"
+          className={`text-sm font-medium ${
+            aviso.ok ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"
+          }`}
+        >
+          {aviso.texto}
+        </p>
+      )}
     </div>
   );
 }

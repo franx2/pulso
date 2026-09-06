@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
+import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import {
   AlertTriangle,
   ArrowRight,
@@ -12,7 +13,8 @@ import {
   Search,
   Store,
 } from "lucide-react";
-import { Badge, Button, EmptyState, Input, PageTitle, Select } from "@/components/ui";
+import { Badge, Button, EmptyState, Input, Metrica, PageTitle, Panel, Select, SelectorSegmentado } from "@/components/ui";
+import { fechaCorta, fechaLarga, kilos, mesLargo, numero, plata } from "@/lib/formato";
 
 type Item = {
   codigo: string;
@@ -129,79 +131,9 @@ const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "royalty", label: "Royalty" },
 ];
 
-const PERIODOS = [
-  { clave: "30", label: "30 días" },
-  { clave: "90", label: "90 días" },
-  { clave: "120", label: "120 días" },
-  { clave: "365", label: "1 año" },
-];
-
-const plata = (n: number) => `${n < 0 ? "-" : ""}$${Math.round(Math.abs(n)).toLocaleString("es-AR")}`;
-const numero = (n: number, decimales = 1) =>
-  n.toLocaleString("es-AR", { minimumFractionDigits: 0, maximumFractionDigits: decimales });
-const kilos = (n: number) => `${numero(n)} kg`;
 const kilosOSinBase = (n: number | null | undefined) => (n == null ? "Sin base" : kilos(n));
-const fechaCorta = (f: string) =>
-  new Date(`${f}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
-const fechaLarga = (f: string) =>
-  new Date(`${f}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
-const MES_LARGO = (clave: string) =>
-  new Date(`${clave}-15T12:00:00Z`).toLocaleDateString("es-AR", { month: "long", year: "numeric" });
 const observacionVisible = (texto: string | null) =>
   texto && !/^\s*Subtotal\s*\$/i.test(texto) ? texto : null;
-
-function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <section className={`rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19] ${className}`}>
-      {children}
-    </section>
-  );
-}
-
-function SelectorSegmentado({
-  opciones,
-  valor,
-  onChange,
-  label,
-}: {
-  opciones: { clave: string; label: string }[];
-  valor: string;
-  onChange: (valor: string) => void;
-  label: string;
-}) {
-  return (
-    <div
-      className="inline-flex min-w-max rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]"
-      aria-label={label}
-    >
-      {opciones.map((opcion) => (
-        <button
-          key={opcion.clave}
-          type="button"
-          aria-pressed={valor === opcion.clave}
-          onClick={() => onChange(opcion.clave)}
-          className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${
-            valor === opcion.clave
-              ? "bg-white text-slate-950 shadow-sm dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-              : "text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
-          }`}
-        >
-          {opcion.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Metrica({ label, valor, nota }: { label: string; valor: string; nota: string }) {
-  return (
-    <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0 md:px-5">
-      <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">{label}</p>
-      <p title={valor} className="mt-1 whitespace-nowrap text-lg font-bold tabular-nums text-slate-950 sm:text-xl 2xl:text-2xl dark:text-[#f2f7f4]">{valor}</p>
-      <p className="mt-1 min-h-5 text-xs text-slate-400 dark:text-[#74817b]">{nota}</p>
-    </div>
-  );
-}
 
 function ComparacionHelado({ resumen }: { resumen: ResumenHelado }) {
   const maximo = Math.max(resumen.compradoKg, resumen.vendidoKgEstimado, 1);
@@ -341,7 +273,7 @@ export default function ComprasClient() {
   const [revision, setRevision] = useState(0);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [localId, setLocalId] = useState("");
-  const [dias, setDias] = useState("120");
+  const { valor, setValor, params: periodo, hoy } = usePeriodo("mes");
   const [vista, setVista] = useState<Vista>("resumen");
   const [busqueda, setBusqueda] = useState("");
 
@@ -350,7 +282,7 @@ export default function ComprasClient() {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-change, no data client in this project
     setCargando(true);
     setError("");
-    fetch(`/api/compras?dias=${dias}`, { signal: controlador.signal })
+    fetch(`/api/compras?${periodo}`, { signal: controlador.signal })
       .then(async (respuesta) => {
         if (!respuesta.ok) throw new Error("No pudimos cargar las compras.");
         return respuesta.json();
@@ -365,7 +297,7 @@ export default function ComprasClient() {
         setCargando(false);
       });
     return () => controlador.abort();
-  }, [dias, revision]);
+  }, [periodo.toString(), revision]); // eslint-disable-line react-hooks/exhaustive-deps
 
   async function asignar(compraId: string, destino: string) {
     if (!destino) return;
@@ -507,9 +439,7 @@ export default function ComprasClient() {
           </div>
           <div>
             <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Período</p>
-            <div className="scrollbar-hide overflow-x-auto pb-1">
-              <SelectorSegmentado label="Elegir período" valor={dias} onChange={setDias} opciones={PERIODOS} />
-            </div>
+            <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} />
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
@@ -990,7 +920,7 @@ export default function ComprasClient() {
                   <div key={control.compraId} className="px-4 py-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
                       <span className="font-semibold">
-                        {control.local} · {MES_LARGO(control.mes)}
+                        {control.local} · {mesLargo(control.mes)}
                         {control.origenMes === "fecha" && <span className="ml-2"><Badge tone="amber">Mes supuesto</Badge></span>}
                       </span>
                       <span className={`font-semibold tabular-nums ${Math.abs(control.diferenciaPct) < 0.5 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>

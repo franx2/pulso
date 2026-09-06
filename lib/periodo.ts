@@ -11,7 +11,7 @@
  * medianoche UTC, que es como Prisma guarda y devuelve los campos `@db.Date`.
  */
 
-import { diasEntre, fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
+import { diaDeFechaSql, diasEntre, fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
 
 /** Presets rápidos: ventanas móviles que terminan hoy. Mes y año calendario
  * se resuelven aparte, para poder navegar historia sin mezclar criterios. */
@@ -137,5 +137,23 @@ export function resolverRango(params: URLSearchParams, hoy = hoyAR()): RangoResu
     inicioPrevio: fechaSql(sumarDias(hoy, -(dias * 2 - 1))),
     finPrevio: fechaSql(sumarDias(hoy, -dias)),
     dias,
+  };
+}
+
+/**
+ * El mismo rango pero en días calendario ("AAAA-MM-DD"), que es como lo
+ * consumen las pantallas de compras y sectores.
+ *
+ * Devolver el rango ya resuelto no es decorativo: `rango` se recorta a
+ * `MAX_DIAS_RANGO` y un mes en curso se corta hoy, así que lo que se midió
+ * no siempre es lo que se pidió. La pantalla tiene que mostrar lo primero.
+ */
+export function rangoDias(params: URLSearchParams, hoy = hoyAR()) {
+  const r = resolverRango(params, hoy);
+  return {
+    periodo: r.periodo,
+    desde: diaDeFechaSql(r.inicioActual),
+    hasta: diaDeFechaSql(r.finActual),
+    dias: r.dias,
   };
 }

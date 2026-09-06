@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, Crosshair, RefreshCw, Save } from "lucide-react";
+import { AlertTriangle, ArrowLeft, Crosshair, RefreshCw, Save } from "lucide-react";
 import {
   Badge,
   Button,
@@ -31,24 +31,76 @@ type Local = {
   verificarRostro: boolean;
   rostroTolerancia: number;
   multiplicadorFeriado: number;
+  cuitCompras: string | null;
+  razonSocialCompras: string | null;
   fudoConfigurado: boolean;
   demandaSincronizadaEn: string | null;
 };
 
-const TABS = [
-  { key: "general", label: "General" },
-  { key: "horas", label: "Horas" },
-  { key: "rostro", label: "Reconocimiento facial" },
-  { key: "fudo", label: "Fudo" },
-  { key: "horario", label: "Horario" },
-  { key: "categorias", label: "Categorías" },
-  { key: "costos", label: "Costos" },
-] as const;
-type TabKey = (typeof TABS)[number]["key"];
+/**
+ * Lo que este local tiene cargado. Siete solapas se ven todas iguales desde
+ * afuera; sin esto, "por qué esta sucursal no tiene compras" se contesta
+ * abriendo las siete y mirando adentro de cada una.
+ */
+type Estado = {
+  ubicacion: boolean;
+  fudo: boolean;
+  horario: boolean;
+  categorias: boolean;
+  compras: boolean;
+  costos: boolean;
+  mes: string;
+};
+
+/**
+ * Dos grupos, no ocho solapas planas: la mitad de esta pantalla configura
+ * cómo trabaja la gente y la otra mitad de dónde salen los números de plata.
+ * Mezcladas, buscar "dónde se cargan las comisiones" era leer las ocho.
+ */
+const GRUPOS = ["Operación", "Negocio"] as const;
+
+type TabKey =
+  | "general"
+  | "horas"
+  | "rostro"
+  | "horario"
+  | "categorias"
+  | "fudo"
+  | "compras"
+  | "costos";
+
+const TABS: {
+  key: TabKey;
+  grupo: (typeof GRUPOS)[number];
+  label: string;
+  /** Qué tiene que estar cargado para que esta solapa esté lista. */
+  requisito?: keyof Estado;
+}[] = [
+  { key: "general", grupo: "Operación", label: "General", requisito: "ubicacion" },
+  { key: "horas", grupo: "Operación", label: "Horas" },
+  { key: "rostro", grupo: "Operación", label: "Rostro" },
+  { key: "horario", grupo: "Operación", label: "Horario", requisito: "horario" },
+  { key: "categorias", grupo: "Operación", label: "Puestos", requisito: "categorias" },
+  { key: "fudo", grupo: "Negocio", label: "Fudo", requisito: "fudo" },
+  { key: "compras", grupo: "Negocio", label: "Compras", requisito: "compras" },
+  { key: "costos", grupo: "Negocio", label: "Costos", requisito: "costos" },
+];
+
+const PENDIENTES: Record<string, string> = {
+  ubicacion: "la ubicación del local",
+  horario: "el horario semanal",
+  categorias: "los puestos",
+  fudo: "las credenciales de Fudo",
+  compras: "el CUIT con el que figura en los remitos",
+  costos: "los costos fijos del mes",
+};
 
 export default function LocalDetalleClient({ localId }: { localId: string }) {
   const [tab, setTab] = useState<TabKey>("general");
   const [local, setLocal] = useState<Local | null>(null);
+  const [estado, setEstado] = useState<Estado | null>(null);
+  const [cuitCompras, setCuitCompras] = useState("");
+  const [razonSocialCompras, setRazonSocialCompras] = useState("");
   const [nombre, setNombre] = useState("");
   const [lat, setLat] = useState("");
   const [lng, setLng] = useState("");
@@ -77,6 +129,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
       .then((d) => {
         const l: Local | null = d.local;
         setLocal(l);
+        setEstado(d.estado ?? null);
         if (!l) return;
         setNombre(l.nombre);
         setLat(l.lat != null ? String(l.lat) : "");
@@ -88,6 +141,8 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
         setVerificarRostro(l.verificarRostro);
         setRostroTolerancia(String(l.rostroTolerancia));
         setMultiplicadorFeriado(String(l.multiplicadorFeriado));
+        setCuitCompras(l.cuitCompras ?? "");
+        setRazonSocialCompras(l.razonSocialCompras ?? "");
       });
   }
 
@@ -176,6 +231,8 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
         verificarRostro,
         rostroTolerancia: Number(rostroTolerancia),
         multiplicadorFeriado: Number(multiplicadorFeriado),
+        cuitCompras,
+        razonSocialCompras,
       }),
     });
     const data = await res.json();
@@ -186,7 +243,10 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
 
   if (!local) return null;
 
-  const tabFormulario = tab === "general" || tab === "horas" || tab === "rostro";
+  const tabFormulario = tab === "general" || tab === "horas" || tab === "rostro" || tab === "compras";
+  const faltantes = estado
+    ? TABS.filter((t) => t.requisito && !estado[t.requisito])
+    : [];
 
   return (
     <div className="flex flex-col gap-6">
@@ -201,20 +261,62 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
         <PageTitle>{local.nombre}</PageTitle>
       </div>
 
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-200 dark:border-[#26312d]">
-        {TABS.map((t) => (
-          <button
-            key={t.key}
-            type="button"
-            onClick={() => setTab(t.key)}
-            className={`shrink-0 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${
-              tab === t.key
-                ? "border-emerald-700 text-emerald-700 dark:border-[#37e6b0] dark:text-[#37e6b0]"
-                : "border-transparent text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
-            }`}
-          >
-            {t.label}
-          </button>
+      {faltantes.length > 0 && (
+        <div className="flex flex-wrap items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
+          <p className="text-amber-900 dark:text-amber-100">
+            Falta cargar{" "}
+            {faltantes.map((t, i) => (
+              <span key={t.key}>
+                {i > 0 && (i === faltantes.length - 1 ? " y " : ", ")}
+                <button
+                  type="button"
+                  onClick={() => setTab(t.key)}
+                  className="font-semibold underline underline-offset-2 hover:no-underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-600"
+                >
+                  {PENDIENTES[t.requisito!]}
+                </button>
+              </span>
+            ))}
+            .
+          </p>
+        </div>
+      )}
+
+      <div className="scrollbar-hidden flex items-end gap-5 overflow-x-auto border-b border-slate-200 dark:border-[#26312d]">
+        {GRUPOS.map((grupo) => (
+          <div key={grupo} className="shrink-0">
+            <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-[#74817b]">
+              {grupo}
+            </p>
+            <div className="flex gap-1">
+              {TABS.filter((t) => t.grupo === grupo).map((t) => {
+                const pendiente = t.requisito && estado && !estado[t.requisito];
+                return (
+                  <button
+                    key={t.key}
+                    type="button"
+                    onClick={() => setTab(t.key)}
+                    aria-current={tab === t.key ? "page" : undefined}
+                    className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${
+                      tab === t.key
+                        ? "border-emerald-700 text-emerald-700 dark:border-[#37e6b0] dark:text-[#37e6b0]"
+                        : "border-transparent text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+                    }`}
+                  >
+                    {t.label}
+                    {pendiente && (
+                      <span
+                        className="h-1.5 w-1.5 rounded-full bg-amber-500"
+                        title="Sin cargar"
+                        aria-label="sin cargar"
+                      />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
         ))}
       </div>
 
@@ -369,6 +471,42 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                     </p>
                   </>
                 )}
+              </div>
+            </Card>
+          )}
+
+          {tab === "compras" && (
+            <Card>
+              <SectionTitle>Identidad en los remitos</SectionTitle>
+              <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+                Los remitos del proveedor llegan por mail y se reparten entre las sucursales por
+                CUIT. Sin esto cargado, los de este local quedan en «sin asignar» y no entran en
+                ningún costo. El CUIT manda: la razón social sólo se usa cuando el remito no lo trae.
+              </p>
+              <div className="flex flex-col gap-3">
+                <div>
+                  <Label>CUIT</Label>
+                  <Input
+                    value={cuitCompras}
+                    onChange={(e) => setCuitCompras(e.target.value)}
+                    placeholder="30718808975"
+                    inputMode="numeric"
+                  />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                    Con o sin guiones; se guarda sólo con números.
+                  </p>
+                </div>
+                <div>
+                  <Label>Razón social</Label>
+                  <Input
+                    value={razonSocialCompras}
+                    onChange={(e) => setRazonSocialCompras(e.target.value)}
+                    placeholder="CUMBRES Y PLACERES SAS"
+                  />
+                  <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                    Como figura impresa en el remito, no como se llama el local acá.
+                  </p>
+                </div>
               </div>
             </Card>
           )}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   ArrowRight,
@@ -13,12 +13,13 @@ import {
   ChevronLeft,
   ChevronRight,
   RefreshCw,
-  TrendingDown,
-  TrendingUp,
 } from "lucide-react";
 import { ComparisonChart, type ComparisonPoint } from "@/components/AnalyticsCharts";
-import { Badge, Button, EmptyState, Input, Label, PageTitle } from "@/components/ui";
+import PeriodoSelector, { OPCIONES, type Periodo } from "@/components/PeriodoSelector";
+import { Badge, Button, EmptyState, Input, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
 import ProductosPanel from "./ProductosPanel";
+import { fechaCompleta, fechaLarga, numeroCompacto, plata, plataCompacta } from "@/lib/formato";
+import { sumarDias } from "@/lib/fechaAR";
 
 type Mapa = Record<string, number>;
 type PuntoSerie = {
@@ -93,18 +94,8 @@ type Dash = {
   alertas: { tono: "rose" | "amber"; texto: string; localId: string | null }[];
 };
 
-type Vista = "rendimiento" | "locales" | "control";
-type Periodo = "semana" | "mes" | "mtd" | "mes-calendario" | "anio-calendario" | "rango";
 type MetricaGrafico = "ventas" | "tickets" | "ticketPromedio";
-
-const PERIODOS: { clave: Periodo; label: string }[] = [
-  { clave: "semana", label: "7 días" },
-  { clave: "mes", label: "30 días" },
-  { clave: "mtd", label: "Mes actual" },
-  { clave: "mes-calendario", label: "Elegir mes" },
-  { clave: "anio-calendario", label: "Elegir año" },
-  { clave: "rango", label: "Fechas" },
-];
+type Vista = "rendimiento" | "locales" | "control";
 
 const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "rendimiento", label: "Rendimiento" },
@@ -126,113 +117,11 @@ const ETIQUETA_CANAL: Record<string, string> = {
 };
 
 const hoyAR = () => new Date(Date.now() - 3 * 60 * 60 * 1000).toISOString().slice(0, 10);
-const sumarDias = (fecha: string, cantidad: number) => {
-  const d = new Date(`${fecha}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + cantidad);
-  return d.toISOString().slice(0, 10);
-};
-const plata = (n: number) => `${n < 0 ? "-" : ""}$${Math.round(Math.abs(n)).toLocaleString("es-AR")}`;
-const plataCompacta = (n: number) =>
-  `${n < 0 ? "-" : ""}$${new Intl.NumberFormat("es-AR", { notation: "compact", maximumFractionDigits: 1 }).format(Math.abs(n))}`;
-const numeroCompacto = (n: number) =>
-  new Intl.NumberFormat("es-AR", { notation: "compact", maximumFractionDigits: 1 }).format(n);
-const fmtFecha = (iso: string) =>
-  new Date(`${iso}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
 const fmtFechaLarga = (iso: string) => {
-  const texto = new Date(`${iso}T12:00:00Z`).toLocaleDateString("es-AR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const texto = fechaCompleta(iso);
   return texto.charAt(0).toUpperCase() + texto.slice(1);
 };
 const variacion = (actual: number, previo: number) => (previo > 0 ? ((actual - previo) / previo) * 100 : null);
-
-function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <section className={`rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19] ${className}`}>
-      {children}
-    </section>
-  );
-}
-
-function SelectorSegmentado<T extends string>({
-  opciones,
-  valor,
-  onChange,
-  label,
-}: {
-  opciones: { clave: T; label: string }[];
-  valor: T;
-  onChange: (valor: T) => void;
-  label: string;
-}) {
-  return (
-    <div
-      className="inline-flex min-w-max rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]"
-      role="tablist"
-      aria-label={label}
-    >
-      {opciones.map((opcion) => (
-        <button
-          key={opcion.clave}
-          type="button"
-          role="tab"
-          aria-selected={valor === opcion.clave}
-          onClick={() => onChange(opcion.clave)}
-          className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${
-            valor === opcion.clave
-              ? "bg-white text-slate-900 shadow-sm dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-              : "text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
-          }`}
-        >
-          {opcion.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Delta({ valor, texto = "vs. período anterior" }: { valor: number | null; texto?: string }) {
-  if (valor == null) return <span className="text-xs text-slate-400 dark:text-[#74817b]">sin base comparable</span>;
-  const sube = valor >= 0;
-  const Icono = sube ? TrendingUp : TrendingDown;
-  return (
-    <span className={`inline-flex items-center gap-1 text-xs font-semibold ${sube ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
-      <Icono size={13} aria-hidden />
-      {sube ? "+" : ""}{valor.toFixed(1)}% {texto}
-    </span>
-  );
-}
-
-function Metrica({
-  label,
-  valor,
-  valorCompleto,
-  delta,
-  textoDelta,
-  nota,
-  tono = "normal",
-}: {
-  label: string;
-  valor: string;
-  valorCompleto?: string;
-  delta: number | null;
-  textoDelta?: string;
-  nota?: string;
-  tono?: "normal" | "negativo";
-}) {
-  return (
-    <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0 md:px-5">
-      <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">{label}</p>
-      <p title={valorCompleto} className={`mt-1 whitespace-nowrap text-xl font-bold tabular-nums md:text-2xl ${tono === "negativo" ? "text-rose-600 dark:text-rose-400" : "text-slate-950 dark:text-[#f2f7f4]"}`}>
-        {valor}
-      </p>
-      <div className="mt-1 min-h-5">{nota ? <span className="text-xs text-slate-400 dark:text-[#74817b]">{nota}</span> : <Delta valor={delta} texto={textoDelta} />}</div>
-    </div>
-  );
-}
 
 function Reparto({ titulo, datos, etiquetas }: { titulo: string; datos: Mapa; etiquetas?: Record<string, string> }) {
   const filas = Object.entries(datos).sort((a, b) => b[1] - a[1]);
@@ -370,7 +259,7 @@ function DetalleDiario({
       <Panel>
         <EmptyState>
           <strong className="block text-slate-800 dark:text-[#f2f7f4]">Sin ventas registradas</strong>
-          <span className="mt-1 block">No hay un cierre de Fudo sincronizado para {local.nombre} el {fmtFecha(fecha)}.</span>
+          <span className="mt-1 block">No hay un cierre de Fudo sincronizado para {local.nombre} el {fechaLarga(fecha)}.</span>
         </EmptyState>
       </Panel>
     );
@@ -417,7 +306,7 @@ function DetalleDiario({
           />
         </section>
         <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3 dark:border-[#1c2521]">
-          <Badge tone="slate">Referencia: {fmtFecha(referencia)}</Badge>
+          <Badge tone="slate">Referencia: {fechaLarga(referencia)}</Badge>
           <Badge tone="slate">{local.personas.toLocaleString("es-AR")} comensales</Badge>
           <Badge tone={local.porcentajeDescuentos >= 5 ? "amber" : "slate"}>
             {plata(local.descuentos)} en descuentos
@@ -494,7 +383,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
     VISTAS.some((v) => v.clave === inicial.vista) ? (inicial.vista as Vista) : "rendimiento"
   );
   const [periodo, setPeriodo] = useState<Periodo>(
-    PERIODOS.some((p) => p.clave === inicial.periodo) ? (inicial.periodo as Periodo) : "mes"
+    OPCIONES.some((p) => p.clave === inicial.periodo) ? (inicial.periodo as Periodo) : "mes"
   );
   const [mesElegido, setMesElegido] = useState(
     /^\d{4}-\d{2}$/.test(inicial.mes ?? "") ? inicial.mes! : hoy.slice(0, 7)
@@ -723,62 +612,37 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                 </div>
               </div>
             ) : (
-              <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
+              <div className="flex min-w-0 items-center gap-2">
                 <CalendarRange size={16} className="shrink-0 text-slate-400" aria-hidden />
-                <SelectorSegmentado opciones={PERIODOS} valor={periodo} onChange={setPeriodo} label="Período del tablero" />
+                <PeriodoSelector
+                  valor={{ periodo, mes: mesElegido, anio: anioElegido, desde, hasta }}
+                  onChange={(v) => {
+                    setPeriodo(v.periodo);
+                    setMesElegido(v.mes);
+                    setAnioElegido(v.anio);
+                    setDesde(v.desde);
+                    setHasta(v.hasta);
+                  }}
+                  hoy={hoy}
+                />
               </div>
             )}
           </div>
-
-          {!modoDetalleDiario && (periodo === "mes-calendario" || periodo === "anio-calendario" || periodo === "rango") && (
-            <div className="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3 dark:border-[#1c2521]">
-              {periodo === "mes-calendario" && (
-                <div className="w-full sm:w-48">
-                  <Label>Mes</Label>
-                  <Input type="month" max={hoy.slice(0, 7)} value={mesElegido} onChange={(evento) => setMesElegido(evento.target.value)} />
-                </div>
-              )}
-              {periodo === "anio-calendario" && (
-                <div className="w-full sm:w-40">
-                  <Label>Año</Label>
-                  <select
-                    value={anioElegido}
-                    onChange={(evento) => setAnioElegido(evento.target.value)}
-                    className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4]"
-                  >
-                    {Array.from({ length: 4 }, (_, indice) => String(Number(hoy.slice(0, 4)) - indice)).map((anio) => <option key={anio}>{anio}</option>)}
-                  </select>
-                </div>
-              )}
-              {periodo === "rango" && (
-                <>
-                  <div className="w-[calc(50%-0.375rem)] sm:w-48">
-                    <Label>Desde</Label>
-                    <Input type="date" max={hasta} value={desde} onChange={(evento) => setDesde(evento.target.value)} />
-                  </div>
-                  <div className="w-[calc(50%-0.375rem)] sm:w-48">
-                    <Label>Hasta</Label>
-                    <Input type="date" min={desde} max={hoy} value={hasta} onChange={(evento) => setHasta(evento.target.value)} />
-                  </div>
-                </>
-              )}
-            </div>
-          )}
 
           {modoDetalleDiario ? (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs dark:border-[#1c2521]">
               <p className="text-slate-500 dark:text-[#94a19c]">
                 <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fmtFechaLarga(fechaLocal)}
               </p>
-              <p className="text-slate-400 dark:text-[#74817b]">Referencia: día anterior · {fmtFecha(referenciaDia)}</p>
+              <p className="text-slate-400 dark:text-[#74817b]">Referencia: día anterior · {fechaLarga(referenciaDia)}</p>
             </div>
           ) : datos && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs dark:border-[#1c2521]">
               <p className="text-slate-500 dark:text-[#94a19c]">
-                <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fmtFecha(datos.rango.desde)} a {fmtFecha(datos.rango.hasta)}
+                <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fechaLarga(datos.rango.desde)} a {fechaLarga(datos.rango.hasta)}
               </p>
               <p className="text-slate-400 dark:text-[#74817b]">
-                Referencia: {fmtFecha(datos.rangoPrevio.desde)} a {fmtFecha(datos.rangoPrevio.hasta)} · {diasCompletos}/{datos.dias} días completos
+                Referencia: {fechaLarga(datos.rangoPrevio.desde)} a {fechaLarga(datos.rangoPrevio.hasta)} · {diasCompletos}/{datos.dias} días completos
               </p>
             </div>
           )}

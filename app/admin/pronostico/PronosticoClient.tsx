@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
   BarChart3,
@@ -13,9 +13,10 @@ import {
   TrendingUp,
 } from "lucide-react";
 import { ForecastChart } from "@/components/AnalyticsCharts";
-import { Badge, Button, EmptyState, PageTitle } from "@/components/ui";
+import { Badge, Button, EmptyState, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
 import TemporadaPanel from "./TemporadaPanel";
 import TendenciaPanel from "./TendenciaPanel";
+import { fechaCorta, numero, plata, plataCompacta } from "@/lib/formato";
 
 type DiaPronostico = {
   fecha: string;
@@ -106,60 +107,10 @@ const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "modelo", label: "Modelo y evidencia" },
 ];
 const HORIZONTES = [7, 15, 30];
-const plata = (n: number) => `${n < 0 ? "-" : ""}$${Math.round(Math.abs(n)).toLocaleString("es-AR")}`;
-const plataCompacta = (n: number) =>
-  `${n < 0 ? "-" : ""}$${new Intl.NumberFormat("es-AR", { notation: "compact", maximumFractionDigits: 1 }).format(Math.abs(n))}`;
-const numero = (n: number) => Math.round(n).toLocaleString("es-AR");
-const fechaCorta = (fecha: string) =>
-  new Date(`${fecha}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 const fechaLarga = (fecha: string) =>
   new Date(`${fecha}T12:00:00Z`).toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" });
 const capitalizar = (texto: string) => texto ? texto[0].toUpperCase() + texto.slice(1) : texto;
 const pctFactor = (factor: number) => `${factor >= 1 ? "+" : ""}${((factor - 1) * 100).toFixed(1)}%`;
-
-function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return <section className={`rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19] ${className}`}>{children}</section>;
-}
-
-function SelectorSegmentado<T extends string | number>({
-  opciones,
-  valor,
-  onChange,
-  label,
-}: {
-  opciones: { clave: T; label: string }[];
-  valor: T;
-  onChange: (valor: T) => void;
-  label: string;
-}) {
-  return (
-    <div className="inline-flex min-w-max rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]" role="tablist" aria-label={label}>
-      {opciones.map((opcion) => (
-        <button
-          key={String(opcion.clave)}
-          type="button"
-          role="tab"
-          aria-selected={valor === opcion.clave}
-          onClick={() => onChange(opcion.clave)}
-          className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${valor === opcion.clave ? "bg-white text-slate-900 shadow-sm dark:bg-[#1d4e48] dark:text-[#f2f7f4]" : "text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"}`}
-        >
-          {opcion.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function Metrica({ label, valor, nota, tono = "normal" }: { label: string; valor: string; nota: string; tono?: "normal" | "positivo" | "advertencia" }) {
-  const color = tono === "positivo" ? "text-emerald-700 dark:text-[#4ee6b0]" : tono === "advertencia" ? "text-amber-700 dark:text-amber-300" : "text-slate-950 dark:text-[#f2f7f4]";
-  return (
-    <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0 md:px-5">
-      <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">{label}</p>
-      <p className={`mt-1 whitespace-nowrap text-lg font-bold tabular-nums xl:text-2xl ${color}`}>{valor}</p>
-      <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">{nota}</p>
-    </div>
-  );
-}
 
 function lunesDe(fecha: string) {
   const d = new Date(`${fecha}T12:00:00Z`);
@@ -221,7 +172,7 @@ function CorrelacionFila({ correlacion }: { correlacion: Correlacion }) {
         <span className={`absolute inset-y-0 rounded-full ${correlacion.r != null && correlacion.r < 0 ? "bg-rose-500" : "bg-emerald-600 dark:bg-[#37e6b0]"}`} style={{ left: `${inicio}%`, width: `${ancho}%` }} />
         {correlacion.r != null && <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-800 shadow-sm dark:border-[#101c19] dark:bg-[#f2f7f4]" style={{ left: `${posicion}%` }} />}
       </div>
-      <div className="mt-1 flex justify-between text-[10px] text-slate-400 dark:text-[#74817b]"><span>−1 inversa</span><span>0</span><span>+1 directa</span></div>
+      <div className="mt-1 flex justify-between text-[11px] text-slate-400 dark:text-[#74817b]"><span>−1 inversa</span><span>0</span><span>+1 directa</span></div>
     </div>
   );
 }

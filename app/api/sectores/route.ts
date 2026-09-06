@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { SectorNegocio } from "@prisma/client";
 import { db } from "@/lib/db";
-import { fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
+import { fechaSql } from "@/lib/fechaAR";
+import { rangoDias } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
 import { definicionDe, PROMOS } from "@/lib/compras/promos";
 import {
@@ -28,10 +29,8 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
   const params = new URL(request.url).searchParams;
-  const dias = Math.min(Math.max(Number(params.get("dias")) || 30, 7), 400);
   const localId = params.get("localId");
-  const hasta = hoyAR();
-  const desde = sumarDias(hasta, -(dias - 1));
+  const { desde, hasta, dias } = rangoDias(params);
 
   const [prods, prodsPorLocal, compras, overrides, locales] = await Promise.all([
     db.productoDiario.groupBy({

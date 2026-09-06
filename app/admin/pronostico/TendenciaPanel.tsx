@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ArrowRight, TrendingDown, TrendingUp } from "lucide-react";
+import { plata } from "@/lib/formato";
 
 type Semana = { semana: string; ventas: number; tickets: number; ticketPromedio: number; dias: number };
 type Tendencia = {
@@ -19,7 +20,6 @@ type Tendencia = {
   semanasIncompletas: number;
 };
 
-const plata = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
 const pct = (n: number | null) => (n == null ? "—" : `${n >= 0 ? "+" : ""}${n.toFixed(1)}%`);
 
 export default function TendenciaPanel({

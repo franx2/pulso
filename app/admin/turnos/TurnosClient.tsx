@@ -450,7 +450,7 @@ export default function TurnosClient() {
                       type="button"
                       onClick={() => quitarFecha(f)}
                       aria-label={`Quitar ${f}`}
-                      className="grid h-5 w-5 place-items-center rounded-full text-slate-400 hover:bg-red-100 hover:text-red-600 dark:hover:bg-red-950/40"
+                      className="grid h-5 w-5 place-items-center rounded-full text-slate-500 transition-colors hover:bg-slate-200 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:text-[#94a19c] dark:hover:bg-[#26312d] dark:hover:text-rose-400"
                     >
                       <X size={12} />
                     </button>
