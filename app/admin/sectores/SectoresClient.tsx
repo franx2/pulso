@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
-import { AlertTriangle, Check } from "lucide-react";
-import { etiquetaCategoria, plata, numero } from "@/lib/formato";
+import ClasificadorSectores from "@/components/ClasificadorSectores";
+import { AlertTriangle } from "lucide-react";
+import { plata } from "@/lib/formato";
 
 type SectorClave = "HELADOS" | "CAFETERIA" | "CHOCOLATERIA" | "PROMOCION" | "SIN_CLASIFICAR";
 type ResumenSector = {
@@ -47,12 +48,6 @@ type Respuesta = {
   }[];
 };
 
-const ASIGNABLES: { clave: Exclude<SectorClave, "SIN_CLASIFICAR">; label: string }[] = [
-  { clave: "HELADOS", label: "Helados" },
-  { clave: "CAFETERIA", label: "Cafetería" },
-  { clave: "CHOCOLATERIA", label: "Chocolatería" },
-  { clave: "PROMOCION", label: "Promoción" },
-];
 
 const COLOR: Record<SectorClave, string> = {
   HELADOS: "bg-sky-600 dark:bg-sky-400",
@@ -68,7 +63,6 @@ export default function SectoresClient() {
   const { valor, setValor, params: periodo, hoy } = usePeriodo("mes");
   const [localId, setLocalId] = useState("");
   const [error, setError] = useState("");
-  const [guardando, setGuardando] = useState<string | null>(null);
   const [revision, setRevision] = useState(0);
 
   useEffect(() => {
@@ -84,16 +78,7 @@ export default function SectoresClient() {
     return () => controlador.abort();
   }, [periodo.toString(), localId, revision]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  async function asignar(producto: string, sector: string) {
-    setGuardando(producto);
-    await fetch("/api/sectores", {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ producto, sector }),
-    });
-    setGuardando(null);
-    setRevision((v) => v + 1);
-  }
+
 
   if (error) return <p className="text-sm text-slate-500 dark:text-[#94a19c]">{error}</p>;
   if (!datos) return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Clasificando productos" />;
@@ -338,52 +323,22 @@ export default function SectoresClient() {
       <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
         <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
           <h2 className="font-semibold">
-            Sin clasificar
+            Todos los productos y su sector
             {sinClas && sinClas.facturacion > 0 && (
-              <span className="ml-2 text-sm font-normal text-slate-500 dark:text-[#94a19c]">
-                {plata(sinClas.facturacion)} · {sinClas.porcentaje.toFixed(1)}% de la venta
+              <span className="ml-2 text-sm font-normal text-rose-600 dark:text-rose-400">
+                {plata(sinClas.facturacion)} sin clasificar · {sinClas.porcentaje.toFixed(1)}% de la venta
               </span>
             )}
           </h2>
           <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
-            Ordenados por lo que facturan: arrancá por arriba. Lo que asignes queda guardado y se
-            aplica a todos los locales y períodos.
-            {datos.overrides > 0 && ` Ya hay ${datos.overrides} cargados.`}
+            Lo que se vende en Fudo y lo que se compra por remito, en una sola lista. Lo que
+            asignes queda guardado y se aplica a todos los locales y períodos, de los dos lados:
+            el mismo nombre corrige la venta y la compra.
           </p>
         </div>
-        {datos.sinClasificar.length === 0 ? (
-          <p className="inline-flex items-center gap-2 px-4 py-6 text-sm text-slate-500 dark:text-[#94a19c]">
-            <Check size={16} className="text-emerald-600" aria-hidden />
-            No queda ningún producto sin clasificar en este período.
-          </p>
-        ) : (
-          <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
-            {datos.sinClasificar.map((p) => (
-              <div key={p.producto} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
-                <div className="min-w-0">
-                  <p className="truncate font-medium">{p.producto}</p>
-                  <p className="text-xs text-slate-400 dark:text-[#74817b]">
-                    {plata(p.facturacion)} · {numero(p.cantidad)} unidades
-                    {p.categoria && ` · ${etiquetaCategoria(p.categoria)}`}
-                  </p>
-                </div>
-                <div className="flex flex-wrap gap-1">
-                  {ASIGNABLES.map((s) => (
-                    <button
-                      key={s.clave}
-                      type="button"
-                      disabled={guardando === p.producto}
-                      onClick={() => asignar(p.producto, s.clave)}
-                      className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold text-slate-600 transition hover:border-emerald-600 hover:text-emerald-700 disabled:opacity-50 dark:border-[#29403b] dark:text-[#c1cbc6] dark:hover:border-[#37e6b0] dark:hover:text-[#37e6b0]"
-                    >
-                      {s.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        <div className="px-4 py-4">
+          <ClasificadorSectores onCambio={() => setRevision((v) => v + 1)} />
+        </div>
       </section>
     </div>
   );

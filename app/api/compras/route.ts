@@ -11,6 +11,7 @@ import {
   type VentaHelado,
 } from "@/lib/compras/consumoHelado";
 import { controlarRoyalty, mesDelRoyalty } from "@/lib/compras/royalty";
+import { sectorDe, type Sector } from "@/lib/compras/sectores";
 
 export async function GET(request: Request) {
   const session = await requireAdminApi();
@@ -22,7 +23,7 @@ export async function GET(request: Request) {
   // traducir de cabeza.
   const { desde, hasta, dias } = rangoDias(params);
 
-  const [compras, locales, ventasHelado, diasConVentas] = await Promise.all([
+  const [compras, locales, ventasHelado, diasConVentas, overridesFilas] = await Promise.all([
     db.compra.findMany({
       where: { fecha: { gte: fechaSql(desde) } },
       orderBy: [{ fecha: "desc" }, { numero: "desc" }],
@@ -50,7 +51,10 @@ export async function GET(request: Request) {
       where: { fecha: { gte: fechaSql(desde), lte: fechaSql(hasta) } },
       select: { localId: true, fecha: true },
     }),
+    db.sectorProducto.findMany({ select: { producto: true, sector: true } }),
   ]);
+
+  const overridesSector = new Map(overridesFilas.map((o) => [o.producto, o.sector as Sector]));
 
   // El royalty se controla contra las ventas del mes que el remito declara,
   // no contra su fecha de emisión: llega antes de que el mes termine.
@@ -201,6 +205,11 @@ export async function GET(request: Request) {
       items: compra.items.map((item) => ({
         codigo: item.codigo,
         detalle: item.detalle,
+        // A qué sector imputa este renglón. Va acá y no se deduce en el
+        // cliente porque las reglas viven en el servidor y las excepciones en
+        // la base: el remito es donde se ve el costo, así que es donde tiene
+        // sentido poder corregir la imputación.
+        sector: sectorDe(item.detalle, null, overridesSector),
         cantidad: item.cantidad,
         unidad: item.unidad,
         precioUnitario: item.precioUnitario,

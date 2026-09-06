@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
+import ClasificadorSectores, { SectorChip } from "@/components/ClasificadorSectores";
 import {
   AlertTriangle,
   ArrowRight,
@@ -19,6 +20,8 @@ import { fechaCorta, fechaLarga, kilos, mesLargo, numero, plata } from "@/lib/fo
 type Item = {
   codigo: string;
   detalle: string;
+  /** A qué sector imputa este renglón, ya resuelto por el servidor. */
+  sector: string;
   cantidad: number;
   unidad: string;
   precioUnitario: number;
@@ -122,13 +125,14 @@ type Respuesta = {
   compras: Compra[];
 };
 
-type Vista = "resumen" | "helado" | "remitos" | "royalty";
+type Vista = "resumen" | "helado" | "remitos" | "royalty" | "clasificacion";
 
 const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "resumen", label: "Resumen" },
   { clave: "helado", label: "Helado" },
   { clave: "remitos", label: "Remitos" },
   { clave: "royalty", label: "Royalty" },
+  { clave: "clasificacion", label: "Clasificación" },
 ];
 
 const kilosOSinBase = (n: number | null | undefined) => (n == null ? "Sin base" : kilos(n));
@@ -163,10 +167,12 @@ function CompraDetalle({
   compra,
   abierto,
   alternar,
+  alCambiarSector,
 }: {
   compra: Compra;
   abierto: boolean;
   alternar: () => void;
+  alCambiarSector: () => void;
 }) {
   const observacion = observacionVisible(compra.observaciones);
   return (
@@ -220,6 +226,7 @@ function CompraDetalle({
                 <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#26312d] dark:text-[#94a19c]">
                   <th className="py-2 pr-3 font-semibold">Cód.</th>
                   <th className="py-2 pr-3 font-semibold">Producto</th>
+                  <th className="py-2 pr-3 font-semibold">Sector</th>
                   <th className="py-2 pr-3 text-right font-semibold">Cantidad</th>
                   <th className="py-2 pr-3 text-right font-semibold">Unitario</th>
                   <th className="py-2 pr-3 text-right font-semibold">Lista</th>
@@ -231,6 +238,9 @@ function CompraDetalle({
                   <tr key={`${item.codigo}-${item.detalle}`} className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]">
                     <td className="py-2 pr-3 tabular-nums text-slate-400 dark:text-[#74817b]">{item.codigo}</td>
                     <td className="py-2 pr-3">{item.detalle}</td>
+                    <td className="py-2 pr-3">
+                      <SectorChip producto={item.detalle} sector={item.sector} onCambio={alCambiarSector} />
+                    </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
                       {numero(item.cantidad, 2)} <span className="text-xs text-slate-400">{item.unidad.slice(0, 3).toLowerCase()}</span>
                     </td>
@@ -253,6 +263,9 @@ function CompraDetalle({
                 <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
                   Cód. {item.codigo} · {numero(item.cantidad, 2)} {item.unidad.toLowerCase()} · {plata(item.precioUnitario)} c/u
                 </p>
+                <div className="mt-1">
+                  <SectorChip producto={item.detalle} sector={item.sector} onCambio={alCambiarSector} />
+                </div>
               </div>
             ))}
           </div>
@@ -620,6 +633,7 @@ export default function ComprasClient() {
                       key={compra.id}
                       compra={compra}
                       abierto={abierto === compra.id}
+                      alCambiarSector={() => setRevision((v) => v + 1)}
                       alternar={() => setAbierto(abierto === compra.id ? null : compra.id)}
                     />
                   ))}
@@ -891,6 +905,7 @@ export default function ComprasClient() {
                           key={compra.id}
                           compra={compra}
                           abierto={abierto === compra.id}
+                      alCambiarSector={() => setRevision((v) => v + 1)}
                           alternar={() => setAbierto(abierto === compra.id ? null : compra.id)}
                         />
                       ))}
@@ -944,6 +959,24 @@ export default function ComprasClient() {
             ) : (
               <EmptyState>No hay remitos de royalty con ventas sincronizadas para este local y período.</EmptyState>
             )}
+          </Panel>
+        </div>
+      )}
+
+      {vista === "clasificacion" && (
+        <div id="compras-panel-clasificacion" role="tabpanel" aria-labelledby="compras-tab-clasificacion">
+          <Panel>
+            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <h2 className="font-semibold">Clasificación de productos</h2>
+              <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+                A qué sector imputa cada cosa que se compra y cada cosa que se vende. Es una lista
+                sola porque el sector es uno solo: corregir acá el café que llega por remito
+                corrige también cómo se clasifica el café que se vende en Fudo.
+              </p>
+            </div>
+            <div className="px-4 py-4">
+              <ClasificadorSectores onCambio={() => setRevision((v) => v + 1)} />
+            </div>
           </Panel>
         </div>
       )}
