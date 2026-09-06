@@ -46,16 +46,15 @@ on:
       ruta:
         description: "Ruta a llamar, por ejemplo /api/cron/remitos"
         required: true
-        # Temporal: trae puesta la recarga de historia vieja. `dias=200` llega
-        # hasta marzo. Repetir mientras `omitidosPorTope` sea mayor a cero: el
-        # tope por corrida es 25 mensajes y los ya procesados quedan
-        # etiquetados, así que cada corrida avanza sola hacia atrás.
-        # Volver a "/api/cron/remitos" cuando la recarga esté hecha.
-        default: "/api/cron/remitos?reprocesar=1&dias=200"
+        default: "/api/cron/remitos"
       reprocesar:
         description: "Releer también los mails ya procesados (para remitos viejos)"
         type: boolean
         default: false
+      dias:
+        description: "Días de correo hacia atrás. Vacío = 45. Para recargar historia vieja: 200 llega hasta marzo"
+        required: false
+        default: ""
 
 env:
   BASE: https://pulso-t572.vercel.app
@@ -88,6 +87,17 @@ jobs:
             case "$RUTA" in
               *\?*) RUTA="$RUTA&reprocesar=1" ;;
               *)    RUTA="$RUTA?reprocesar=1" ;;
+            esac
+          fi
+          # La recarga de historia vieja se pide acá y no tipeando la query a
+          # mano. Repetir mientras `omitidosPorTope` venga mayor a cero: el
+          # tope por corrida son 25 mensajes y los ya leídos quedan
+          # etiquetados, así que cada corrida avanza sola hacia atrás.
+          DIAS="${{ github.event.inputs.dias }}"
+          if [ -n "$DIAS" ]; then
+            case "$RUTA" in
+              *\?*) RUTA="$RUTA&dias=$DIAS" ;;
+              *)    RUTA="$RUTA?dias=$DIAS" ;;
             esac
           fi
           echo "ruta=$RUTA" >> "$GITHUB_OUTPUT"

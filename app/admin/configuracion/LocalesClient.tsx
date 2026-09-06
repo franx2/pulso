@@ -2,11 +2,30 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ChevronRight, Plus, Store, Users } from "lucide-react";
+import { AlertTriangle, ChevronRight, Plus, Store, Users } from "lucide-react";
 import { Button, Card, EmptyState, ErrorText, Input, Label, PageTitle, SectionTitle } from "@/components/ui";
 import Feriados from "./Feriados";
 
-type Local = { id: string; nombre: string; _count: { empleados: number } };
+type Estado = {
+  ubicacion: boolean;
+  fudo: boolean;
+  horario: boolean;
+  categorias: boolean;
+  compras: boolean;
+  costos: boolean;
+};
+
+type Local = { id: string; nombre: string; _count: { empleados: number }; estado?: Estado };
+
+/** Qué nombre tiene cada cosa que puede faltar, para poder decirlo. */
+const FALTANTES: { clave: keyof Estado; label: string }[] = [
+  { clave: "fudo", label: "Fudo" },
+  { clave: "compras", label: "CUIT de compras" },
+  { clave: "costos", label: "costos del mes" },
+  { clave: "horario", label: "horario" },
+  { clave: "categorias", label: "puestos" },
+  { clave: "ubicacion", label: "ubicación" },
+];
 
 export default function LocalesClient() {
   const [locales, setLocales] = useState<Local[]>([]);
@@ -79,6 +98,21 @@ export default function LocalesClient() {
                         <Users size={12} />
                         {l._count.empleados} {l._count.empleados === 1 ? "empleado" : "empleados"}
                       </p>
+                      {(() => {
+                        // Lo que falta se dice acá y no se deja para adentro:
+                        // "por qué esta sucursal no tiene compras" se
+                        // contestaba abriendo las cuatro, una por una.
+                        const faltan = l.estado
+                          ? FALTANTES.filter((f) => !l.estado![f.clave]).map((f) => f.label)
+                          : [];
+                        if (faltan.length === 0) return null;
+                        return (
+                          <p className="mt-1 flex items-start gap-1 text-xs text-amber-700 dark:text-amber-300">
+                            <AlertTriangle size={12} className="mt-0.5 shrink-0" aria-hidden />
+                            <span>Falta {faltan.join(", ")}</span>
+                          </p>
+                        );
+                      })()}
                     </div>
                   </div>
                   <ChevronRight size={18} className="shrink-0 text-slate-400" />
