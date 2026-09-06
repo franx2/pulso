@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { AlertTriangle, Check } from "lucide-react";
-import { plata, numero } from "@/lib/formato";
+import { etiquetaCategoria, plata, numero } from "@/lib/formato";
 
 type SectorClave = "HELADOS" | "CAFETERIA" | "CHOCOLATERIA" | "PROMOCION" | "SIN_CLASIFICAR";
 type ResumenSector = {
@@ -364,7 +364,7 @@ export default function SectoresClient() {
                   <p className="truncate font-medium">{p.producto}</p>
                   <p className="text-xs text-slate-400 dark:text-[#74817b]">
                     {plata(p.facturacion)} · {numero(p.cantidad)} unidades
-                    {p.categoria && ` · ${p.categoria}`}
+                    {p.categoria && ` · ${etiquetaCategoria(p.categoria)}`}
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-1">

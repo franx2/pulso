@@ -251,24 +251,21 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
       {datos && datos.locales.length > 0 && (
         <Panel className="md:sticky md:top-[4.75rem] md:z-[9]">
           <div className="flex flex-col gap-3 p-3.5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
+            <div className="flex min-w-0 items-center gap-2">
               <BarChart3 size={16} className="shrink-0 text-slate-400" aria-hidden />
-              <div className="inline-flex min-w-max rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]" role="group" aria-label="Local del pronóstico">
-                {datos.locales.map((local) => (
-                  <button
-                    key={local.id}
-                    type="button"
-                    aria-pressed={seleccionado === local.id}
-                    onClick={() => setLocalId(local.id)}
-                    className={`min-h-9 rounded-md px-3 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${seleccionado === local.id ? "bg-white text-slate-900 shadow-sm dark:bg-[#1d4e48] dark:text-[#f2f7f4]" : "text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"}`}
-                  >
-                    {local.nombre}
-                  </button>
-                ))}
+              <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Local</span>
+              <div className="scrollbar-hidden min-w-0 overflow-x-auto">
+                <SelectorSegmentado
+                  label="Local del pronóstico"
+                  valor={seleccionado}
+                  onChange={setLocalId}
+                  opciones={datos.locales.map((local) => ({ clave: local.id, label: local.nombre }))}
+                />
               </div>
             </div>
-            <div className="scrollbar-hidden flex items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
+            <div className="flex items-center gap-2">
               <CalendarClock size={16} className="shrink-0 text-slate-400" aria-hidden />
+              <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Horizonte</span>
               <SelectorSegmentado
                 opciones={HORIZONTES.map((dias) => ({ clave: dias, label: `${dias} días` }))}
                 valor={horizonte}

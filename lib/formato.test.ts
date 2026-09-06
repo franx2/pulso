@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import {
+  etiquetaCategoria,
   fechaCompleta,
   fechaCorta,
   fechaLarga,
@@ -68,5 +69,14 @@ assert.strictEqual(fechaCorta(new Date(2026, 0, 1, 0, 5)), fechaCorta("2026-01-0
 // Un rango dentro del mismo mes no repite el mes: "28 – 31 ago".
 assert.match(rango("2026-08-28", "2026-08-31"), /^28 – 31 ago/);
 assert.match(rango("2026-08-28", "2026-09-05"), /^28 ago – 05 sep/);
+
+// El prefijo de orden de Fudo se saca; el nombre no se toca.
+assert.strictEqual(etiquetaCategoria("1.Promociones"), "Promociones");
+assert.strictEqual(etiquetaCategoria("7. Heladeria"), "Heladeria");
+assert.strictEqual(etiquetaCategoria("12-Cafeteria"), "Cafeteria");
+assert.strictEqual(etiquetaCategoria("Cafetería"), "Cafetería");
+// Una categoría que ES un número no puede quedar vacía.
+assert.strictEqual(etiquetaCategoria("2026"), "2026");
+assert.strictEqual(etiquetaCategoria(null), "");
 
 console.log("lib/formato.test.ts: todos los checks pasaron");

@@ -133,3 +133,17 @@ export function rango(desde: string, hasta: string): string {
   const inicio = mismoMes ? partes(desde, { day: "2-digit" }).day : fechaCorta(desde);
   return `${inicio} – ${fechaCorta(hasta)}`;
 }
+
+/**
+ * El nombre de una categoría de Fudo, sin su prefijo de orden.
+ *
+ * Fudo numera las categorías para ordenarlas en su propia carta: llegan como
+ * "1.Promociones", "2.Cafeteria", "7.Heladeria". Ese número es una clave
+ * interna del POS y en pantalla no significa nada — pero se guarda tal cual
+ * porque las reglas de clasificación por sector lo matchean. Se saca sólo al
+ * mostrarlo.
+ */
+export function etiquetaCategoria(nombre: string | null | undefined): string {
+  if (!nombre) return "";
+  return nombre.replace(/^\s*\d+\s*[.\-)]\s*/, "").trim() || nombre.trim();
+}

@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, Card, SectionTitle, Spinner } from "@/components/ui";
-import { plata, numero } from "@/lib/formato";
+import { Badge, Card, SectionTitle, SelectorSegmentado, Spinner } from "@/components/ui";
+import { etiquetaCategoria, numero, plata } from "@/lib/formato";
 
 type ProductoLocal = { local: string; cantidad: number; facturacion: number; precioPromedio: number };
 type Producto = {
@@ -25,13 +25,14 @@ type Analisis = {
 
 const unidades = (n: number) => numero(n, 1);
 
-const VISTAS = [
+type Vista = "facturan" | "vendidos" | "menos" | "precios";
+
+const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "facturan", label: "Los que más facturan" },
   { clave: "vendidos", label: "Los que más salen" },
   { clave: "menos", label: "Los que menos salen" },
   { clave: "precios", label: "Precio distinto entre locales" },
-] as const;
-type Vista = (typeof VISTAS)[number]["clave"];
+];
 
 export default function ProductosPanel({
   desde,
@@ -84,21 +85,8 @@ export default function ProductosPanel({
         Productos
       </SectionTitle>
 
-      <div className="flex flex-wrap gap-1">
-        {VISTAS.map((v) => (
-          <button
-            key={v.clave}
-            type="button"
-            onClick={() => setVista(v.clave)}
-            className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${
-              vista === v.clave
-                ? "bg-emerald-700 text-white dark:bg-[#1d4e48] dark:text-[#37e6b0]"
-                : "text-slate-500 hover:bg-slate-100 dark:text-[#94a19c] dark:hover:bg-[#172724]"
-            }`}
-          >
-            {v.label}
-          </button>
-        ))}
+      <div className="scrollbar-hidden -mx-1 overflow-x-auto px-1">
+        <SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Qué productos mirar" />
       </div>
 
       {vista === "precios" ? (
@@ -140,7 +128,7 @@ export default function ProductosPanel({
           <table className="w-full min-w-[34rem] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
-                <th className="py-2 pr-3 font-semibold">Producto</th>
+                <th className="w-2/5 py-2 pr-3 font-semibold">Producto</th>
                 <th className="py-2 pr-3 text-right font-semibold">Unidades</th>
                 <th className="py-2 pr-3 text-right font-semibold">Facturación</th>
                 <th className="py-2 pr-3 text-right font-semibold">Precio prom.</th>
@@ -153,7 +141,7 @@ export default function ProductosPanel({
                   <td className="py-2 pr-3">
                     <span className="font-medium">{p.nombre}</span>
                     {p.categoria && (
-                      <span className="ml-1.5 text-xs text-slate-400 dark:text-[#74817b]">{p.categoria}</span>
+                      <span className="ml-1.5 text-xs text-slate-400 dark:text-[#74817b]">{etiquetaCategoria(p.categoria)}</span>
                     )}
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">{unidades(p.cantidad)}</td>

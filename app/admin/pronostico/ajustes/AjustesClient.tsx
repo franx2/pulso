@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { etiquetaCategoria } from "@/lib/formato";
 import Link from "next/link";
 import { ArrowLeft, Trash2 } from "lucide-react";
 import { Badge, Button, Card, ErrorText, Input, Label, PageTitle, SectionTitle, Select, Spinner } from "@/components/ui";
@@ -273,7 +274,7 @@ export default function AjustesClient() {
             <tbody>
               {categorias.map((cat) => (
                 <tr key={cat} className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]">
-                  <td className="py-2 pr-3 font-medium">{cat}</td>
+                  <td className="py-2 pr-3 font-medium">{etiquetaCategoria(cat)}</td>
                   {sectores.map((sec) => {
                     const c = globales.find((x) => x.categoria === cat && x.sector === sec);
                     if (!c) return <td key={sec} className="py-2 pr-3 text-right text-slate-300">—</td>;
