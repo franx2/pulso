@@ -19,6 +19,7 @@
  */
 
 import { unzipSync } from "fflate";
+import { createExtractorFromData } from "node-unrar-js";
 import { ImapFlow } from "imapflow";
 import { simpleParser } from "mailparser";
 
@@ -36,7 +37,7 @@ export type Diagnostico = {
    * entiende no tira error, desaparece. Con esto, una sola corrida dice qué
    * son los archivos que el lector no está abriendo.
    */
-  adjuntosIgnorados: { nombre: string; tipo: string; bytes: number }[];
+  adjuntosIgnorados: { nombre: string; tipo: string; bytes: number; motivo: string }[];
 };
 
 export type AdjuntoPdf = {
@@ -139,7 +140,37 @@ const esPdf = (nombre: string, tipo: string) =>
   tipo === "application/pdf" || nombre.toLowerCase().endsWith(".pdf");
 
 const esZip = (nombre: string, tipo: string) =>
-  /zip|compressed/i.test(tipo) || nombre.toLowerCase().endsWith(".zip");
+  /zip/i.test(tipo) || nombre.toLowerCase().endsWith(".zip");
+
+const esRar = (nombre: string, tipo: string) =>
+  /rar/i.test(tipo) || nombre.toLowerCase().endsWith(".rar");
+
+/**
+ * Los PDF de un RAR.
+ *
+ * El proveedor comprime en RAR, no en ZIP: se descubrió porque el cron empezó
+ * a reportar los adjuntos que no sabía abrir, y ahí aparecieron
+ * "PRESUPUESTO CUMBRES 3ER SEMANA AGOSTO.rar" y dos más. RAR es formato
+ * propietario y no hay nada en la librería estándar, así que va con
+ * `node-unrar-js`, que es la fuente oficial de descompresión compilada a
+ * WebAssembly — sirve en Vercel, donde no se puede instalar un binario.
+ */
+async function pdfsDeRar(nombre: string, contenido: Buffer): Promise<{ nombre: string; datos: Uint8Array }[]> {
+  const salida: { nombre: string; datos: Uint8Array }[] = [];
+  const extractor = await createExtractorFromData({
+    data: Uint8Array.from(contenido).buffer as ArrayBuffer,
+  });
+  // `files` es un generador: la descompresión ocurre al recorrerlo, no al
+  // llamar a `extract()`.
+  const extraidos = extractor.extract();
+  for (const archivo of extraidos.files) {
+    const interno = archivo.fileHeader.name;
+    if (archivo.fileHeader.flags.directory || !interno.toLowerCase().endsWith(".pdf")) continue;
+    if (!archivo.extraction) continue;
+    salida.push({ nombre: `${nombre} → ${interno.split(/[\\/]/).pop()}`, datos: archivo.extraction });
+  }
+  return salida;
+}
 
 /**
  * Los PDF de un adjunto, abriendo el ZIP si viene comprimido.
@@ -150,17 +181,28 @@ const esZip = (nombre: string, tipo: string) =>
  * compras de agosto sin que nada avisara, porque un adjunto que no es PDF no
  * genera error, genera silencio.
  */
-function pdfsDelAdjunto(nombre: string, tipo: string, contenido: Buffer): { nombre: string; datos: Uint8Array }[] {
-  if (esPdf(nombre, tipo)) return [{ nombre, datos: new Uint8Array(contenido) }];
-  if (!esZip(nombre, tipo)) return [];
+async function pdfsDelAdjunto(
+  nombre: string,
+  tipo: string,
+  contenido: Buffer
+): Promise<{ pdfs: { nombre: string; datos: Uint8Array }[]; motivo: string }> {
+  if (esPdf(nombre, tipo)) return { pdfs: [{ nombre, datos: new Uint8Array(contenido) }], motivo: "" };
   try {
+    if (esRar(nombre, tipo)) {
+      const pdfs = await pdfsDeRar(nombre, contenido);
+      return { pdfs, motivo: pdfs.length === 0 ? "RAR sin PDF adentro" : "" };
+    }
+    if (!esZip(nombre, tipo)) return { pdfs: [], motivo: "formato que no sé abrir" };
     const archivos = unzipSync(new Uint8Array(contenido));
-    return Object.entries(archivos)
+    const pdfs = Object.entries(archivos)
       .filter(([interno]) => interno.toLowerCase().endsWith(".pdf"))
       .map(([interno, datos]) => ({ nombre: `${nombre} → ${interno.split("/").pop()}`, datos }));
-  } catch {
-    // Un ZIP roto o con contraseña no puede tumbar el resto del mail.
-    return [];
+    return { pdfs, motivo: pdfs.length === 0 ? "ZIP sin PDF adentro" : "" };
+  } catch (error) {
+    // Un comprimido roto, con contraseña, o una librería que no cargó no puede
+    // tumbar el resto del mail. Pero el motivo se reporta: "no lo pude abrir"
+    // y "no sé qué es" se arreglan de maneras distintas.
+    return { pdfs: [], motivo: error instanceof Error ? error.message : "error al descomprimir" };
   }
 }
 
@@ -229,11 +271,11 @@ export async function traerRemitosSinLeer(
         for (const adjunto of mail.attachments ?? []) {
           const nombre = adjunto.filename ?? "adjunto";
           const tipo = adjunto.contentType ?? "";
-          const salida = pdfsDelAdjunto(nombre, tipo, adjunto.content);
-          if (salida.length === 0) {
-            diagnostico.adjuntosIgnorados.push({ nombre, tipo, bytes: adjunto.content?.length ?? 0 });
+          const { pdfs, motivo } = await pdfsDelAdjunto(nombre, tipo, adjunto.content);
+          if (pdfs.length === 0) {
+            diagnostico.adjuntosIgnorados.push({ nombre, tipo, bytes: adjunto.content?.length ?? 0, motivo });
           }
-          for (const pdf of salida) {
+          for (const pdf of pdfs) {
             adjuntos.push({
               nombre: pdf.nombre,
               contenido: pdf.datos,
