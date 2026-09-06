@@ -14,9 +14,8 @@ const ETIQUETA_ROL: Record<Rol, string> = {
   EMPLEADO: "Empleado",
 };
 
-/** Consola de escritorio para encargado/admin: rail fijo agrupado por
- * sección, con marca, usuario y salida propios — reemplaza al bottom-nav
- * mobile en vez de convivir con él. */
+/** Rail de escritorio para encargado/admin. Permanece compacto y se abre al
+ * acercar el puntero o al recibir foco, sin desplazar el área de trabajo. */
 export function Sidebar({ active, rol, nombre }: { active: NavActivo; rol: Rol; nombre?: string }) {
   const router = useRouter();
   const visibles = ITEMS.filter((i) => i.grupo && RANGO[rol] >= RANGO[i.minimo]);
@@ -31,15 +30,15 @@ export function Sidebar({ active, rol, nombre }: { active: NavActivo; rol: Rol; 
   }
 
   return (
-    <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-slate-200 bg-white md:flex dark:border-[#26312d] dark:bg-[#0b1412]">
-      <div className="border-b border-slate-100 px-5 py-4 dark:border-[#1c2521]">
-        <Brand />
+    <aside className="group/sidebar fixed inset-y-0 left-0 z-30 hidden w-[4.5rem] flex-col overflow-hidden border-r border-slate-200 bg-white transition-[width,box-shadow] duration-200 ease-out hover:w-60 hover:shadow-[8px_0_24px_rgba(15,23,42,0.12)] focus-within:w-60 focus-within:shadow-[8px_0_24px_rgba(15,23,42,0.12)] md:flex dark:border-[#26312d] dark:bg-[#0b1412] dark:hover:shadow-[8px_0_28px_rgba(0,0,0,0.35)] dark:focus-within:shadow-[8px_0_28px_rgba(0,0,0,0.35)]">
+      <div className="shrink-0 border-b border-slate-100 px-[1.1rem] py-4 dark:border-[#1c2521]">
+        <Brand collapsible />
       </div>
 
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
+      <nav className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4">
         {grupos.map((grupo) => (
-          <div key={grupo} className="mb-5 last:mb-0">
-            <p className="mb-1.5 px-2.5 text-[11px] font-bold uppercase tracking-wider text-slate-400 dark:text-[#5d6d67]">
+          <div key={grupo} className="mb-2 transition-[margin] duration-200 last:mb-0 group-hover/sidebar:mb-5 group-focus-within/sidebar:mb-5">
+            <p className="max-h-0 overflow-hidden whitespace-nowrap px-2.5 text-[11px] font-bold uppercase text-slate-400 opacity-0 transition-[max-height,margin,opacity] duration-200 group-hover/sidebar:mb-1.5 group-hover/sidebar:max-h-5 group-hover/sidebar:opacity-100 group-focus-within/sidebar:mb-1.5 group-focus-within/sidebar:max-h-5 group-focus-within/sidebar:opacity-100 dark:text-[#5d6d67]">
               {grupo}
             </p>
             <div className="flex flex-col gap-0.5">
@@ -49,14 +48,17 @@ export function Sidebar({ active, rol, nombre }: { active: NavActivo; rol: Rol; 
                   <Link
                     key={i.key}
                     href={i.href}
-                    className={`flex min-h-10 items-center gap-2.5 rounded-lg px-2.5 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${
+                    title={i.label}
+                    className={`flex min-h-10 w-full items-center justify-center gap-0 overflow-hidden rounded-lg px-0 text-sm font-semibold transition-[color,background-color,padding,gap] duration-200 group-hover/sidebar:justify-start group-hover/sidebar:gap-2.5 group-hover/sidebar:px-2.5 group-focus-within/sidebar:justify-start group-focus-within/sidebar:gap-2.5 group-focus-within/sidebar:px-2.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${
                       active === i.key
                         ? "bg-emerald-700 text-white shadow-sm dark:bg-[#1d4e48] dark:text-[#37e6b0]"
                         : "text-slate-600 hover:bg-slate-100 hover:text-slate-900 dark:text-[#b0c3bc] dark:hover:bg-[#172724] dark:hover:text-[#f2f7f4]"
                     }`}
                   >
-                    <i.Icon size={17} strokeWidth={2.3} />
-                    {i.label}
+                    <i.Icon size={18} strokeWidth={2.3} className="shrink-0" aria-hidden />
+                    <span className="max-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 group-hover/sidebar:max-w-36 group-hover/sidebar:opacity-100 group-focus-within/sidebar:max-w-36 group-focus-within/sidebar:opacity-100">
+                      {i.label}
+                    </span>
                   </Link>
                 ))}
             </div>
@@ -64,12 +66,12 @@ export function Sidebar({ active, rol, nombre }: { active: NavActivo; rol: Rol; 
         ))}
       </nav>
 
-      <div className="flex items-center justify-between gap-2 border-t border-slate-100 px-4 py-3 dark:border-[#1c2521]">
-        <div className="min-w-0">
+      <div className="flex shrink-0 flex-col items-center gap-1 border-t border-slate-100 px-3 py-3 transition-[gap] duration-200 group-hover/sidebar:flex-row group-hover/sidebar:justify-between group-hover/sidebar:gap-2 group-focus-within/sidebar:flex-row group-focus-within/sidebar:justify-between group-focus-within/sidebar:gap-2 dark:border-[#1c2521]">
+        <div className="max-w-0 min-w-0 overflow-hidden whitespace-nowrap opacity-0 transition-[max-width,opacity] duration-200 group-hover/sidebar:max-w-28 group-hover/sidebar:opacity-100 group-focus-within/sidebar:max-w-28 group-focus-within/sidebar:opacity-100">
           {nombre && <p className="truncate text-sm font-semibold">{nombre}</p>}
           <p className="text-xs text-slate-500 dark:text-[#94a19c]">{ETIQUETA_ROL[rol]}</p>
         </div>
-        <div className="flex shrink-0 items-center gap-1">
+        <div className="flex shrink-0 flex-col items-center gap-1 group-hover/sidebar:flex-row group-focus-within/sidebar:flex-row">
           <ThemeToggle />
           <button
             type="button"

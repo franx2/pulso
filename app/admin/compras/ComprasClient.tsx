@@ -404,7 +404,7 @@ export default function ComprasClient() {
     [comprasAlcance]
   );
   const sinAsignar = datos?.compras.filter((compra) => !compra.localId) ?? [];
-  const nombreLocal = datos?.locales.find((local) => local.id === localId)?.nombre ?? "Todos los locales";
+  const nombreLocal = datos?.locales.find((local) => local.id === localId)?.nombre ?? "Toda la cadena";
   const heladoActual = localId
     ? datos?.helado.porLocal.find((local) => local.localId === localId) ?? null
     : datos?.helado.total ?? null;
@@ -486,7 +486,7 @@ export default function ComprasClient() {
               onChange={(evento) => setLocalId(evento.target.value)}
               className="md:hidden"
             >
-              <option value="">Todos los locales</option>
+              <option value="">Cadena</option>
               {datos.locales.map((local) => (
                 <option key={local.id} value={local.id}>
                   {local.nombre}
@@ -499,7 +499,7 @@ export default function ComprasClient() {
                 valor={localId}
                 onChange={setLocalId}
                 opciones={[
-                  { clave: "", label: "Todos" },
+                  { clave: "", label: "Cadena" },
                   ...datos.locales.map((local) => ({ clave: local.id, label: local.nombre })),
                 ]}
               />
@@ -524,7 +524,7 @@ export default function ComprasClient() {
         </div>
       </Panel>
 
-      {sinAsignar.length > 0 && (
+      {!localId && sinAsignar.length > 0 && (
         <section className="rounded-lg border border-amber-300 bg-amber-50/60 dark:border-amber-500/40 dark:bg-amber-500/10">
           <div className="border-b border-amber-200 px-4 py-3 dark:border-amber-500/30">
             <h2 className="inline-flex items-center gap-2 font-semibold text-amber-950 dark:text-amber-200">
@@ -601,81 +601,104 @@ export default function ComprasClient() {
             />
           </section>
 
-          <Panel>
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
-              <h2 className="font-semibold">Resumen por local</h2>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
-                Los importes usan el período elegido; el cruce de helado comienza con el primer remito disponible.
-              </p>
-            </div>
-            <div className="hidden overflow-x-auto lg:block">
-              <table className="w-full min-w-[56rem] text-sm">
-                <thead>
-                  <tr className="border-b border-slate-100 text-left text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
-                    <th className="px-4 py-2.5 font-semibold">Local</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Mercadería</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Servicios</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Remitos</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Helado recibido</th>
-                    <th className="px-3 py-2.5 text-right font-semibold">Vendido estimado</th>
-                    <th className="px-4 py-2.5 text-right font-semibold">Balance</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {datos.porLocal.map((local) => {
-                    const helado = heladoPorLocal.get(local.localId);
-                    return (
-                      <tr
-                        key={local.localId}
-                        className={`border-b border-slate-100 last:border-0 dark:border-[#1c2521] ${localId === local.localId ? "bg-emerald-50/60 dark:bg-[#123029]" : ""}`}
-                      >
-                        <td className="px-4 py-3">
-                          <button
-                            type="button"
-                            onClick={() => setLocalId(local.localId)}
-                            className="inline-flex items-center gap-1.5 font-semibold text-slate-900 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#f2f7f4] dark:hover:text-[#37e6b0]"
-                          >
-                            {local.local}
-                            <ArrowRight size={14} aria-hidden />
-                          </button>
-                        </td>
-                        <td className="px-3 py-3 text-right tabular-nums">{plata(local.mercaderia)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{plata(local.servicios)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums">{local.remitos}</td>
-                        <td className="px-3 py-3 text-right tabular-nums">{kilos(helado?.compradoKg ?? 0)}</td>
-                        <td className="px-3 py-3 text-right tabular-nums">{helado?.desdeComparacion ? kilos(helado.vendidoKgEstimado) : "Sin base"}</td>
-                        <td className="px-4 py-3 text-right font-semibold tabular-nums">{kilosOSinBase(helado?.balanceKg)}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div className="divide-y divide-slate-100 lg:hidden dark:divide-[#1c2521]">
-              {datos.porLocal.map((local) => {
-                const helado = heladoPorLocal.get(local.localId);
-                return (
-                  <button
-                    key={local.localId}
-                    type="button"
-                    onClick={() => setLocalId(local.localId)}
-                    className={`block w-full px-4 py-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${localId === local.localId ? "bg-emerald-50/60 dark:bg-[#123029]" : ""}`}
-                  >
-                    <span className="flex items-center justify-between gap-3">
-                      <span className="font-semibold">{local.local}</span>
-                      <ArrowRight size={16} aria-hidden />
-                    </span>
-                    <span className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-[#94a19c]">
-                      <span>Mercadería <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{plata(local.mercaderia)}</strong></span>
-                      <span>Remitos <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{local.remitos}</strong></span>
-                      <span>Helado recibido <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{kilos(helado?.compradoKg ?? 0)}</strong></span>
-                      <span>Balance <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{kilosOSinBase(helado?.balanceKg)}</strong></span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </Panel>
+          {!localId ? (
+            <Panel>
+              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                <h2 className="font-semibold">Comparación entre locales</h2>
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+                  Mismo período para todas las sucursales; elegí una para abrir su detalle.
+                </p>
+              </div>
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full min-w-[56rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-left text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+                      <th className="px-4 py-2.5 font-semibold">Local</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">Mercadería</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">Servicios</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">Remitos</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">Helado recibido</th>
+                      <th className="px-3 py-2.5 text-right font-semibold">Vendido estimado</th>
+                      <th className="px-4 py-2.5 text-right font-semibold">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {datos.porLocal.map((local) => {
+                      const helado = heladoPorLocal.get(local.localId);
+                      return (
+                        <tr key={local.localId} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-[#1c2521] dark:hover:bg-[#13201d]">
+                          <td className="px-4 py-3">
+                            <button
+                              type="button"
+                              onClick={() => setLocalId(local.localId)}
+                              className="inline-flex items-center gap-1.5 font-semibold text-slate-900 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#f2f7f4] dark:hover:text-[#37e6b0]"
+                            >
+                              {local.local}
+                              <ArrowRight size={14} aria-hidden />
+                            </button>
+                          </td>
+                          <td className="px-3 py-3 text-right tabular-nums">{plata(local.mercaderia)}</td>
+                          <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{plata(local.servicios)}</td>
+                          <td className="px-3 py-3 text-right tabular-nums">{local.remitos}</td>
+                          <td className="px-3 py-3 text-right tabular-nums">{kilos(helado?.compradoKg ?? 0)}</td>
+                          <td className="px-3 py-3 text-right tabular-nums">{helado?.desdeComparacion ? kilos(helado.vendidoKgEstimado) : "Sin base"}</td>
+                          <td className="px-4 py-3 text-right font-semibold tabular-nums">{kilosOSinBase(helado?.balanceKg)}</td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <div className="divide-y divide-slate-100 lg:hidden dark:divide-[#1c2521]">
+                {datos.porLocal.map((local) => {
+                  const helado = heladoPorLocal.get(local.localId);
+                  return (
+                    <button
+                      key={local.localId}
+                      type="button"
+                      onClick={() => setLocalId(local.localId)}
+                      className="block w-full px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 dark:hover:bg-[#13201d]"
+                    >
+                      <span className="flex items-center justify-between gap-3">
+                        <span className="font-semibold">{local.local}</span>
+                        <ArrowRight size={16} aria-hidden />
+                      </span>
+                      <span className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-[#94a19c]">
+                        <span>Mercadería <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{plata(local.mercaderia)}</strong></span>
+                        <span>Remitos <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{local.remitos}</strong></span>
+                        <span>Helado recibido <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{kilos(helado?.compradoKg ?? 0)}</strong></span>
+                        <span>Balance <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{kilosOSinBase(helado?.balanceKg)}</strong></span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </Panel>
+          ) : (
+            <Panel>
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                <div>
+                  <h2 className="font-semibold">Compras recientes de {nombreLocal}</h2>
+                  <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Remitos del período elegido, sin mezclar otras sucursales.</p>
+                </div>
+                <Button type="button" variant="ghost" onClick={() => setVista("remitos")}>Ver todos los remitos</Button>
+              </div>
+              {comprasAlcance.length > 0 ? (
+                <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                  {comprasAlcance.slice(0, 5).map((compra) => (
+                    <CompraDetalle
+                      key={compra.id}
+                      compra={compra}
+                      abierto={abierto === compra.id}
+                      alternar={() => setAbierto(abierto === compra.id ? null : compra.id)}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <EmptyState>No hay compras registradas para {nombreLocal} en este período.</EmptyState>
+              )}
+            </Panel>
+          )}
 
           <div className="grid gap-5 lg:grid-cols-2">
             <Panel className="p-4">
@@ -713,8 +736,12 @@ export default function ComprasClient() {
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 py-3 last:pb-0">
-                  <span className="text-sm text-slate-600 dark:text-[#c1cbc6]">Remitos sin local</span>
-                  <span className="font-semibold tabular-nums">{sinAsignar.length}</span>
+                  <span className="text-sm text-slate-600 dark:text-[#c1cbc6]">
+                    {localId ? "Días con ventas cruzadas" : "Remitos sin local"}
+                  </span>
+                  <span className="font-semibold tabular-nums">
+                    {localId ? (heladoActual?.diasConVentas ?? 0) : sinAsignar.length}
+                  </span>
                 </div>
               </div>
             </Panel>

@@ -853,3 +853,33 @@ model CompraItem {
   @@index([compraId])
   @@index([codigo])
 }
+
+/// Los tres sectores del negocio, más el limbo de las promociones.
+///
+/// `PROMOCION` no es un sector: es la marca de que esa plata todavía no se
+/// pudo atribuir. Fudo guarda las promos como un producto único ("PROMO
+/// CLÁSICA", $11,4M en agosto) sin decir qué llevan adentro, y son el 31% de
+/// la facturación. Repartirlas a ojo sería inventar un tercio de la venta.
+enum SectorNegocio {
+  HELADOS
+  CAFETERIA
+  CHOCOLATERIA
+  PROMOCION
+}
+
+/// Excepción de clasificación cargada a mano.
+///
+/// Las reglas viven en `lib/compras/sectores.ts` y resuelven el 99% de la
+/// facturación: son el vocabulario del negocio, se testean y se revisan en un
+/// diff. Acá va sólo lo que las reglas no pueden saber — "COPA DEL MUNDO" es
+/// un helado y no hay forma de deducirlo del nombre.
+model SectorProducto {
+  id String @id @default(cuid())
+  /// Nombre normalizado (sin acentos, mayúsculas, espacios colapsados): el
+  /// mismo producto viene escrito distinto en cada sucursal.
+  producto String        @unique
+  sector   SectorNegocio
+  creadoEn DateTime      @default(now())
+
+  @@index([sector])
+}

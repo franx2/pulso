@@ -34,7 +34,7 @@ export function PageShell({
       <main
         className={`mx-auto w-full flex-1 px-4 sm:px-6 ${
           conSidebar
-            ? "pt-5 sm:pt-6 md:ml-60 md:w-[calc(100%-15rem)] md:max-w-none md:px-8 md:pt-0"
+            ? "pt-5 sm:pt-6 md:ml-[4.5rem] md:w-[calc(100%-4.5rem)] md:max-w-none md:px-8 md:pt-0"
             : "max-w-3xl pt-5 sm:pt-6"
         } ${nav ? "pb-28 md:pb-8" : "pb-8"}`}
       >
