@@ -31,11 +31,19 @@ export async function GET(request: Request) {
   // `?reprocesar=1` vuelve a mirar mails ya etiquetados. Sirve cuando el
   // lector mejora —abrir ZIP, por ejemplo— y hay que releer lo viejo. No
   // duplica nada: la carga descarta los remitos ya cargados por número.
-  const reprocesar = new URL(request.url).searchParams.get("reprocesar") === "1";
+  const params = new URL(request.url).searchParams;
+  const reprocesar = params.get("reprocesar") === "1";
+  // `?dias=N` amplía la ventana hacia atrás para cargar historia vieja. El
+  // tope por corrida sigue vigente: si quedan mensajes, la respuesta lo dice
+  // en `omitidosPorTope` y alcanza con volver a correrlo.
+  const dias = Math.min(Math.max(Number(params.get("dias")) || 0, 0), 400);
 
   let adjuntos, diagnostico;
   try {
-    ({ adjuntos, diagnostico } = await traerRemitosSinLeer(config, { reprocesar }));
+    ({ adjuntos, diagnostico } = await traerRemitosSinLeer(config, {
+      reprocesar,
+      diasAtras: dias > 0 ? dias : undefined,
+    }));
   } catch (error) {
     // Que falle el correo no es lo mismo que no haber remitos: se distingue,
     // o un problema de credenciales pasaría meses sin que nadie lo note.
@@ -67,6 +75,7 @@ export async function GET(request: Request) {
   return NextResponse.json({
     carpeta: config.carpeta,
     reprocesar,
+    diasAtras: dias > 0 ? dias : 45,
     correo: diagnostico,
     remitente: config.remitente ?? "(sin filtro)",
     advertencias: advertencias(config),

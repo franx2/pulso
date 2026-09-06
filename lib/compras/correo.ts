@@ -98,7 +98,13 @@ export function configDesdeEntorno(): ConfigCorreo | null {
   };
 }
 
-/** Tope de mensajes por corrida, para no pasarse del tiempo de la función. */
+/**
+ * Tope de mensajes por corrida, para no pasarse del tiempo de la función.
+ *
+ * No es un límite del histórico: los procesados quedan etiquetados, así que
+ * corridas sucesivas van tomando los siguientes y avanzan hacia atrás solas.
+ * `omitidosPorTope` dice cuántos quedaron para la próxima.
+ */
 const MAX_MENSAJES = 25;
 
 /**
@@ -108,7 +114,11 @@ const MAX_MENSAJES = 25;
  */
 const MARCA = "PulsoProcesado";
 
-/** Ventana hacia atrás. Sin esto la búsqueda recorrería la casilla entera. */
+/**
+ * Ventana hacia atrás por defecto. Sin esto la búsqueda recorrería la casilla
+ * entera en cada corrida, que para el uso diario es puro trabajo de más.
+ * Se puede ampliar por parámetro para cargar historia vieja.
+ */
 const DIAS_ATRAS = 45;
 
 /**
@@ -220,7 +230,7 @@ function esDelProveedor(remitenteMail: string, filtro: string | null): boolean {
  */
 export async function traerRemitosSinLeer(
   config: ConfigCorreo,
-  opciones: { reprocesar?: boolean } = {}
+  opciones: { reprocesar?: boolean; diasAtras?: number } = {}
 ): Promise<{ adjuntos: AdjuntoPdf[]; diagnostico: Diagnostico }> {
   const cliente = new ImapFlow({
     host: config.host,
@@ -236,7 +246,7 @@ export async function traerRemitosSinLeer(
   try {
     const cerrojo = await cliente.getMailboxLock(config.carpeta);
     try {
-      const desde = new Date(Date.now() - DIAS_ATRAS * 86400000);
+      const desde = new Date(Date.now() - (opciones.diasAtras ?? DIAS_ATRAS) * 86400000);
       const candidatos = await buscar(cliente, desde, config.remitente);
 
       // El keyword se filtra ACÁ y no en la búsqueda. Gmail no implementa

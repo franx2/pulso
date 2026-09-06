@@ -46,9 +46,12 @@ on:
       ruta:
         description: "Ruta a llamar, por ejemplo /api/cron/remitos"
         required: true
-        # Temporal: trae el parámetro puesto para la recarga de los remitos
-        # viejos. Volver a "/api/cron/remitos" cuando esa recarga esté hecha.
-        default: "/api/cron/remitos?reprocesar=1"
+        # Temporal: trae puesta la recarga de historia vieja. `dias=200` llega
+        # hasta marzo. Repetir mientras `omitidosPorTope` sea mayor a cero: el
+        # tope por corrida es 25 mensajes y los ya procesados quedan
+        # etiquetados, así que cada corrida avanza sola hacia atrás.
+        # Volver a "/api/cron/remitos" cuando la recarga esté hecha.
+        default: "/api/cron/remitos?reprocesar=1&dias=200"
       reprocesar:
         description: "Releer también los mails ya procesados (para remitos viejos)"
         type: boolean
