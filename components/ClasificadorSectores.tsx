@@ -156,16 +156,23 @@ export function SectorChip({
 export default function ClasificadorSectores({
   /** Precarga la búsqueda: Compras lo abre con el renglón del remito ya puesto. */
   inicial = "",
+  /**
+   * Acota la lista a un sector y esconde su filtro. Es como lo usa el
+   * desplegable de la tabla de sectores: ahí el sector ya lo eligió la fila
+   * en la que se hizo clic, y volver a ofrecerlo confundiría.
+   */
+  sectorFijo,
   onCambio,
 }: {
   inicial?: string;
+  sectorFijo?: string;
   onCambio?: () => void;
 }) {
   const [q, setQ] = useState(inicial);
   const [busqueda, setBusqueda] = useState(inicial);
   const [fuente, setFuente] = useState("");
   const [origen, setOrigen] = useState("");
-  const [sector, setSector] = useState("");
+  const [sector, setSector] = useState(sectorFijo ?? "");
   const [datos, setDatos] = useState<Respuesta | null>(null);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -234,9 +241,16 @@ export default function ClasificadorSectores({
         <SelectorSegmentado label="Cómo se clasificó" valor={origen} onChange={setOrigen} opciones={ORIGENES} />
       </div>
 
-      <div className="scrollbar-hidden -mx-1 overflow-x-auto px-1">
-        <SelectorSegmentado label="Filtrar por sector" valor={sector} onChange={setSector} opciones={FILTRO_SECTOR} />
-      </div>
+      {!sectorFijo && (
+        <div className="scrollbar-hidden -mx-1 overflow-x-auto px-1">
+          <SelectorSegmentado
+            label="Filtrar por sector"
+            valor={sector}
+            onChange={setSector}
+            opciones={FILTRO_SECTOR}
+          />
+        </div>
+      )}
 
       {datos && (
         <p className="text-xs text-slate-500 dark:text-[#94a19c]">

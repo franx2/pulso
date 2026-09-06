@@ -1,10 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import ClasificadorSectores from "@/components/ClasificadorSectores";
 import { Select } from "@/components/ui";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
 import { plata } from "@/lib/formato";
 
 type SectorClave = "HELADOS" | "CAFETERIA" | "CHOCOLATERIA" | "PROMOCION" | "SIN_CLASIFICAR";
@@ -63,6 +63,7 @@ export default function SectoresClient() {
   const [datos, setDatos] = useState<Respuesta | null>(null);
   const { valor, setValor, params: periodo, hoy } = usePeriodo("mes");
   const [localId, setLocalId] = useState("");
+  const [desplegado, setDesplegado] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
 
@@ -149,12 +150,25 @@ export default function SectoresClient() {
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
               {conVenta.map((s) => (
-                <tr key={s.sector}>
+                <Fragment key={s.sector}>
+                <tr
+                  className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-[#172724]"
+                  onClick={() => setDesplegado(desplegado === s.sector ? null : s.sector)}
+                >
                   <td className="px-4 py-2.5">
-                    <span className="inline-flex items-center gap-2 font-medium">
-                      <span className={`h-2.5 w-2.5 rounded-full ${COLOR[s.sector]}`} aria-hidden />
+                    <button
+                      type="button"
+                      aria-expanded={desplegado === s.sector}
+                      className="inline-flex items-center gap-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0]"
+                    >
+                      {desplegado === s.sector ? (
+                        <ChevronDown size={15} className="shrink-0 text-slate-400" aria-hidden />
+                      ) : (
+                        <ChevronRight size={15} className="shrink-0 text-slate-400" aria-hidden />
+                      )}
+                      <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${COLOR[s.sector]}`} aria-hidden />
                       {s.etiqueta}
-                    </span>
+                    </button>
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">{plata(s.facturacion)}</td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
@@ -181,6 +195,22 @@ export default function SectoresClient() {
                     {s.margenPct != null && s.compra > 0 ? `${s.margenPct.toFixed(1)}%` : "—"}
                   </td>
                 </tr>
+                {desplegado === s.sector && (
+                  <tr>
+                    <td colSpan={7} className="bg-slate-50/70 px-4 py-4 dark:bg-[#0d1614]">
+                      <p className="mb-3 text-sm text-slate-500 dark:text-[#94a19c]">
+                        Todo lo que cae en {s.etiqueta.toLowerCase()}, de la venta y de la compra.
+                        Si algo no debería estar acá, cambiale el sector y las cifras de arriba se
+                        recalculan.
+                      </p>
+                      <ClasificadorSectores
+                        sectorFijo={s.sector}
+                        onCambio={() => setRevision((v) => v + 1)}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               ))}
               <tr className="border-t-2 border-slate-200 font-semibold dark:border-[#29403b]">
                 <td className="px-4 py-2.5">Total</td>

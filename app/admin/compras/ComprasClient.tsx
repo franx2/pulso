@@ -122,14 +122,49 @@ type Respuesta = {
     total: HeladoTotal;
     porLocal: HeladoLocal[];
   };
+  cafe: {
+    gramosPorInfusion: number;
+    total: CafeTotal;
+    porLocal: CafeLocal[];
+  };
   compras: Compra[];
 };
 
-type Vista = "resumen" | "helado" | "remitos" | "royalty" | "clasificacion";
+type ResumenCafe = {
+  compradoKg: number;
+  costoComprado: number;
+  costoPorKg: number | null;
+  consumidoKg: number;
+  balanceKg: number | null;
+  ratioConsumidoCompradoPct: number | null;
+  costoPorInfusion: number | null;
+  infusiones: number;
+  infusionesSueltas: number;
+  infusionesEnPromo: number;
+  detalle: { producto: string; origen: "suelto" | "promo"; unidades: number; gramosPorUnidad: number; kilos: number }[];
+  compras: { detalle: string; kilos: number; costo: number }[];
+  promosSinDefinir: { producto: string; unidades: number }[];
+};
+type CafeTotal = ResumenCafe & {
+  desdeComparacion: string | null;
+  hastaComparacion: string | null;
+  diasConVentas: number;
+  localesConCompras: number;
+};
+type CafeLocal = ResumenCafe & {
+  localId: string;
+  local: string;
+  desdeComparacion: string | null;
+  hastaComparacion: string | null;
+  diasConVentas: number;
+};
+
+type Vista = "resumen" | "helado" | "cafe" | "remitos" | "royalty" | "clasificacion";
 
 const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "resumen", label: "Resumen" },
   { clave: "helado", label: "Helado" },
+  { clave: "cafe", label: "Café" },
   { clave: "remitos", label: "Remitos" },
   { clave: "royalty", label: "Royalty" },
   { clave: "clasificacion", label: "Clasificación" },
@@ -353,6 +388,9 @@ export default function ComprasClient() {
   const heladoActual = localId
     ? datos?.helado.porLocal.find((local) => local.localId === localId) ?? null
     : datos?.helado.total ?? null;
+  const cafeActual = localId
+    ? datos?.cafe.porLocal.find((local) => local.localId === localId) ?? null
+    : datos?.cafe.total ?? null;
   const heladoPorLocal = useMemo(
     () => new Map((datos?.helado.porLocal ?? []).map((local) => [local.localId, local])),
     [datos]
@@ -960,6 +998,156 @@ export default function ComprasClient() {
               <EmptyState>No hay remitos de royalty con ventas sincronizadas para este local y período.</EmptyState>
             )}
           </Panel>
+        </div>
+      )}
+
+      {vista === "cafe" && cafeActual && (
+        <div id="compras-panel-cafe" role="tabpanel" aria-labelledby="compras-tab-cafe" className="space-y-5">
+          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0 dark:border-[#29403b] dark:divide-[#29403b]">
+            <Metrica
+              label="Café recibido"
+              valor={kilos(cafeActual.compradoKg)}
+              nota={cafeActual.costoComprado > 0 ? plata(cafeActual.costoComprado) : "Sin remitos de café"}
+            />
+            <Metrica
+              label="Explicado por la venta"
+              valor={kilos(cafeActual.consumidoKg)}
+              nota={`${numero(cafeActual.infusiones)} infusiones × ${datos.cafe.gramosPorInfusion} g`}
+            />
+            <Metrica
+              label="Diferencia"
+              valor={cafeActual.balanceKg == null ? "Sin base" : kilos(cafeActual.balanceKg)}
+              tono={
+                cafeActual.balanceKg == null
+                  ? "normal"
+                  : Math.abs(cafeActual.balanceKg) > cafeActual.compradoKg * 0.15
+                    ? "advertencia"
+                    : "normal"
+              }
+              nota={
+                cafeActual.ratioConsumidoCompradoPct == null
+                  ? "Hace falta al menos un remito con café"
+                  : `La venta explica el ${numero(cafeActual.ratioConsumidoCompradoPct)}% de lo comprado`
+              }
+            />
+            <Metrica
+              label="Café por infusión"
+              valor={cafeActual.costoPorInfusion == null ? "Sin base" : plata(cafeActual.costoPorInfusion)}
+              nota={
+                cafeActual.costoPorKg == null
+                  ? "Sin precio de compra"
+                  : `${plata(cafeActual.costoPorKg)} el kilo`
+              }
+            />
+          </section>
+
+          <Panel className="p-4">
+            <h2 className="font-semibold">Cómo se llega a ese consumo</h2>
+            <p className="mt-1 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+              Cada infusión se cuenta a {datos.cafe.gramosPorInfusion} g. Es un promedio a
+              propósito: parte de esas infusiones son té o mate cocido y no llevan un grano, y
+              parte son dobles y llevan el doble. Una promo suma una infusión sólo si su
+              composición declarada dice que la lleva.
+            </p>
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+                <p className="text-xs font-semibold uppercase text-slate-400 dark:text-[#5d6d67]">
+                  Vendido suelto
+                </p>
+                <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesSueltas)}</p>
+                <p className="text-xs text-slate-500 dark:text-[#94a19c]">cortados, lattes, americanos</p>
+              </div>
+              <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+                <p className="text-xs font-semibold uppercase text-slate-400 dark:text-[#5d6d67]">
+                  Dentro de una promo
+                </p>
+                <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesEnPromo)}</p>
+                <p className="text-xs text-slate-500 dark:text-[#94a19c]">promos con infusión declarada</p>
+              </div>
+            </div>
+
+            {cafeActual.detalle.length > 0 && (
+              <div className="mt-4 overflow-x-auto">
+                <table className="w-full min-w-[30rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+                      <th className="w-2/5 py-2 pr-3 font-semibold">Producto</th>
+                      <th className="py-2 pr-3 font-semibold">Origen</th>
+                      <th className="py-2 pr-3 text-right font-semibold">Unidades</th>
+                      <th className="py-2 pr-3 text-right font-semibold">g c/u</th>
+                      <th className="py-2 text-right font-semibold">Café</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cafeActual.detalle.map((fila) => (
+                      <tr
+                        key={fila.producto}
+                        className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]"
+                      >
+                        <td className="py-2 pr-3 font-medium">{fila.producto}</td>
+                        <td className="py-2 pr-3">
+                          <Badge tone={fila.origen === "promo" ? "amber" : "slate"}>
+                            {fila.origen === "promo" ? "Promo" : "Suelto"}
+                          </Badge>
+                        </td>
+                        <td className="py-2 pr-3 text-right tabular-nums">{numero(fila.unidades)}</td>
+                        <td className="py-2 pr-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                          {fila.gramosPorUnidad}
+                        </td>
+                        <td className="py-2 text-right font-semibold tabular-nums">{kilos(fila.kilos)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Panel>
+
+          {cafeActual.compras.length > 0 && (
+            <Panel className="p-4">
+              <h2 className="font-semibold">Café comprado</h2>
+              <div className="mt-3 divide-y divide-slate-100 dark:divide-[#1c2521]">
+                {cafeActual.compras.map((compra) => (
+                  <div key={compra.detalle} className="flex items-center justify-between gap-3 py-2.5">
+                    <span className="min-w-0 truncate font-medium">{compra.detalle}</span>
+                    <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                      {kilos(compra.kilos)} · {plata(compra.costo)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {cafeActual.promosSinDefinir.length > 0 && (
+            <Panel className="p-4">
+              <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200">
+                <AlertTriangle size={16} aria-hidden />
+                Promos sin composición declarada
+              </h2>
+              <p className="mt-1 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+                No se sabe si llevan infusión, así que no suman café. Mientras estén acá, el
+                consumo medido queda corto y la diferencia se ve más grande de lo que es.
+              </p>
+              <div className="mt-3 divide-y divide-slate-100 dark:divide-[#1c2521]">
+                {cafeActual.promosSinDefinir.slice(0, 12).map((promo) => (
+                  <div key={promo.producto} className="flex items-center justify-between gap-3 py-2 text-sm">
+                    <span className="min-w-0 truncate">{promo.producto}</span>
+                    <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                      {numero(promo.unidades)} vendidas
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </Panel>
+          )}
+
+          {cafeActual.compradoKg === 0 && (
+            <EmptyState>
+              No hay remitos con café de {nombreLocal} en este período. Sin una compra cargada no
+              hay contra qué comparar el consumo.
+            </EmptyState>
+          )}
         </div>
       )}
 

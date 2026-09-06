@@ -12,6 +12,14 @@ import {
 } from "@/lib/compras/consumoHelado";
 import { controlarRoyalty, mesDelRoyalty } from "@/lib/compras/royalty";
 import { sectorDe, type Sector } from "@/lib/compras/sectores";
+import { definicionDe } from "@/lib/compras/promos";
+import {
+  GRAMOS_POR_INFUSION,
+  esCafeComprado,
+  resumirCafe,
+  type CompraCafe,
+  type VentaCafe,
+} from "@/lib/compras/consumoCafe";
 
 export async function GET(request: Request) {
   const session = await requireAdminApi();
@@ -23,7 +31,7 @@ export async function GET(request: Request) {
   // traducir de cabeza.
   const { desde, hasta, dias } = rangoDias(params);
 
-  const [compras, locales, ventasHelado, diasConVentas, overridesFilas] = await Promise.all([
+  const [compras, locales, ventasHelado, diasConVentas, overridesFilas, ventasCafe] = await Promise.all([
     db.compra.findMany({
       where: { fecha: { gte: fechaSql(desde) } },
       orderBy: [{ fecha: "desc" }, { numero: "desc" }],
@@ -52,6 +60,22 @@ export async function GET(request: Request) {
       select: { localId: true, fecha: true },
     }),
     db.sectorProducto.findMany({ select: { producto: true, sector: true } }),
+    db.productoDiario.findMany({
+      where: {
+        fecha: { gte: fechaSql(desde), lte: fechaSql(hasta) },
+        OR: [
+          ...["CAFE", "CORTADO", "LATTE", "CAPUCC", "CAPUCH", "MOCCA", "MOCHA", "LAGRIMA", "AMERICANO", "ESPRESSO", "EXPRESO", "MACCHIATO", "FLAT WHITE"].map(
+            (palabra) => ({ producto: { contains: palabra, mode: "insensitive" as const } })
+          ),
+          // Las promos entran enteras: recién su definición dice si llevan
+          // infusión, y la que no está declarada hay que poder listarla.
+          { producto: { contains: "PROMO", mode: "insensitive" as const } },
+          { producto: { contains: "DESAYUNO", mode: "insensitive" as const } },
+          { producto: { contains: "MERIENDA", mode: "insensitive" as const } },
+        ],
+      },
+      select: { localId: true, fecha: true, producto: true, cantidad: true },
+    }),
   ]);
 
   const overridesSector = new Map(overridesFilas.map((o) => [o.producto, o.sector as Sector]));
@@ -152,6 +176,61 @@ export async function GET(request: Request) {
       ...resumirHelado(entradas, ventasComparables),
     };
   });
+  // --- Café ---
+  //
+  // El café se compra por kilo y se vende, casi siempre, adentro de una promo.
+  // La ventana arranca en el primer remito de café de cada local: comparar
+  // ventas de días en los que no hay compra cargada da una merma inventada.
+  const comprasCafePorLocal = new Map<string, (CompraCafe & { fecha: string })[]>();
+  for (const compra of compras) {
+    if (!compra.localId || compra.tipo !== "MERCADERIA" || !compra.verificado) continue;
+    const entradas = comprasCafePorLocal.get(compra.localId) ?? [];
+    for (const item of compra.items) {
+      if (!esCafeComprado(item.detalle)) continue;
+      entradas.push({
+        fecha: diaDeFechaSql(compra.fecha),
+        detalle: item.detalle,
+        cantidadKg: item.cantidadExacta,
+        costo: item.totalConAjuste,
+      });
+    }
+    comprasCafePorLocal.set(compra.localId, entradas);
+  }
+
+  const ventasCafePorLocal = new Map<string, { fecha: string; producto: string; cantidad: number }[]>();
+  for (const venta of ventasCafe) {
+    const filas = ventasCafePorLocal.get(venta.localId) ?? [];
+    filas.push({ fecha: diaDeFechaSql(venta.fecha), producto: venta.producto, cantidad: venta.cantidad });
+    ventasCafePorLocal.set(venta.localId, filas);
+  }
+
+  const esPromoVenta = (producto: string) => sectorDe(producto, null, overridesSector) === "PROMOCION";
+  const ventasCafeComparables = new Map<string, VentaCafe[]>();
+  const controlCafePorLocal = locales.map((local) => {
+    const entradas = comprasCafePorLocal.get(local.id) ?? [];
+    const desdeComparacion = entradas.length > 0 ? entradas.map((e) => e.fecha).sort()[0] : null;
+    const comparables = desdeComparacion
+      ? (ventasCafePorLocal.get(local.id) ?? []).filter((v) => v.fecha >= desdeComparacion)
+      : [];
+    ventasCafeComparables.set(local.id, comparables);
+    return {
+      localId: local.id,
+      local: local.nombre,
+      desdeComparacion,
+      hastaComparacion: desdeComparacion ? hasta : null,
+      diasConVentas: desdeComparacion
+        ? (diasVentaPorLocal.get(local.id) ?? []).filter((f) => f >= desdeComparacion).length
+        : 0,
+      ...resumirCafe(entradas, comparables, definicionDe, esPromoVenta),
+    };
+  });
+  const controlCafeTotal = resumirCafe(
+    [...comprasCafePorLocal.values()].flat(),
+    [...ventasCafeComparables.values()].flat(),
+    definicionDe,
+    esPromoVenta
+  );
+
   const localesConCompras = controlHeladoPorLocal.filter((local) => local.desdeComparacion != null);
   const controlHeladoTotal = resumirHelado(
     [...comprasHeladoPorLocal.values()].flat(),
@@ -186,6 +265,21 @@ export async function GET(request: Request) {
       },
       porLocal: controlHeladoPorLocal,
     },
+    cafe: (() => {
+      const conCafe = controlCafePorLocal.filter((local) => local.desdeComparacion != null);
+      return {
+        gramosPorInfusion: GRAMOS_POR_INFUSION,
+        total: {
+          ...controlCafeTotal,
+          desdeComparacion:
+            conCafe.length > 0 ? conCafe.map((local) => local.desdeComparacion!).sort()[0] : null,
+          hastaComparacion: conCafe.length > 0 ? hasta : null,
+          diasConVentas: conCafe.reduce((suma, local) => suma + local.diasConVentas, 0),
+          localesConCompras: conCafe.length,
+        },
+        porLocal: controlCafePorLocal,
+      };
+    })(),
     compras: compras.map((compra) => ({
       id: compra.id,
       numero: compra.numero,
