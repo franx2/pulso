@@ -11,6 +11,7 @@ type ResumenSector = {
   cantidad: number;
   productos: number;
   porcentaje: number;
+  ventaComparable: number;
   compra: number;
   margen: number;
   margenPct: number | null;
@@ -26,6 +27,8 @@ type Respuesta = {
   total: number;
   totalCompra: number;
   compraSinClasificar: number;
+  ventaComparable: number;
+  localesConMargen: string[];
   cobertura: number;
   sectores: ResumenSector[];
   ejemplos: Partial<Record<SectorClave, { producto: string; facturacion: number }[]>>;
@@ -174,6 +177,7 @@ export default function SectoresClient() {
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
                 <th className="px-4 py-2.5 font-semibold">Sector</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Venta</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Venta comparable</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Compra</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Costo %</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Margen</th>
@@ -190,6 +194,9 @@ export default function SectoresClient() {
                     </span>
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">{plata(s.facturacion)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    {s.compra > 0 ? plata(s.ventaComparable) : "—"}
+                  </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
                     {s.compra > 0 ? plata(s.compra) : "—"}
                   </td>
@@ -215,19 +222,27 @@ export default function SectoresClient() {
               <tr className="border-t-2 border-slate-200 font-semibold dark:border-[#29403b]">
                 <td className="px-4 py-2.5">Total</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.total)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.ventaComparable)}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.totalCompra)}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">
-                  {datos.total > 0 ? `${((datos.totalCompra / datos.total) * 100).toFixed(1)}%` : "—"}
+                  {datos.ventaComparable > 0 ? `${((datos.totalCompra / datos.ventaComparable) * 100).toFixed(1)}%` : "—"}
                 </td>
-                <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.total - datos.totalCompra)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.ventaComparable - datos.totalCompra)}</td>
                 <td className="px-4 py-2.5 text-right tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
-                  {datos.total > 0
-                    ? `${(((datos.total - datos.totalCompra) / datos.total) * 100).toFixed(1)}%`
+                  {datos.ventaComparable > 0
+                    ? `${(((datos.ventaComparable - datos.totalCompra) / datos.ventaComparable) * 100).toFixed(1)}%`
                     : "—"}
                 </td>
               </tr>
             </tbody>
           </table>
+          {datos.localesConMargen.length > 0 && (
+            <p className="px-4 py-2.5 text-xs text-slate-500 dark:text-[#94a19c]">
+              El margen se calcula sólo sobre {datos.localesConMargen.join(", ")}, que {datos.localesConMargen.length === 1 ? "es el único local" : "son los únicos locales"} con remitos
+              cargados. La columna Venta es de todos los locales y sirve para el mix; la
+              comparable es la que se mide contra las compras.
+            </p>
+          )}
           {datos.compraSinClasificar > 0 && (
             <p className="px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
               {plata(datos.compraSinClasificar)} de compras sin clasificar —insumos varios y
