@@ -114,7 +114,7 @@ La densidad es deliberada, pero nunca amontonada. Las pantallas de administraci�
 - Teal escaso y funcional para acciones, selección y lectura positiva.
 - Números tabulares, jerarquía compacta y comparaciones con base explícita.
 - Paneles planos de borde fino; profundidad sólo para navegación flotante y modales.
-- Desktop denso con rail fijo; móvil vertical con navegación inferior desplazable.
+- Desktop denso con rail compacto expandible; móvil vertical con navegación inferior desplazable.
 
 ## Colors
 
@@ -158,7 +158,7 @@ La paleta mezcla un teal sobrio con menta activa, papel apenas cálido y señale
 
 ## Layout
 
-La administración usa un rail fijo de 240px en escritorio y un lienzo de hasta 1440px. Los gutters crecen de 16px a 24px y 32px; el ritmo vertical principal es de 20px. El encabezado de página y la barra de contexto permanecen visibles donde el espacio lo permite.
+La administración usa un rail fijo de 72px en escritorio que se expande a 240px con hover o foco. La expansión flota sobre el lienzo para no mover los datos mientras se navega. Los gutters crecen de 16px a 24px y 32px; el ritmo vertical principal es de 20px. El encabezado de página y la barra de contexto permanecen visibles donde el espacio lo permite.
 
 Los tableros siguen un orden estable: contexto compartido, modos, banda de cuatro métricas, evidencia principal y excepciones. En pantallas angostas, las métricas pasan a una cuadrícula 2×2, los selectores se desplazan horizontalmente y toda tabla decisiva se reexpresa como filas verticales; no se encogen columnas hasta volverlas ilegibles.
 
@@ -203,7 +203,7 @@ Los paneles analíticos y botones usan esquinas discretas de 8px. Campos y contr
 - **Error / Disabled:** señal semántica en texto; opacidad reducida y cursor no disponible.
 
 ### Navigation
-- **Desktop:** rail fijo agrupado por Operación, Análisis y Gestión; activo como bloque teal con icono Lucide.
+- **Desktop:** rail fijo de iconos agrupado por Operación, Análisis y Gestión; se expande con hover o foco para revelar marca, grupos y etiquetas. El activo conserva bloque teal e icono Lucide.
 - **Mobile:** barra inferior flotante y desplazable; el elemento activo se centra automáticamente y mantiene icono más etiqueta.
 
 ### Command Context

@@ -30,15 +30,15 @@ export function Sidebar({ active, rol, nombre }: { active: NavActivo; rol: Rol; 
   }
 
   return (
-    <aside className="group/sidebar fixed inset-y-0 left-0 z-30 hidden w-[4.5rem] flex-col overflow-hidden border-r border-slate-200 bg-white transition-[width,box-shadow] duration-200 ease-out hover:w-60 hover:shadow-[8px_0_24px_rgba(15,23,42,0.12)] focus-within:w-60 focus-within:shadow-[8px_0_24px_rgba(15,23,42,0.12)] md:flex dark:border-[#26312d] dark:bg-[#0b1412] dark:hover:shadow-[8px_0_28px_rgba(0,0,0,0.35)] dark:focus-within:shadow-[8px_0_28px_rgba(0,0,0,0.35)]">
-      <div className="shrink-0 border-b border-slate-100 px-[1.1rem] py-4 dark:border-[#1c2521]">
+    <aside className="group/sidebar fixed inset-y-0 left-0 z-30 hidden w-18 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-200 ease-out hover:w-60 hover:shadow-[8px_0_24px_rgba(15,23,42,0.12)] focus-within:w-60 focus-within:shadow-[8px_0_24px_rgba(15,23,42,0.12)] md:flex dark:border-[#26312d] dark:bg-[#0b1412] dark:hover:shadow-[8px_0_28px_rgba(0,0,0,0.35)] dark:focus-within:shadow-[8px_0_28px_rgba(0,0,0,0.35)]">
+      <div className="shrink-0 border-b border-slate-100 px-4 py-4 dark:border-[#1c2521]">
         <Brand collapsible />
       </div>
 
       <nav className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4">
         {grupos.map((grupo) => (
           <div key={grupo} className="mb-2 transition-[margin] duration-200 last:mb-0 group-hover/sidebar:mb-5 group-focus-within/sidebar:mb-5">
-            <p className="max-h-0 overflow-hidden whitespace-nowrap px-2.5 text-[11px] font-bold uppercase text-slate-400 opacity-0 transition-[max-height,margin,opacity] duration-200 group-hover/sidebar:mb-1.5 group-hover/sidebar:max-h-5 group-hover/sidebar:opacity-100 group-focus-within/sidebar:mb-1.5 group-focus-within/sidebar:max-h-5 group-focus-within/sidebar:opacity-100 dark:text-[#5d6d67]">
+            <p className="max-h-0 overflow-hidden whitespace-nowrap px-2.5 text-xs font-bold uppercase text-slate-400 opacity-0 transition-[max-height,margin,opacity] duration-200 group-hover/sidebar:mb-1.5 group-hover/sidebar:max-h-5 group-hover/sidebar:opacity-100 group-focus-within/sidebar:mb-1.5 group-focus-within/sidebar:max-h-5 group-focus-within/sidebar:opacity-100 dark:text-[#5d6d67]">
               {grupo}
             </p>
             <div className="flex flex-col gap-0.5">

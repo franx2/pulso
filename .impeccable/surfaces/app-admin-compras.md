@@ -25,9 +25,11 @@ ice-cream control, delivery notes and royalty instead of mixing them.
 OWN-WORLD: Pulso teal and mint, warm white, dark ink, Geist, tabular numbers,
 8px panels, thin rules and semantic amber or rose only for attention states.
 
-STORY: Choose location and period, scan purchase signals, compare kilograms
-received with equivalent kilograms sold, inspect missing recipes, then open the
-supporting delivery note or royalty calculation.
+STORY: Choose location and period. Chain scope compares locations; a selected
+location replaces that comparison with its own recent purchases and controls.
+Then scan purchase signals, compare kilograms received with equivalent
+kilograms sold, inspect missing recipes, and open the supporting delivery note
+or royalty calculation.
 
 FIRST VIEWPORT: Sticky title, compact context selector, four navigation tabs
 and a four-metric band. Desktop uses dense tables; mobile uses a native location

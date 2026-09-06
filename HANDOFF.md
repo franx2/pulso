@@ -190,8 +190,9 @@ Las vistas del centro de comando son:
 
 1. **Rendimiento**: facturación, tickets, ticket promedio, resultado, curva contra el período
    anterior y excepciones accionables.
-2. **Locales**: tabla comparativa y apertura de canal, medio de pago y categoría sin perder el
-   período elegido.
+2. **Locales**: con Cadena muestra la tabla comparativa; al elegir una sucursal la reemplaza por
+   un calendario diario con facturación, tickets, resultado, canales, medios de pago, categorías
+   y productos de ese día. La fecha queda en la URL como `dia`.
 3. **Productos y control**: rankings y stock separados de las métricas de negocio.
 
 El pronóstico quedó dividido en **Proyección** y **Modelo y evidencia**. La primera conecta datos
@@ -423,9 +424,11 @@ GUAYMALLEN)`, CUIT 30718808975.
 ### Compras y consumo por local
 
 `/admin/compras` es una consola por sucursal, con períodos de 30, 90, 120 o
-365 días y cuatro vistas separadas: resumen, helado, remitos y royalty. Los
-remitos se agrupan por local; los no asignados conservan una bandeja propia y
-no se adjudican por aproximación.
+365 días y cuatro vistas separadas: resumen, helado, remitos y royalty. En
+alcance Cadena, Resumen compara sucursales; al elegir un local esa tabla se
+reemplaza por sus compras recientes. Los remitos se agrupan por local; los no
+asignados conservan una bandeja propia sólo en Cadena y no se adjudican por
+aproximación.
 
 El primer cruce de insumo contra venta es el helado. Las unidades vendidas en
 Fudo se convierten con estas equivalencias operativas:
