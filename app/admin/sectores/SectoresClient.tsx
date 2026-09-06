@@ -25,6 +25,15 @@ type Respuesta = {
   ejemplos: Partial<Record<SectorClave, { producto: string; facturacion: number }[]>>;
   overrides: number;
   sinClasificar: Producto[];
+  promosRepartidas: number;
+  promosSupuestas: number;
+  promosSinDefinir: { producto: string; facturacion: number }[];
+  promosDefinidas: {
+    nombre: string;
+    contenido: string;
+    base: "medido" | "supuesto";
+    reparto: Partial<Record<string, number>>;
+  }[];
 };
 
 const ASIGNABLES: { clave: Exclude<SectorClave, "SIN_CLASIFICAR">; label: string }[] = [
@@ -179,21 +188,84 @@ export default function SectoresClient() {
         </div>
       </section>
 
-      {promo && promo.facturacion > 0 && (
-        <section className="rounded-lg border border-amber-300 bg-amber-50/60 px-4 py-3 dark:border-amber-500/40 dark:bg-amber-500/10">
-          <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200">
-            <AlertTriangle size={16} aria-hidden />
-            {promo.porcentaje.toFixed(1)}% de la venta está en promociones sin abrir
-          </h2>
-          <p className="mt-1 text-sm text-amber-800 dark:text-amber-300/90">
-            Fudo guarda cada promo como un producto único —{" "}
-            {datos.ejemplos.PROMOCION?.[0]?.producto ?? "PROMO"} por{" "}
-            {plata(datos.ejemplos.PROMOCION?.[0]?.facturacion ?? 0)} — sin decir qué lleva adentro.
-            Hasta que se declare la composición, esa plata no se puede atribuir a helados, cafetería
-            ni chocolatería. Repartirla a ojo sería inventar un tercio de la facturación.
+      <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
+        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <h2 className="font-semibold">Promociones</h2>
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+            Fudo las guarda como un producto único, sin decir qué llevan adentro. Las que están en
+            la carta se reparten entre sectores; el resto queda sin atribuir.
           </p>
-        </section>
-      )}
+        </div>
+        <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-[#1c2521]">
+          <div className="px-4 py-3">
+            <p className="text-xs text-slate-500 dark:text-[#94a19c]">Repartidas</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+              {plata(datos.promosRepartidas)}
+            </p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs text-slate-500 dark:text-[#94a19c]">De eso, por hipótesis</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+              {plata(datos.promosSupuestas)}
+            </p>
+            <p className="text-xs text-slate-400 dark:text-[#74817b]">la promo deja elegir opciones de sectores distintos</p>
+          </div>
+          <div className="px-4 py-3">
+            <p className="text-xs text-slate-500 dark:text-[#94a19c]">Sin definir</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+              {plata(promo?.facturacion ?? 0)}
+            </p>
+            <p className="text-xs text-slate-400 dark:text-[#74817b]">
+              {datos.promosSinDefinir.length} promos que no están en la carta cargada
+            </p>
+          </div>
+        </div>
+
+        {datos.promosSinDefinir.length > 0 && (
+          <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
+              <AlertTriangle size={15} aria-hidden />
+              Falta la composición de estas
+            </p>
+            <div className="mt-1.5 flex flex-col gap-1">
+              {datos.promosSinDefinir.slice(0, 8).map((p) => (
+                <div key={p.producto} className="flex items-baseline justify-between gap-3 text-sm">
+                  <span className="truncate text-amber-900 dark:text-amber-200/90">{p.producto}</span>
+                  <span className="shrink-0 tabular-nums text-amber-800 dark:text-amber-300/80">
+                    {plata(p.facturacion)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-[#1c2521] dark:border-[#1c2521]">
+          {datos.promosDefinidas.map((p) => (
+            <div key={p.nombre} className="px-4 py-2.5">
+              <div className="flex flex-wrap items-baseline justify-between gap-2">
+                <span className="font-medium">
+                  {p.nombre}
+                  {p.base === "supuesto" && (
+                    <span
+                      className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+                      title="La promo deja elegir entre opciones de sectores distintos: el reparto es una hipótesis"
+                    >
+                      supuesto
+                    </span>
+                  )}
+                </span>
+                <span className="text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">
+                  {Object.entries(p.reparto)
+                    .map(([s, v]) => `${s.slice(0, 4).toLowerCase()} ${Math.round((v ?? 0) * 100)}%`)
+                    .join(" · ")}
+                </span>
+              </div>
+              <p className="text-xs text-slate-400 dark:text-[#74817b]">{p.contenido}</p>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
         <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">

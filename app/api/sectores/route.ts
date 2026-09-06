@@ -3,6 +3,7 @@ import type { SectorNegocio } from "@prisma/client";
 import { db } from "@/lib/db";
 import { fechaSql, hoyAR, sumarDias } from "@/lib/fechaAR";
 import { requireAdminApi } from "@/lib/session";
+import { definicionDe, PROMOS } from "@/lib/compras/promos";
 import {
   claveProducto,
   resumirPorSector,
@@ -52,7 +53,15 @@ export async function GET(request: Request) {
     cantidad: p._sum.cantidad ?? 0,
   }));
 
-  const { sectores, total, cobertura } = resumirPorSector(filas, overrides);
+  const { sectores, total, cobertura, promosRepartidas, promosSupuestas } = resumirPorSector(filas, overrides);
+
+  // Las promos que todavía no tienen composición declarada: es la lista de
+  // trabajo que falta para cerrar la cobertura.
+  const promosSinDefinir = filas
+    .filter((f) => sectorDe(f.producto, f.categoria, overrides) === "PROMOCION" && !definicionDe(f.producto))
+    .sort((a, b) => b.facturacion - a.facturacion)
+    .slice(0, 20)
+    .map((f) => ({ producto: f.producto, facturacion: f.facturacion }));
 
   // Los más grandes de cada sector, que es lo que permite verificar de un
   // vistazo si la clasificación tiene sentido antes de creerle a los totales.
@@ -79,6 +88,15 @@ export async function GET(request: Request) {
     locales,
     total,
     cobertura,
+    promosRepartidas,
+    promosSupuestas,
+    promosSinDefinir,
+    promosDefinidas: PROMOS.map((p) => ({
+      nombre: p.nombre,
+      contenido: p.contenido,
+      base: p.base,
+      reparto: p.reparto,
+    })),
     sectores,
     ejemplos,
     overrides: overrides.size,

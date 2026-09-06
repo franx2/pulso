@@ -18,6 +18,8 @@
  * como lo que son —sin abrir— hasta que alguien declare su composición.
  */
 
+import { definicionDe, repartir } from "./promos";
+
 export const SECTORES = ["HELADOS", "CAFETERIA", "CHOCOLATERIA", "PROMOCION", "SIN_CLASIFICAR"] as const;
 export type Sector = (typeof SECTORES)[number];
 
@@ -117,18 +119,51 @@ export type ResumenSector = {
 export function resumirPorSector(
   filas: FilaProducto[],
   overrides: Map<string, Sector> = new Map()
-): { sectores: ResumenSector[]; total: number; cobertura: number } {
+): {
+  sectores: ResumenSector[];
+  total: number;
+  cobertura: number;
+  promosRepartidas: number;
+  promosSupuestas: number;
+} {
   const acumulado = new Map<Sector, { facturacion: number; cantidad: number; productos: Set<string> }>();
   for (const sector of SECTORES) {
     acumulado.set(sector, { facturacion: 0, cantidad: 0, productos: new Set() });
   }
 
+  // Facturación de promos que sí se pudo repartir: se descuenta de la
+  // "cobertura pendiente" pero se sigue contando aparte, porque una promo
+  // repartida por hipótesis no es lo mismo que un producto medido.
+  let promosRepartidas = 0;
+  let promosSupuestas = 0;
+
   for (const fila of filas) {
     const sector = sectorDe(fila.producto, fila.categoria, overrides);
+    const clave = claveProducto(fila.producto);
+
+    // Una promo con composición declarada se abre entre sus sectores. Sin
+    // declaración queda en PROMOCION, visible como no atribuida: adivinar por
+    // el nombre es justamente lo que hay que evitar con el 31% de la venta.
+    if (sector === "PROMOCION") {
+      const partes = repartir(fila.producto, fila.facturacion);
+      if (partes) {
+        for (const parte of partes) {
+          const destino = acumulado.get(parte.sector)!;
+          destino.facturacion += parte.monto;
+          destino.productos.add(clave);
+        }
+        // Las unidades no se parten: una promo vendida es una promo vendida.
+        acumulado.get("PROMOCION")!.cantidad += fila.cantidad;
+        promosRepartidas += fila.facturacion;
+        if (definicionDe(fila.producto)?.base === "supuesto") promosSupuestas += fila.facturacion;
+        continue;
+      }
+    }
+
     const a = acumulado.get(sector)!;
     a.facturacion += fila.facturacion;
     a.cantidad += fila.cantidad;
-    a.productos.add(claveProducto(fila.producto));
+    a.productos.add(clave);
   }
 
   const total = filas.reduce((s, f) => s + f.facturacion, 0);
@@ -151,7 +186,15 @@ export function resumirPorSector(
     .filter((s) => s.sector !== "SIN_CLASIFICAR" && s.sector !== "PROMOCION")
     .reduce((s, x) => s + x.facturacion, 0);
 
-  return { sectores, total, cobertura: total > 0 ? (atribuido / total) * 100 : 0 };
+  return {
+    sectores,
+    total,
+    cobertura: total > 0 ? (atribuido / total) * 100 : 0,
+    promosRepartidas,
+    // Cuánta plata está atribuida por hipótesis y no por medición. Sin este
+    // número la cobertura suena más firme de lo que es.
+    promosSupuestas,
+  };
 }
 
 /** Los productos sin sector, de mayor a menor: la cola que hay que mapear. */

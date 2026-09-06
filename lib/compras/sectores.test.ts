@@ -7,6 +7,7 @@ import {
   type FilaProducto,
   type Sector,
 } from "./sectores";
+import { definicionDe, PROMOS } from "./promos";
 
 /**
  * Los nombres de este test son productos reales de agosto de 2026, sacados de
@@ -72,7 +73,7 @@ assert.strictEqual(claveProducto("  Café  Helado "), "CAFE HELADO");
 // --- El resumen ---
 
 const filas: FilaProducto[] = [
-  { producto: "PROMO CLÁSICA", categoria: "1.Promociones", facturacion: 11388980, cantidad: 1675 },
+  { producto: "PROMO SIN CARTA", categoria: "1.Promociones", facturacion: 11388980, cantidad: 1675 },
   { producto: "CAFE CHICO", categoria: "2.Cafetería", facturacion: 4000000, cantidad: 2000 },
   { producto: "HELADO 1/4 KG", categoria: "7. Heladería", facturacion: 3000000, cantidad: 500 },
   { producto: "TABLETA 70%", categoria: "Tabletas", facturacion: 1000000, cantidad: 200 },
@@ -122,5 +123,60 @@ assert.deepStrictEqual(
   repetido.map((f) => [f.producto, f.facturacion]),
   [["XX-1", 500], ["XX-2", 300]]
 );
+
+// --- Promos con composición declarada ---
+
+// La Clásica se abre 90/10 entre cafetería y chocolatería: no queda en el
+// limbo, pero tampoco se la manda entera a cafetería.
+const conPromo = resumirPorSector([
+  { producto: "PROMO CLÁSICA", categoria: "1.Promociones", facturacion: 10000, cantidad: 10 },
+]);
+const mapa = new Map(conPromo.sectores.map((s) => [s.sector, s.facturacion]));
+assert.strictEqual(mapa.get("CAFETERIA"), 9000);
+assert.strictEqual(mapa.get("CHOCOLATERIA"), 1000);
+assert.strictEqual(mapa.get("PROMOCION"), 0, "repartida, no queda plata en el limbo");
+assert.strictEqual(conPromo.cobertura, 100);
+// Pero se declara que esos 10.000 están atribuidos por hipótesis.
+assert.strictEqual(conPromo.promosRepartidas, 10000);
+assert.strictEqual(conPromo.promosSupuestas, 10000);
+
+// Dulce Antojo es la única con helado.
+const antojo = resumirPorSector([
+  { producto: "PROMO DULCE ANTOJO", categoria: null, facturacion: 1000, cantidad: 1 },
+]);
+const mapaAntojo = new Map(antojo.sectores.map((s) => [s.sector, s.facturacion]));
+assert.strictEqual(mapaAntojo.get("HELADOS"), 250);
+assert.strictEqual(mapaAntojo.get("CAFETERIA"), 600);
+assert.strictEqual(mapaAntojo.get("CHOCOLATERIA"), 150);
+
+// Una promo 100% cafetería no cuenta como supuesta: no hay nada que suponer.
+const chipa = resumirPorSector([
+  { producto: "PROMO CHIPA PRENSADO", categoria: null, facturacion: 1000, cantidad: 1 },
+]);
+assert.strictEqual(chipa.promosRepartidas, 1000);
+assert.strictEqual(chipa.promosSupuestas, 0, "un solo sector no es una hipótesis");
+
+// EL PUNTO: una promo SIN definir sigue sin atribuirse. Adivinar por el
+// nombre es lo que este módulo existe para evitar.
+const sinDefinir = resumirPorSector([
+  { producto: "PROMO INVENTADA", categoria: null, facturacion: 5000, cantidad: 5 },
+]);
+assert.strictEqual(new Map(sinDefinir.sectores.map((s) => [s.sector, s.facturacion])).get("PROMOCION"), 5000);
+assert.strictEqual(sinDefinir.cobertura, 0);
+assert.strictEqual(sinDefinir.promosRepartidas, 0);
+
+// El orden importa: "TOSTADO BRIOCHE" no puede caer en la definición de
+// "TOSTADAS", que va después.
+assert.strictEqual(definicionDe("PROMO TOSTADO BRIOCHE")?.nombre, "Tostado Brioche / Panini");
+assert.strictEqual(definicionDe("PROMO TOSTADAS 2un (MEDIA CANASTA)")?.nombre, "Tostadas");
+assert.strictEqual(definicionDe("PROMO PANINI (TOSTADO BRIOCHE)")?.nombre, "Tostado Brioche / Panini");
+assert.strictEqual(definicionDe("ALMUERZO EJECUTIVO"), null, "no está en la carta que se cargó");
+
+// Todos los repartos tienen que sumar 1: si no, se estaría perdiendo o
+// inventando facturación al abrir la promo.
+for (const promo of PROMOS) {
+  const suma = Object.values(promo.reparto).reduce((s, v) => s + (v ?? 0), 0);
+  assert.ok(Math.abs(suma - 1) < 1e-9, `el reparto de "${promo.nombre}" suma ${suma}, no 1`);
+}
 
 console.log("lib/compras/sectores.test.ts: todos los checks pasaron");
