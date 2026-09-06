@@ -488,12 +488,12 @@ export default function ComprasClient() {
                   </p>
                   <p className="truncate text-sm text-amber-900/80 dark:text-amber-200/80">{compra.cliente}</p>
                 </div>
-                <select
+                <Select
                   aria-label={`Asignar remito ${compra.numero}`}
                   defaultValue=""
                   disabled={guardando === compra.id}
                   onChange={(evento) => asignar(compra.id, evento.target.value)}
-                  className="min-h-11 rounded-xl border border-amber-300 bg-white px-3 py-2 text-base outline-none focus:border-emerald-600 focus:ring-2 focus:ring-emerald-100 disabled:opacity-60 dark:border-amber-500/40 dark:bg-[#101c19] dark:focus:ring-[#1d4e48]"
+                  className="w-auto min-h-11 border-amber-300 disabled:opacity-60 dark:border-amber-500/40"
                 >
                   <option value="">Asignar a...</option>
                   {datos.locales.map((local) => (
@@ -501,7 +501,7 @@ export default function ComprasClient() {
                       {local.nombre}
                     </option>
                   ))}
-                </select>
+                </Select>
               </div>
             ))}
           </div>

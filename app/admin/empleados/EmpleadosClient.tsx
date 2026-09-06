@@ -8,6 +8,7 @@ import {
   KeyRound,
   Link as LinkIcon,
   Lock,
+  Pencil,
   Plus,
   Store,
   UserPlus,
@@ -73,6 +74,7 @@ export default function EmpleadosClient() {
   const [localesAbiertos, setLocalesAbiertos] = useState<Set<string>>(new Set());
 
   // Carga masiva de precio/hora: modo selección + valor a aplicar.
+  const [editando, setEditando] = useState<string | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [precioMasivo, setPrecioMasivo] = useState("");
   const [aplicandoMasivo, setAplicandoMasivo] = useState(false);
@@ -414,17 +416,25 @@ export default function EmpleadosClient() {
                           <p className="truncate text-sm text-slate-500 dark:text-[#94a19c]">@{e.usuario}</p>
                         </div>
                       </div>
-                      <Button
-                        variant="ghost"
-                        onClick={() => actualizar(e.id, { activo: !e.activo })}
-                        className="shrink-0"
-                      >
-                        {e.activo ? "Desactivar" : "Activar"}
-                      </Button>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <Button
+                          variant="ghost"
+                          aria-expanded={editando === e.id}
+                          onClick={() => setEditando(editando === e.id ? null : e.id)}
+                        >
+                          <Pencil size={14} />
+                          {editando === e.id ? "Listo" : "Editar"}
+                        </Button>
+                        <Button variant="ghost" onClick={() => actualizar(e.id, { activo: !e.activo })}>
+                          {e.activo ? "Desactivar" : "Activar"}
+                        </Button>
+                      </div>
                     </div>
 
                     <div className="flex flex-wrap gap-1.5">
-                      <Badge tone={e.rol === "EMPLEADO" ? "slate" : "amber"}>{ETIQUETA_ROL[e.rol]}</Badge>
+                      {/* El rol sólo se muestra cuando NO es el corriente: una fila de
+                          chips donde todos dicen "Empleado" no informa nada. */}
+                      {e.rol !== "EMPLEADO" && <Badge tone="amber">{ETIQUETA_ROL[e.rol]}</Badge>}
                       {e.categoria && <Badge tone="slate">{e.categoria.nombre}</Badge>}
                       <Badge tone={e.credenciales.length > 0 ? "emerald" : "amber"}>
                         {e.credenciales.length > 0
@@ -433,7 +443,7 @@ export default function EmpleadosClient() {
                             ? "Invitación pendiente"
                             : "Sin invitación"}
                       </Badge>
-                      <Badge tone={e.activo ? "emerald" : "slate"}>{e.activo ? "Activo" : "Inactivo"}</Badge>
+                      {!e.activo && <Badge tone="slate">Inactivo</Badge>}
                       {e.asignaciones.length > 0 && (
                         <Badge tone="slate">
                           <span className="inline-flex items-center gap-1">
@@ -444,6 +454,7 @@ export default function EmpleadosClient() {
                       )}
                     </div>
 
+                    {editando === e.id && (
                     <div className="flex flex-wrap items-center gap-2">
                       <Select
                         value={e.rol}
@@ -483,7 +494,9 @@ export default function EmpleadosClient() {
                         Poner contraseña
                       </Button>
                     </div>
+                    )}
 
+                    {editando === e.id && (
                     <div className="flex flex-wrap items-end gap-3">
                       <div>
                         <Label>Precio/hora</Label>
@@ -515,6 +528,7 @@ export default function EmpleadosClient() {
                         </div>
                       )}
                     </div>
+                    )}
                   </Card>
                 ))}
               </div>

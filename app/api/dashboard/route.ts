@@ -259,6 +259,35 @@ export async function GET(request: Request) {
     },
     locales: porLocal,
     alertas: [...armarAlertas(porLocal, dias), ...alertasDePrecio(productos, locales)],
+    // Las alertas de personal viven en su propia tabla porque alguien las
+    // resuelve, a diferencia de las comerciales, que son una lectura del
+    // período y desaparecen solas cuando el número vuelve a su lugar. Van en
+    // la misma respuesta para que el centro de comando sea un solo lugar
+    // donde mirar qué está mal.
+    alertasPersonal: (
+      await db.alerta.findMany({
+        where: { resuelta: false, fecha: { gte: inicioActual, lte: finActual } },
+        orderBy: [{ fecha: "desc" }],
+        take: 100,
+        select: {
+          id: true,
+          tipo: true,
+          fecha: true,
+          detalle: true,
+          localId: true,
+          empleado: { select: { nombre: true } },
+          local: { select: { nombre: true } },
+        },
+      })
+    ).map((a) => ({
+      id: a.id,
+      tipo: a.tipo,
+      fecha: diaDeFechaSql(a.fecha),
+      detalle: a.detalle,
+      localId: a.localId,
+      empleado: a.empleado.nombre,
+      local: a.local.nombre,
+    })),
   });
 }
 

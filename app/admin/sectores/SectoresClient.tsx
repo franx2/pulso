@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import ClasificadorSectores from "@/components/ClasificadorSectores";
+import { Select } from "@/components/ui";
 import { AlertTriangle } from "lucide-react";
 import { plata } from "@/lib/formato";
 
@@ -91,17 +92,17 @@ export default function SectoresClient() {
     <div className="space-y-5">
       <div className="flex flex-wrap items-center gap-2">
         <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} />
-        <select
+        <Select
           value={localId}
           onChange={(e) => setLocalId(e.target.value)}
           aria-label="Local"
-          className="min-h-9 rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 outline-none transition-colors focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600/25 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4]"
+          className="w-auto py-1.5 text-sm"
         >
           <option value="">Toda la cadena</option>
           {datos.locales.map((l) => (
             <option key={l.id} value={l.id}>{l.nombre}</option>
           ))}
-        </select>
+        </Select>
       </div>
 
       <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">

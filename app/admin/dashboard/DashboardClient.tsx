@@ -92,16 +92,39 @@ type Dash = {
   cadena: CadenaDash;
   locales: LocalDash[];
   alertas: { tono: "rose" | "amber"; texto: string; localId: string | null }[];
+  alertasPersonal: {
+    id: string;
+    tipo: string;
+    fecha: string;
+    detalle: string;
+    localId: string;
+    empleado: string;
+    local: string;
+  }[];
 };
 
 type MetricaGrafico = "ventas" | "tickets" | "ticketPromedio";
-type Vista = "rendimiento" | "locales" | "control";
+type Vista = "rendimiento" | "locales" | "control" | "alertas";
 
 const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "rendimiento", label: "Rendimiento" },
   { clave: "locales", label: "Locales" },
   { clave: "control", label: "Productos y control" },
+  { clave: "alertas", label: "Alertas" },
 ];
+
+/**
+ * Qué dice cada tipo de alerta de personal en castellano.
+ *
+ * El enum de la base es para el código; a nadie le sirve leer
+ * "SALIDA_OLVIDADA" en una pantalla.
+ */
+const TIPO_ALERTA: Record<string, string> = {
+  NO_FICHO: "No fichó",
+  LLEGADA_TARDE: "Llegó tarde",
+  SALIDA_OLVIDADA: "Salida olvidada",
+  EXCESO_HORARIO: "Exceso de horario",
+};
 
 const METRICAS_GRAFICO: { clave: MetricaGrafico; label: string }[] = [
   { clave: "ventas", label: "Ventas" },
@@ -402,6 +425,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   const [revision, setRevision] = useState(0);
   const [sincronizando, setSincronizando] = useState(false);
   const [avisoSync, setAvisoSync] = useState("");
+  const [resolviendo, setResolviendo] = useState<string | null>(null);
   const [datosDia, setDatosDia] = useState<Dash | null>(null);
   const [cargandoDia, setCargandoDia] = useState(false);
   const [errorDia, setErrorDia] = useState("");
@@ -481,6 +505,14 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
     window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
   }, [vista, periodo, mesElegido, anioElegido, desde, hasta, alcance, fechaLocal]);
 
+  /** El encargado la vio y la da por atendida; deja de aparecer. */
+  async function resolverAlerta(id: string) {
+    setResolviendo(id);
+    const respuesta = await fetch(`/api/alertas/${id}`, { method: "PATCH" });
+    setResolviendo(null);
+    if (respuesta.ok) setRevision((actual) => actual + 1);
+  }
+
   async function sincronizar() {
     if (!datos) return;
     setSincronizando(true);
@@ -509,6 +541,10 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   const resultadoPrevio = localActivo?.resultadoPrevio ?? datos?.cadena.resultadoPrevio ?? 0;
   const costoIncompleto = localActivo?.costoIncompleto ?? locales.some((local) => local.costoIncompleto);
   const alertas = (datos?.alertas ?? []).filter((alerta) => !alcance || alerta.localId === alcance || alerta.localId == null);
+  // Las rojas primero: si hay diez, las dos que importan tienen que estar arriba.
+  const alertasOrdenadas = [...alertas].sort((a, b) => (a.tono === b.tono ? 0 : a.tono === "rose" ? -1 : 1));
+  const alertasPersonal = (datos?.alertasPersonal ?? []).filter((a) => !alcance || a.localId === alcance);
+  const totalAlertas = alertas.length + alertasPersonal.length;
   const diasCompletos = serie?.actual.filter((punto) => punto.completo).length ?? 0;
   const etiquetaAlcance = localActivo?.nombre ?? "Toda la cadena";
   const modoDetalleDiario = vista === "locales" && Boolean(localActivo);
@@ -701,23 +737,34 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                   <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
                     <div className="flex items-center justify-between gap-3">
                       <h2 className="font-semibold">Requiere atención</h2>
-                      <Badge tone={alertas.length > 0 ? "amber" : "emerald"}>{alertas.length}</Badge>
+                      <Badge tone={totalAlertas > 0 ? "amber" : "emerald"}>{totalAlertas}</Badge>
                     </div>
                     <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Sólo excepciones del alcance elegido.</p>
                   </div>
                   <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
-                    {alertas.length === 0 ? (
+                    {totalAlertas === 0 ? (
                       <div className="flex items-start gap-2 py-5 text-sm text-slate-600 dark:text-[#c1cbc6]">
                         <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
                         No hay excepciones relevantes en este período.
                       </div>
                     ) : (
-                      alertas.slice(0, 6).map((alerta) => (
-                        <div key={alerta.texto} className="flex items-start gap-2 py-3 text-sm">
-                          <AlertTriangle size={15} className={`mt-0.5 shrink-0 ${alerta.tono === "rose" ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`} aria-hidden />
-                          <span className="text-slate-700 dark:text-[#c1cbc6]">{alerta.texto}</span>
-                        </div>
-                      ))
+                      <>
+                        {alertasOrdenadas.slice(0, 4).map((alerta) => (
+                          <div key={alerta.texto} className="flex items-start gap-2 py-3 text-sm">
+                            <AlertTriangle size={15} className={`mt-0.5 shrink-0 ${alerta.tono === "rose" ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`} aria-hidden />
+                            <span className="text-slate-700 dark:text-[#c1cbc6]">{alerta.texto}</span>
+                          </div>
+                        ))}
+                        {totalAlertas > 4 && (
+                          <button
+                            type="button"
+                            onClick={() => setVista("alertas")}
+                            className="w-full py-3 text-left text-sm font-semibold text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#4ee6b0] dark:focus-visible:ring-[#37e6b0]"
+                          >
+                            Ver las {totalAlertas} en Alertas
+                          </button>
+                        )}
+                      </>
                     )}
                   </div>
                 </Panel>
@@ -845,6 +892,93 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                   </p>
                 </Panel>
               )}
+            </div>
+          )}
+
+          {vista === "alertas" && (
+            <div className="space-y-5">
+              <Panel>
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                  <div>
+                    <h2 className="font-semibold">Qué está fuera de lugar</h2>
+                    <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+                      Del negocio, sobre {etiquetaAlcance.toLowerCase()} en el período elegido. Estas
+                      no se marcan como vistas: aparecen mientras el número esté fuera de rango y se
+                      van solas cuando vuelve.
+                    </p>
+                  </div>
+                  <Badge tone={alertas.length > 0 ? "amber" : "emerald"}>{alertas.length}</Badge>
+                </div>
+                {alertas.length === 0 ? (
+                  <p className="flex items-start gap-2 px-4 py-6 text-sm text-slate-600 dark:text-[#c1cbc6]">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+                    Ningún indicador del negocio está fuera de rango en este período.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+                    {alertasOrdenadas.map((alerta) => (
+                      <div key={alerta.texto} className="flex items-start gap-2.5 py-3 text-sm">
+                        <AlertTriangle
+                          size={16}
+                          className={`mt-0.5 shrink-0 ${
+                            alerta.tono === "rose"
+                              ? "text-rose-600 dark:text-rose-400"
+                              : "text-amber-600 dark:text-amber-400"
+                          }`}
+                          aria-hidden
+                        />
+                        <span className="text-slate-700 dark:text-[#c1cbc6]">{alerta.texto}</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Panel>
+
+              <Panel>
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                  <div>
+                    <h2 className="font-semibold">Personal</h2>
+                    <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+                      Fichajes que no cierran. Estas sí se resuelven: alguien las mira, decide qué
+                      pasó y las da por vistas.
+                    </p>
+                  </div>
+                  <Badge tone={alertasPersonal.length > 0 ? "amber" : "emerald"}>
+                    {alertasPersonal.length}
+                  </Badge>
+                </div>
+                {alertasPersonal.length === 0 ? (
+                  <p className="flex items-start gap-2 px-4 py-6 text-sm text-slate-600 dark:text-[#c1cbc6]">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+                    No quedan alertas de personal sin resolver en este período.
+                  </p>
+                ) : (
+                  <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+                    {alertasPersonal.map((alerta) => (
+                      <div key={alerta.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                        <div className="min-w-0">
+                          <p className="flex flex-wrap items-center gap-2 text-sm font-medium">
+                            {alerta.empleado}
+                            <Badge tone="amber">{TIPO_ALERTA[alerta.tipo] ?? alerta.tipo}</Badge>
+                          </p>
+                          <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                            {fechaLarga(alerta.fecha)} · {alerta.local}
+                            {alerta.detalle && ` · ${alerta.detalle}`}
+                          </p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          disabled={resolviendo === alerta.id}
+                          onClick={() => resolverAlerta(alerta.id)}
+                        >
+                          {resolviendo === alerta.id ? "Marcando…" : "Dar por vista"}
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </Panel>
             </div>
           )}
         </div>
