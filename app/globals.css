@@ -59,3 +59,32 @@ body {
   background: #1d4e48;
   color: #f2f7f4;
 }
+
+/**
+ * Los colores de las series de los gráficos.
+ *
+ * Estaban escritos a mano adentro del SVG, y un `#0f766e` que en papel se lee
+ * perfecto queda casi negro sobre el fondo `#0b1412`: en modo oscuro la línea
+ * del período actual se perdía contra la grilla. Acá cambian con el tema.
+ *
+ * La serie actual es más saturada que el teal de la interfaz a propósito: con
+ * `#0f766e` la separación contra el gris de referencia era ΔE 9,3, por debajo
+ * del piso con el que dos líneas se distinguen de un vistazo.
+ */
+:root {
+  --serie-actual: #159a78;
+  --serie-referencia: #64748b;
+  --serie-aviso: #b45309;
+  --serie-real: #475569;
+  /* La banda del intervalo: en claro el menta al 18% sobre blanco casi no
+     se veía, que es justo lo que el intervalo tiene que comunicar. */
+  --serie-banda: rgba(21, 154, 120, 0.16);
+}
+
+.dark {
+  --serie-actual: #37e6b0;
+  --serie-referencia: #94a19c;
+  --serie-aviso: #fcd34d;
+  --serie-real: #c1cbc6;
+  --serie-banda: rgba(55, 230, 176, 0.18);
+}

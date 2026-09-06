@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { fechaCorta } from "@/lib/formato";
 
 export type ComparisonPoint = {
   fecha: string;
@@ -77,10 +78,6 @@ function Punto({
       style={{ left: `${x}%`, top: `${y}%`, backgroundColor: color, transform: "translate(-50%, -50%)" }}
     />
   );
-}
-
-function fechaCorta(fecha: string) {
-  return new Date(`${fecha}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
 }
 
 function Leyenda({ color, trazo, children }: { color: string; trazo?: "linea" | "banda" | "puntos"; children: string }) {
@@ -164,9 +161,9 @@ export function ComparisonChart({
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1.5">
-        <Leyenda color="#0f766e">{etiquetaActual}</Leyenda>
-        <Leyenda color="#94a3b8" trazo="puntos">{etiquetaReferencia}</Leyenda>
-        <Leyenda color="#d97706" trazo="puntos">Promedio del período</Leyenda>
+        <Leyenda color="var(--serie-actual)">{etiquetaActual}</Leyenda>
+        <Leyenda color="var(--serie-referencia)" trazo="puntos">{etiquetaReferencia}</Leyenda>
+        <Leyenda color="var(--serie-aviso)" trazo="puntos">Promedio del período</Leyenda>
       </div>
       <div className="flex min-w-0">
         <EjeY maximo={maximo} formato={formato} />
@@ -194,13 +191,13 @@ export function ComparisonChart({
                 y1={yDe(promedio, maximo)}
                 y2={yDe(promedio, maximo)}
                 vectorEffect="non-scaling-stroke"
-                className="stroke-amber-600"
+                stroke="var(--serie-aviso)"
                 strokeDasharray="5 5"
               />
               <path
                 d={ruta(valoresReferencia, maximo)}
                 fill="none"
-                stroke="#94a3b8"
+                stroke="var(--serie-referencia)"
                 strokeWidth="1.5"
                 strokeDasharray="5 5"
                 vectorEffect="non-scaling-stroke"
@@ -208,7 +205,7 @@ export function ComparisonChart({
               <path
                 d={ruta(valoresActuales, maximo)}
                 fill="none"
-                stroke="#0f766e"
+                stroke="var(--serie-actual)"
                 strokeWidth="2.5"
                 vectorEffect="non-scaling-stroke"
               />
@@ -229,12 +226,12 @@ export function ComparisonChart({
                   key={punto.fecha}
                   x={pctX(indice, actual.length)}
                   y={pctY(punto.valor, maximo)}
-                  color="#d97706"
+                  color="var(--serie-aviso)"
                 />
               ) : null
             )}
             {activo != null && puntoActivo?.valor != null && (
-              <Punto x={pctX(activo, actual.length)} y={pctY(puntoActivo.valor, maximo)} color="#0f766e" grande />
+              <Punto x={pctX(activo, actual.length)} y={pctY(puntoActivo.valor, maximo)} color="var(--serie-actual)" grande />
             )}
             {activo != null && puntoActivo && (
               <div
@@ -313,10 +310,10 @@ export function ForecastChart({
   return (
     <div>
       <div className="mb-3 flex flex-wrap gap-x-4 gap-y-1.5">
-        <Leyenda color="#475569">Real</Leyenda>
-        <Leyenda color="#0f766e">Pronóstico</Leyenda>
-        <Leyenda color="rgba(55,230,176,.22)" trazo="banda">Rango esperado</Leyenda>
-        <Leyenda color="#d97706" trazo="puntos">Promedio reciente</Leyenda>
+        <Leyenda color="var(--serie-real)">Real</Leyenda>
+        <Leyenda color="var(--serie-actual)">Pronóstico</Leyenda>
+        <Leyenda color="var(--serie-banda)" trazo="banda">Rango esperado</Leyenda>
+        <Leyenda color="var(--serie-aviso)" trazo="puntos">Promedio reciente</Leyenda>
       </div>
       <div className="flex min-w-0">
         <EjeY maximo={maximo} formato={formato} />
@@ -343,31 +340,31 @@ export function ForecastChart({
                 x2={WIDTH}
                 y1={yDe(promedioHistorico, maximo)}
                 y2={yDe(promedioHistorico, maximo)}
-                stroke="#d97706"
+                stroke="var(--serie-aviso)"
                 strokeDasharray="5 5"
                 vectorEffect="non-scaling-stroke"
               />
-              {banda && <polygon points={banda} fill="rgba(55,230,176,.18)" />}
+              {banda && <polygon points={banda} fill="var(--serie-banda)" />}
               <line
                 x1={xDe(Math.max(limite - 0.5, 0), combinados.length)}
                 x2={xDe(Math.max(limite - 0.5, 0), combinados.length)}
                 y1="0"
                 y2={HEIGHT}
-                className="stroke-slate-400 dark:stroke-[#74817b]"
+                stroke="var(--serie-referencia)"
                 strokeDasharray="3 4"
                 vectorEffect="non-scaling-stroke"
               />
               <path
                 d={rutaConIndices(puntosHistoricos, combinados.length, maximo)}
                 fill="none"
-                className="stroke-slate-600 dark:stroke-[#c1cbc6]"
+                stroke="var(--serie-real)"
                 strokeWidth="2"
                 vectorEffect="non-scaling-stroke"
               />
               <path
                 d={rutaConIndices(puntosPronostico, combinados.length, maximo)}
                 fill="none"
-                stroke="#0f766e"
+                stroke="var(--serie-actual)"
                 strokeWidth="2.75"
                 vectorEffect="non-scaling-stroke"
               />
@@ -386,7 +383,7 @@ export function ForecastChart({
               <Punto
                 x={pctX(activo, combinados.length)}
                 y={pctY(puntoActivo.valor, maximo)}
-                color={puntoActivo.tipo === "real" ? "#475569" : "#0f766e"}
+                color={puntoActivo.tipo === "real" ? "var(--serie-real)" : "var(--serie-actual)"}
                 grande
               />
             )}

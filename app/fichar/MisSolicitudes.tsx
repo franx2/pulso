@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { fechaCorta } from "@/lib/formato";
 import { Camera, PencilLine, Palmtree, Plus } from "lucide-react";
 import { achicarImagen } from "@/lib/imagen";
 import { formatearFechaSql } from "@/lib/fechas";
@@ -62,7 +63,7 @@ const TONO: Record<EstadoSolicitud, "amber" | "emerald" | "slate"> = {
 
 /** Instante real (fichaje corregido): se muestra en hora local. */
 const diaLocal = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+  fechaCorta(new Date(iso));
 const hoyISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;

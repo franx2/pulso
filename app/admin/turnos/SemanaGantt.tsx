@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { fechaCorta } from "@/lib/formato";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Card, EmptyState, Select, Spinner } from "@/components/ui";
 import { posicionBarra } from "@/lib/ganttBarra";
@@ -174,8 +175,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
           <ChevronLeft size={18} />
         </button>
         <p className="text-sm font-medium">
-          {dias[0].toLocaleDateString("es-AR", { day: "2-digit", month: "short" })} –{" "}
-          {dias[6].toLocaleDateString("es-AR", { day: "2-digit", month: "short" })}
+          {fechaCorta(dias[0])} – {fechaCorta(dias[6])}
         </p>
         <button
           type="button"
@@ -219,7 +219,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                   <p className="flex items-center gap-2 text-sm font-semibold">
                     {NOMBRE_DIA[dia.getDay()]}{" "}
                     <span className="font-normal text-slate-400">
-                      {dia.toLocaleDateString("es-AR", { day: "2-digit", month: "short" })}
+                      {fechaCorta(dia)}
                     </span>
                     {totalPorDia.has(dia.getDay()) && (
                       <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">

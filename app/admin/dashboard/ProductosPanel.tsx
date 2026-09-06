@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Badge, Card, SectionTitle, Spinner } from "@/components/ui";
-import { plata } from "@/lib/formato";
+import { plata, numero } from "@/lib/formato";
 
 type ProductoLocal = { local: string; cantidad: number; facturacion: number; precioPromedio: number };
 type Producto = {
@@ -23,7 +23,7 @@ type Analisis = {
   desparejos: { nombre: string; local: string; facturacion: number }[];
 };
 
-const unidades = (n: number) => n.toLocaleString("es-AR", { maximumFractionDigits: 1 });
+const unidades = (n: number) => numero(n, 1);
 
 const VISTAS = [
   { clave: "facturan", label: "Los que más facturan" },

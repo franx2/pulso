@@ -18,7 +18,7 @@ import { ComparisonChart, type ComparisonPoint } from "@/components/AnalyticsCha
 import PeriodoSelector, { OPCIONES, type Periodo } from "@/components/PeriodoSelector";
 import { Badge, Button, EmptyState, Input, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
 import ProductosPanel from "./ProductosPanel";
-import { fechaCompleta, fechaLarga, numeroCompacto, plata, plataCompacta } from "@/lib/formato";
+import { fechaCompleta, fechaLarga, numeroCompacto, plata, plataCompacta, numero } from "@/lib/formato";
 import { sumarDias } from "@/lib/fechaAR";
 
 type Mapa = Record<string, number>;
@@ -194,7 +194,7 @@ function SerieStock({ localNombre }: { localNombre?: string }) {
                 <span className="ml-2 text-xs text-slate-400 dark:text-[#74817b]">{movimiento.local} · {movimiento.fecha}</span>
               </span>
               <span className={`shrink-0 font-semibold tabular-nums ${movimiento.movimiento < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-[#c1cbc6]"}`}>
-                {movimiento.movimiento > 0 ? "+" : ""}{movimiento.movimiento.toLocaleString("es-AR")}
+                {movimiento.movimiento > 0 ? "+" : ""}{numero(movimiento.movimiento)}
               </span>
             </div>
           ))
@@ -285,7 +285,7 @@ function DetalleDiario({
           />
           <Metrica
             label="Tickets"
-            valor={local.tickets.toLocaleString("es-AR")}
+            valor={numero(local.tickets)}
             delta={comparable ? variacion(local.tickets, local.ticketsPrevio) : null}
             textoDelta="vs. día anterior"
           />
@@ -307,7 +307,7 @@ function DetalleDiario({
         </section>
         <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3 dark:border-[#1c2521]">
           <Badge tone="slate">Referencia: {fechaLarga(referencia)}</Badge>
-          <Badge tone="slate">{local.personas.toLocaleString("es-AR")} comensales</Badge>
+          <Badge tone="slate">{numero(local.personas)} comensales</Badge>
           <Badge tone={local.porcentajeDescuentos >= 5 ? "amber" : "slate"}>
             {plata(local.descuentos)} en descuentos
           </Badge>
@@ -667,7 +667,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
             <div className="space-y-5">
               <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 md:grid-cols-4 md:divide-y-0 dark:border-[#29403b] dark:divide-[#29403b]">
                 <Metrica label="Facturación" valor={plataCompacta(ventas)} valorCompleto={plata(ventas)} delta={localActivo ? localActivo.variacionVentas : datos.cadena.variacionVentas} />
-                <Metrica label="Tickets" valor={tickets.toLocaleString("es-AR")} delta={comparacionValida ? variacion(tickets, ticketsPrevio) : null} />
+                <Metrica label="Tickets" valor={numero(tickets)} delta={comparacionValida ? variacion(tickets, ticketsPrevio) : null} />
                 <Metrica label="Ticket promedio" valor={plata(ticketPromedio)} delta={comparacionValida ? variacion(ticketPromedio, ticketPromedioPrevio) : null} />
                 <Metrica
                   label="Resultado operativo"
@@ -776,7 +776,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                               </span>
                               <span>
                                 <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Tickets · promedio</span>
-                                <span className="mt-0.5 block font-semibold tabular-nums">{local.tickets.toLocaleString("es-AR")} · {plata(local.ticketPromedio)}</span>
+                                <span className="mt-0.5 block font-semibold tabular-nums">{numero(local.tickets)} · {plata(local.ticketPromedio)}</span>
                               </span>
                               <span>
                                 <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Resultado · descuentos</span>
@@ -815,7 +815,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                               <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-400" : local.variacionVentas >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
                                 {local.variacionVentas == null ? "—" : `${local.variacionVentas >= 0 ? "+" : ""}${local.variacionVentas.toFixed(1)}%`}
                               </td>
-                              <td className="px-3 py-3 text-right tabular-nums">{local.tickets.toLocaleString("es-AR")}</td>
+                              <td className="px-3 py-3 text-right tabular-nums">{numero(local.tickets)}</td>
                               <td className="px-3 py-3 text-right tabular-nums">{plata(local.ticketPromedio)}</td>
                               <td className={`px-3 py-3 text-right tabular-nums ${local.porcentajeDescuentos >= 5 ? "text-amber-700 dark:text-amber-300" : ""}`}>{local.porcentajeDescuentos.toFixed(1)}%</td>
                               <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.resultado < 0 ? "text-rose-600 dark:text-rose-300" : ""}`}>

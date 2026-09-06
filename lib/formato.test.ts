@@ -60,6 +60,11 @@ assert.match(fechaLarga("2026-01-01"), /^01 ene.*2026$/);
 // Acepta también un ISO completo, que es como llega un @db.Date serializado.
 assert.strictEqual(fechaCorta("2026-08-28T00:00:00.000Z"), fechaCorta("2026-08-28"));
 
+// Un `Date` se lee por su calendario local. Pasarlo por `toISOString()` lo
+// correría un día entero en Argentina: a las 21h del 28 ya es 29 en UTC.
+assert.strictEqual(fechaCorta(new Date(2026, 7, 28, 21, 30)), fechaCorta("2026-08-28"));
+assert.strictEqual(fechaCorta(new Date(2026, 0, 1, 0, 5)), fechaCorta("2026-01-01"));
+
 // Un rango dentro del mismo mes no repite el mes: "28 – 31 ago".
 assert.match(rango("2026-08-28", "2026-08-31"), /^28 – 31 ago/);
 assert.match(rango("2026-08-28", "2026-09-05"), /^28 ago – 05 sep/);

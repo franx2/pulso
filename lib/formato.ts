@@ -75,6 +75,18 @@ export function kilos(n: number): string {
 const alMediodia = (dia: string) => new Date(`${dia.slice(0, 10)}T12:00:00.000Z`);
 
 /**
+ * Un `Date` se lee por sus campos locales, no por su ISO.
+ *
+ * Las pantallas que arman fechas con `new Date(...)` — el Gantt de la semana,
+ * presencia, mis solicitudes — trabajan en calendario local. Pasarlas por
+ * `toISOString()` las correría un día en cualquier huso al oeste de Greenwich.
+ */
+const claveLocal = (d: Date) =>
+  `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+
+const clave = (dia: string | Date) => (typeof dia === "string" ? dia : claveLocal(dia));
+
+/**
  * Se arma por partes en vez de usar el formato corto del locale porque
  * `es-AR` devuelve "28-ago", con guion. El guion lee como un rango y en una
  * tabla de fechas confunde; el resto de la app ya escribe "28 ago".
@@ -88,8 +100,8 @@ function partes(dia: string, opciones: Intl.DateTimeFormatOptions): Record<strin
 }
 
 /** "28 ago" — para ejes, chips y celdas apretadas. */
-export function fechaCorta(dia: string): string {
-  const p = partes(dia, { day: "2-digit", month: "short" });
+export function fechaCorta(dia: string | Date): string {
+  const p = partes(clave(dia), { day: "2-digit", month: "short" });
   return `${p.day} ${p.month.replace(".", "")}`;
 }
 

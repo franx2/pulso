@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { fechaCorta } from "@/lib/formato";
 import {
   AlertTriangle,
   Check,
@@ -123,7 +124,7 @@ const hora = (iso: string | null) =>
   iso ? new Date(iso).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) : "—";
 /** Instante real (un fichaje): hora local. */
 const diaLocal = (iso: string) =>
-  new Date(iso).toLocaleDateString("es-AR", { day: "2-digit", month: "short" });
+  fechaCorta(new Date(iso));
 
 export default function PresenciaClient() {
   const [locales, setLocales] = useState<Local[]>([]);

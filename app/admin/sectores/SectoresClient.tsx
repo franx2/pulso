@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { AlertTriangle, Check } from "lucide-react";
-import { plata } from "@/lib/formato";
+import { plata, numero } from "@/lib/formato";
 
 type SectorClave = "HELADOS" | "CAFETERIA" | "CHOCOLATERIA" | "PROMOCION" | "SIN_CLASIFICAR";
 type ResumenSector = {
@@ -363,7 +363,7 @@ export default function SectoresClient() {
                 <div className="min-w-0">
                   <p className="truncate font-medium">{p.producto}</p>
                   <p className="text-xs text-slate-400 dark:text-[#74817b]">
-                    {plata(p.facturacion)} · {Math.round(p.cantidad).toLocaleString("es-AR")} unidades
+                    {plata(p.facturacion)} · {numero(p.cantidad)} unidades
                     {p.categoria && ` · ${p.categoria}`}
                   </p>
                 </div>
