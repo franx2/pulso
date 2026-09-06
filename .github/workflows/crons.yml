@@ -46,7 +46,9 @@ on:
       ruta:
         description: "Ruta a llamar, por ejemplo /api/cron/remitos"
         required: true
-        default: "/api/cron/remitos"
+        # Temporal: trae el parámetro puesto para la recarga de los remitos
+        # viejos. Volver a "/api/cron/remitos" cuando esa recarga esté hecha.
+        default: "/api/cron/remitos?reprocesar=1"
       reprocesar:
         description: "Releer también los mails ya procesados (para remitos viejos)"
         type: boolean
