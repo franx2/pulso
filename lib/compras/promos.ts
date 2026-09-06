@@ -105,13 +105,13 @@ export const PROMOS: DefinicionPromo[] = [
     base: "supuesto",
   },
   {
-    // La única promo con helado. Infusión $4.592 + monoporción $9.200, o
-    // cuadrado + bocha $3.900, o alfacookie. El reparto supone que la
-    // monoporción es la opción más elegida.
+    // La única promo con helado. El dueño fijó el reparto en 90/10: la
+    // monoporción y el cuadrado son pastelería, y la bocha —cuando la eligen—
+    // es la parte de heladería.
     patron: /DULCE ANTOJO/i,
     nombre: "Dulce Antojo",
     contenido: "Infusión + monoporción, o cuadrado con bocha de helado, o alfacookie",
-    reparto: { CAFETERIA: 0.6, HELADOS: 0.25, CHOCOLATERIA: 0.15 },
+    reparto: { CAFETERIA: 0.9, HELADOS: 0.1 },
     base: "supuesto",
   },
 ];

@@ -70,6 +70,14 @@ assert.strictEqual(sectorDe("TORTA ROGEL", null, forzado), "CHOCOLATERIA");
 
 assert.strictEqual(claveProducto("  Café  Helado "), "CAFE HELADO");
 
+// CABRALES es la marca de café que compran: el nombre del producto no dice
+// "café" por ningún lado, pero es cafetería.
+assert.strictEqual(sectorDe("CABRALES PRESTIGE GRANO 1KG", null), "CAFETERIA");
+// Platos que antes quedaban sin clasificar.
+assert.strictEqual(sectorDe("SORRENTINOS DE MUZARELLA Y CHAMPIGNONES", null), "CAFETERIA");
+assert.strictEqual(sectorDe("CERDO A LA MOSTAZA Y MIEL", null), "CAFETERIA");
+assert.strictEqual(sectorDe("OPCION LECHE DE ALMENDRAS", null), "CAFETERIA");
+
 // --- El resumen ---
 
 const filas: FilaProducto[] = [
@@ -145,9 +153,9 @@ const antojo = resumirPorSector([
   { producto: "PROMO DULCE ANTOJO", categoria: null, facturacion: 1000, cantidad: 1 },
 ]);
 const mapaAntojo = new Map(antojo.sectores.map((s) => [s.sector, s.facturacion]));
-assert.strictEqual(mapaAntojo.get("HELADOS"), 250);
-assert.strictEqual(mapaAntojo.get("CAFETERIA"), 600);
-assert.strictEqual(mapaAntojo.get("CHOCOLATERIA"), 150);
+assert.strictEqual(mapaAntojo.get("HELADOS"), 100);
+assert.strictEqual(mapaAntojo.get("CAFETERIA"), 900);
+assert.strictEqual(mapaAntojo.get("CHOCOLATERIA"), 0);
 
 // Una promo 100% cafetería no cuenta como supuesta: no hay nada que suponer.
 const chipa = resumirPorSector([
