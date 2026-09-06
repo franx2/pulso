@@ -46,12 +46,29 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     multiplicadorFeriado?: number;
     fudoApiKey?: string;
     fudoApiSecret?: string;
+    comisionCredito?: number;
+    comisionDebito?: number;
+    comisionBilletera?: number;
+    comisionDelivery?: number;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
   if (body.nombre !== undefined && !body.nombre.trim()) {
     return NextResponse.json({ error: "El nombre no puede quedar vacío" }, { status: 400 });
   }
+  // Una comisión fuera de 0-100% es un error de tipeo (poner 27 en vez de
+  // 0,27), y guardarla multiplicaría el costo de venta por cien.
+  for (const [campo, valor] of Object.entries({
+    comisionCredito: body.comisionCredito,
+    comisionDebito: body.comisionDebito,
+    comisionBilletera: body.comisionBilletera,
+    comisionDelivery: body.comisionDelivery,
+  })) {
+    if (valor !== undefined && (!Number.isFinite(valor) || valor < 0 || valor > 1)) {
+      return NextResponse.json({ error: `${campo} tiene que estar entre 0 y 1 (0,27 = 27%)` }, { status: 400 });
+    }
+  }
+
   if (body.radioMetros !== undefined && body.radioMetros < 10) {
     return NextResponse.json({ error: "El radio debe ser de al menos 10 metros" }, { status: 400 });
   }
@@ -91,6 +108,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         : {}),
       ...(body.fudoApiKey !== undefined ? { fudoApiKey: body.fudoApiKey.trim() || null } : {}),
       ...(body.fudoApiSecret !== undefined ? { fudoApiSecret: body.fudoApiSecret.trim() || null } : {}),
+      ...(body.comisionCredito !== undefined ? { comisionCredito: body.comisionCredito } : {}),
+      ...(body.comisionDebito !== undefined ? { comisionDebito: body.comisionDebito } : {}),
+      ...(body.comisionBilletera !== undefined ? { comisionBilletera: body.comisionBilletera } : {}),
+      ...(body.comisionDelivery !== undefined ? { comisionDelivery: body.comisionDelivery } : {}),
     },
   });
 

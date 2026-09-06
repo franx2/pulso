@@ -18,16 +18,32 @@ const costo = costoDeVenta({
 
 assert.strictEqual(costo.total, 9500);
 // 4% de crédito + 2% de (débito + MP + 2 QR) = 40 + 80 = 120.
-assert.strictEqual(costo.comisiones, 120);
+assert.strictEqual(costo.comisiones, 120 + 810);
 // Efectivo y transferencia no pagan comisión.
 assert.strictEqual(costo.ventaSinComision, 1500);
-// LAS APPS NO SE ESTIMAN: cobran 20-30%, no 2-4%. Ponerles una tasa
-// inventada haría parecer sano un margen de delivery que puede no serlo.
-assert.strictEqual(costo.ventaSinTasa, 3000);
+// LAS APPS SON LA COMISIÓN MÁS CARA: 27% contra 2-4% del resto. Y el orden
+// de las reglas importa — "Pedidos ya efectivo" contiene "efectivo": si
+// ganara esa regla, la venta más cara de cobrar contaría como la más barata.
+assert.strictEqual(costo.ventaDelivery, 3000);
+assert.strictEqual(costo.comisionDelivery, 810);
 const uber = costo.porMedio.find((m) => m.medio === "Online Uber Eats")!;
-assert.strictEqual(uber.tasa, null);
-assert.strictEqual(uber.comision, 0);
-assert.strictEqual(uber.etiqueta, "Falta la comisión");
+assert.strictEqual(uber.tasa, 0.27);
+assert.strictEqual(uber.etiqueta, "Delivery");
+const pyEfectivo = costoDeVenta({ "Pedidos ya efectivo": 1000 });
+assert.strictEqual(pyEfectivo.porMedio[0].etiqueta, "Delivery", "la app gana sobre 'efectivo'");
+assert.strictEqual(pyEfectivo.comisiones, 270);
+
+// Las tasas son por local: cada sucursal negocia su propio contrato.
+const propias = costoDeVenta(
+  { "Tarj. Crédito": 1000, "Online Uber Eats": 1000 },
+  { credito: 0.06, debito: 0.03, billetera: 0.03, delivery: 0.3 }
+);
+assert.strictEqual(propias.comisiones, 60 + 300);
+
+// Un medio que ninguna regla reconoce se informa, no se estima en cero.
+const raro = costoDeVenta({ "Vale de canje": 500 });
+assert.strictEqual(raro.porMedio[0].tasa, null);
+assert.strictEqual(raro.ventaSinTasa, 500);
 
 // Prepaga va como débito; "Cta. Cte." no tiene comisión.
 assert.strictEqual(costoDeVenta({ "Tarj. prepaga": 100 }).comisiones, 2);

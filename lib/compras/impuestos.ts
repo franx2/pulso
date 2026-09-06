@@ -25,38 +25,47 @@ export const IVA = 0.21;
  */
 export const IIBB = 0.05;
 
-export type TasaMedio = {
-  patron: RegExp;
-  /** Comisión sobre el monto liquidado. */
-  tasa: number;
-  etiqueta: string;
+export type TasaMedio = { patron: RegExp; tasa: number; etiqueta: string };
+
+/** Las comisiones de un local, tal como se cargan en su configuración. */
+export type Comisiones = {
+  credito: number;
+  debito: number;
+  billetera: number;
+  delivery: number;
+};
+
+export const COMISIONES_POR_DEFECTO: Comisiones = {
+  credito: 0.04,
+  debito: 0.02,
+  billetera: 0.02,
+  delivery: 0.27,
 };
 
 /**
- * Comisiones por medio de pago.
+ * Comisiones por medio de pago, con las tasas del local.
  *
- * Las tasas de tarjeta y billetera las fijó el dueño: 4% crédito, 2% débito y
- * Mercado Pago. Los QR se tratan como billetera porque en la práctica lo son.
- *
- * **Las apps de delivery no están acá y es a propósito.** Cobran del orden del
- * 20-30%, no 2-4%, y ponerles una tasa inventada haría que el margen de
- * delivery pareciera sano cuando puede no serlo. Quedan reportadas aparte
- * hasta que alguien cargue la comisión real del contrato.
+ * **El orden importa y las apps van primero.** "Pedidos ya efectivo" contiene
+ * la palabra "efectivo" y "Pedidos ya online" contiene "online": si ganara
+ * otra regla, la venta más cara de cobrar quedaría contada como la más
+ * barata. Delivery cobra 27% contra 2-4% del resto, así que el error costaría
+ * un orden de magnitud.
  */
-export const TASAS: TasaMedio[] = [
-  { patron: /^efectivo|efectivo$/i, tasa: 0, etiqueta: "Efectivo" },
-  { patron: /transferencia|cta\.? ?cte|cuenta corriente/i, tasa: 0, etiqueta: "Sin comisión" },
-  { patron: /cr[eé]dito/i, tasa: 0.04, etiqueta: "Crédito" },
-  { patron: /d[eé]bito|prepaga/i, tasa: 0.02, etiqueta: "Débito" },
-  { patron: /mercado ?pago|\bqr\b|posnet|nave|modo/i, tasa: 0.02, etiqueta: "Billetera / QR" },
-];
-
-/** Medios cuya comisión todavía no se cargó: se informan, no se estiman. */
-const SIN_TASA = /uber|pedidos ?ya|pedidosya|rappi/i;
+export function tasasDe(c: Comisiones = COMISIONES_POR_DEFECTO): TasaMedio[] {
+  return [
+    { patron: /uber|pedidos ?ya|pedidosya|rappi/i, tasa: c.delivery, etiqueta: "Delivery" },
+    { patron: /efectivo/i, tasa: 0, etiqueta: "Efectivo" },
+    { patron: /transferencia|cta\.? ?cte|cuenta corriente/i, tasa: 0, etiqueta: "Sin comisión" },
+    { patron: /cr[eé]dito/i, tasa: c.credito, etiqueta: "Crédito" },
+    { patron: /d[eé]bito|prepaga/i, tasa: c.debito, etiqueta: "Débito" },
+    { patron: /mercado ?pago|\bqr\b|posnet|nave|modo/i, tasa: c.billetera, etiqueta: "Billetera / QR" },
+  ];
+}
 
 export type CostoMedio = {
   medio: string;
   monto: number;
+  /** Null cuando ninguna regla reconoce el medio: se informa, no se estima. */
   tasa: number | null;
   comision: number;
   etiqueta: string;
@@ -64,19 +73,16 @@ export type CostoMedio = {
 
 export type CostoDeVenta = {
   porMedio: CostoMedio[];
-  /** Comisiones de los medios con tasa conocida. */
   comisiones: number;
-  /** Venta cobrada por medios cuya comisión falta cargar. */
+  /** Venta cobrada por medios que ninguna regla reconoce. */
   ventaSinTasa: number;
   /** Venta cobrada en efectivo o por medios sin comisión. */
   ventaSinComision: number;
+  /** Venta cobrada por apps de delivery, que es la comisión más cara. */
+  ventaDelivery: number;
+  comisionDelivery: number;
   total: number;
 };
-
-function tasaDe(medio: string): TasaMedio | null {
-  if (SIN_TASA.test(medio)) return null;
-  return TASAS.find((t) => t.patron.test(medio)) ?? null;
-}
 
 /**
  * Comisiones a partir del desglose por medio de pago que ya trae cada día.
@@ -85,32 +91,52 @@ function tasaDe(medio: string): TasaMedio | null {
  * fiscal para un responsable inscripto: el costo que va al resultado es la
  * comisión neta, no la comisión más IVA.
  */
-export function costoDeVenta(porMedioPago: Record<string, number>): CostoDeVenta {
+export function costoDeVenta(
+  porMedioPago: Record<string, number>,
+  comisiones: Comisiones = COMISIONES_POR_DEFECTO
+): CostoDeVenta {
+  const tasas = tasasDe(comisiones);
   const porMedio: CostoMedio[] = [];
-  let comisiones = 0;
+  let total = 0;
+  let suma = 0;
   let ventaSinTasa = 0;
   let ventaSinComision = 0;
-  let total = 0;
+  let ventaDelivery = 0;
+  let comisionDelivery = 0;
 
   for (const [medio, monto] of Object.entries(porMedioPago)) {
     if (typeof monto !== "number" || monto === 0) continue;
     total += monto;
-    const tasa = tasaDe(medio);
+    const tasa = tasas.find((t) => t.patron.test(medio)) ?? null;
     const comision = tasa ? monto * tasa.tasa : 0;
-    comisiones += comision;
+    suma += comision;
+
     if (!tasa) ventaSinTasa += monto;
     else if (tasa.tasa === 0) ventaSinComision += monto;
+    if (tasa?.etiqueta === "Delivery") {
+      ventaDelivery += monto;
+      comisionDelivery += comision;
+    }
+
     porMedio.push({
       medio,
       monto,
       tasa: tasa ? tasa.tasa : null,
       comision,
-      etiqueta: tasa ? tasa.etiqueta : "Falta la comisión",
+      etiqueta: tasa ? tasa.etiqueta : "Medio desconocido",
     });
   }
 
   porMedio.sort((a, b) => b.monto - a.monto);
-  return { porMedio, comisiones, ventaSinTasa, ventaSinComision, total };
+  return {
+    porMedio,
+    comisiones: suma,
+    ventaSinTasa,
+    ventaSinComision,
+    ventaDelivery,
+    comisionDelivery,
+    total,
+  };
 }
 
 export type CargaIIBB = {
@@ -162,3 +188,13 @@ export function posicionIVA(ventasGravadas: number, comprasConFactura: number): 
   const creditoFiscal = (comprasConFactura / (1 + IVA)) * IVA;
   return { debitoFiscal, creditoFiscal, aPagar: debitoFiscal - creditoFiscal };
 }
+
+/** Conceptos de costo fijo que se ofrecen para cargar en cada local. */
+export const CONCEPTOS_FIJOS = [
+  "Alquiler",
+  "Servicios",
+  "Seguros",
+  "Impuestos",
+  "Mantenimiento",
+  "Otros",
+] as const;

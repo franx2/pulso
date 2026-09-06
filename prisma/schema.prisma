@@ -151,6 +151,14 @@ model Local {
   cuitCompras        String?
   razonSocialCompras String?
 
+  /// Comisiones que cobra cada medio de pago, sobre el monto liquidado.
+  /// Son por local porque cada sucursal negocia sus propios contratos.
+  /// Delivery es la que más pesa y menos se mira: 27% contra 2-4% del resto.
+  comisionCredito   Float @default(0.04)
+  comisionDebito    Float @default(0.02)
+  comisionBilletera Float @default(0.02)
+  comisionDelivery  Float @default(0.27)
+
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
   turnos      Turno[]
@@ -170,6 +178,7 @@ model Local {
   climas           ClimaDia[]
   pronosticos      Pronostico[]
   compras          Compra[]
+  costosFijos      CostoFijo[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -882,4 +891,27 @@ model SectorProducto {
   creadoEn DateTime      @default(now())
 
   @@index([sector])
+}
+
+
+/// Un costo fijo mensual de un local, cargado a mano.
+///
+/// Alquiler, servicios, seguros e impuestos no están en Fudo ni en los
+/// remitos, y sin ellos el resultado se queda en margen de contribución. Son
+/// pocos números por mes y no se pueden deducir de ningún lado: se cargan.
+///
+/// Va por concepto y no en columnas fijas para que agregar contador o
+/// mantenimiento no necesite una migración.
+model CostoFijo {
+  id      String @id @default(cuid())
+  local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+  /// 2026-08. Mensual: es la unidad en la que se pagan estas cosas.
+  mes      String
+  concepto String
+  monto    Float
+  nota     String?
+
+  @@unique([localId, mes, concepto])
+  @@index([localId, mes])
 }

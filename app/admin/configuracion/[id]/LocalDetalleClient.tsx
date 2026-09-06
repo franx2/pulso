@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import HorarioSemanal from "./HorarioSemanal";
 import CategoriasLocal from "./CategoriasLocal";
+import CostosLocal from "./CostosLocal";
 import VentasFudo from "./VentasFudo";
 import CajasFudo from "./CajasFudo";
 
@@ -41,6 +42,7 @@ const TABS = [
   { key: "fudo", label: "Fudo" },
   { key: "horario", label: "Horario" },
   { key: "categorias", label: "Categorías" },
+  { key: "costos", label: "Costos" },
 ] as const;
 type TabKey = (typeof TABS)[number]["key"];
 
@@ -457,6 +459,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
 
       {tab === "horario" && <HorarioSemanal localId={localId} />}
       {tab === "categorias" && <CategoriasLocal localId={localId} />}
+      {tab === "costos" && <CostosLocal localId={localId} />}
     </div>
   );
 }
