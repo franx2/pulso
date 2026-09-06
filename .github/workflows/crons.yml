@@ -47,6 +47,10 @@ on:
         description: "Ruta a llamar, por ejemplo /api/cron/remitos"
         required: true
         default: "/api/cron/remitos"
+      reprocesar:
+        description: "Releer también los mails ya procesados (para remitos viejos)"
+        type: boolean
+        default: false
 
 env:
   BASE: https://pulso-t572.vercel.app
@@ -71,6 +75,16 @@ jobs:
             "0 9 * * 1")    RUTA="/api/cron/resumen?dias=90&local=QuickPoint" ;;
             *)              RUTA="${{ github.event.inputs.ruta }}" ;;
           esac
+          # Como casilla y no como query string a mano: tipear "?reprocesar=1"
+          # en un campo de texto se olvida, y el síntoma es que no pasa nada.
+          if [ "${{ github.event.inputs.reprocesar }}" = "true" ]; then
+            # El "?" va escapado: sin escapar es un comodín de un carácter y
+            # matchearía cualquier ruta, pegando "&" donde falta el "?".
+            case "$RUTA" in
+              *\?*) RUTA="$RUTA&reprocesar=1" ;;
+              *)    RUTA="$RUTA?reprocesar=1" ;;
+            esac
+          fi
           echo "ruta=$RUTA" >> "$GITHUB_OUTPUT"
           echo "Voy a llamar a $RUTA"
 
