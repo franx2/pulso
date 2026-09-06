@@ -79,7 +79,7 @@ Creció en tres módulos que conviene entender por separado:
 | **Asistencia** | fichaje, turnos, ausencias, correcciones, reportes de horas y liquidación | la propia app |
 | **Dashboard** | centro de comando: facturación, tickets, resultado, excepciones y comparación por local | Fudo → tablas locales |
 | **Pronóstico** | demanda a 7/15/30 días, intervalo, backtest y evidencia del modelo | Fudo + clima → modelo propio |
-| **Compras** | remitos del proveedor, costo por producto y control del royalty | PDF por mail → parser propio |
+| **Compras** | remitos y costos por local, consumo estimado de helado y control del royalty | PDF por mail + ventas de Fudo |
 
 ---
 
@@ -420,6 +420,37 @@ se asigna a mano, el CUIT queda guardado en el local y el próximo entra solo.
 Hoy sólo **Las Cañas** está mapeada: `CUMBRES Y PLACERES SAS (BIANCONERO
 GUAYMALLEN)`, CUIT 30718808975.
 
+### Compras y consumo por local
+
+`/admin/compras` es una consola por sucursal, con períodos de 30, 90, 120 o
+365 días y cuatro vistas separadas: resumen, helado, remitos y royalty. Los
+remitos se agrupan por local; los no asignados conservan una bandeja propia y
+no se adjudican por aproximación.
+
+El primer cruce de insumo contra venta es el helado. Las unidades vendidas en
+Fudo se convierten con estas equivalencias operativas:
+
+| Formato vendido | Gramos de helado |
+|---|---:|
+| Cucurucho de 1 bocha | 90 g |
+| Cucurucho de 2 bochas | 180 g |
+| Cucurucho de 3 bochas | 270 g |
+| Pote de 1/4 | 270 g |
+| Pote de 1/2 | 550 g |
+| Pote de 1 kg | 1.070 g |
+
+El cálculo usa sólo líneas de sabor (`HELADO DE ...`) de remitos verificados y
+la `cantidadExacta`, no el valor impreso a dos decimales. Para cada local la
+comparación comienza en su primer remito de helado dentro del período elegido;
+si no hay uno, muestra **Sin base**. Los productos que consumen helado pero no
+tienen receta conocida (por ejemplo licuados, waffles o minibochas) quedan
+visibles como pendientes y fuera de los kilos estimados.
+
+**El balance actual no es merma.** Es `kg recibidos - kg vendidos estimados` y
+todavía incluye el stock que ya existía al comienzo, el stock final y las
+recetas pendientes. Para transformarlo en control de merma hace falta registrar
+stock inicial/final por local y completar esas recetas.
+
 ### El control del royalty
 
 La regla, según el dueño: **(venta del local ÷ 1,21) × 0,05** — el 5% de la
@@ -573,8 +604,10 @@ Notas de entorno que ahorran tiempo:
 - **Que el personal fiche.** Desbloquea el aprendizaje de capacidad y con eso toda la mitad de
   dotación del pronóstico, que hoy es un supuesto.
 - **Cargar los costos por producto en Fudo.** Sin eso el food cost y el margen no sirven.
-- **Cargar las compras en Fudo con detalle de producto.** Convierte la serie de stock en un
-  control de faltantes real.
+- **Registrar stock inicial y final de helado por local y completar las recetas pendientes.**
+  Recién entonces el balance de Compras puede presentarse como merma real.
+- **Mapear los remitos de los otros locales.** Hoy sólo Las Cañas tiene identidad de compra y
+  una base comparable; los demás se muestran correctamente como `Sin base`.
 - ~~QuickPoint tiene días que Fudo no registra~~ **Resuelto: cerró por reformas del 23 al 28 de
   agosto de 2026.** No era un problema de sincronización. Los otros huecos de los cuatro locales
   son feriados de un día (1 de mayo, 25 de diciembre, 1 de enero). El modelo ahora lo detecta
