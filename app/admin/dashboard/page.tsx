@@ -31,6 +31,7 @@ export default async function DashboardPage({
           anio: texto("anio"),
           desde: texto("desde"),
           hasta: texto("hasta"),
+          dia: texto("dia"),
           local: texto("local"),
         }}
       />

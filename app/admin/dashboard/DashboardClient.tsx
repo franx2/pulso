@@ -7,8 +7,11 @@ import {
   ArrowRight,
   BrainCircuit,
   Building2,
+  CalendarDays,
   CalendarRange,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   RefreshCw,
   TrendingDown,
   TrendingUp,
@@ -57,6 +60,7 @@ type LocalDash = {
   porCanal: Mapa;
   porCategoria: Mapa;
   descuentosPorCaja: Mapa;
+  topProductos: { nombre: string; valor: number }[];
   serie: Serie;
 };
 type CadenaDash = {
@@ -134,6 +138,15 @@ const numeroCompacto = (n: number) =>
   new Intl.NumberFormat("es-AR", { notation: "compact", maximumFractionDigits: 1 }).format(n);
 const fmtFecha = (iso: string) =>
   new Date(`${iso}T12:00:00Z`).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+const fmtFechaLarga = (iso: string) => {
+  const texto = new Date(`${iso}T12:00:00Z`).toLocaleDateString("es-AR", {
+    weekday: "long",
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+  return texto.charAt(0).toUpperCase() + texto.slice(1);
+};
 const variacion = (actual: number, previo: number) => (previo > 0 ? ((actual - previo) / previo) * 100 : null);
 
 function Panel({ children, className = "" }: { children: ReactNode; className?: string }) {
@@ -198,6 +211,7 @@ function Metrica({
   valor,
   valorCompleto,
   delta,
+  textoDelta,
   nota,
   tono = "normal",
 }: {
@@ -205,6 +219,7 @@ function Metrica({
   valor: string;
   valorCompleto?: string;
   delta: number | null;
+  textoDelta?: string;
   nota?: string;
   tono?: "normal" | "negativo";
 }) {
@@ -214,7 +229,7 @@ function Metrica({
       <p title={valorCompleto} className={`mt-1 whitespace-nowrap text-xl font-bold tabular-nums md:text-2xl ${tono === "negativo" ? "text-rose-600 dark:text-rose-400" : "text-slate-950 dark:text-[#f2f7f4]"}`}>
         {valor}
       </p>
-      <div className="mt-1 min-h-5">{nota ? <span className="text-xs text-slate-400 dark:text-[#74817b]">{nota}</span> : <Delta valor={delta} />}</div>
+      <div className="mt-1 min-h-5">{nota ? <span className="text-xs text-slate-400 dark:text-[#74817b]">{nota}</span> : <Delta valor={delta} texto={textoDelta} />}</div>
     </div>
   );
 }
@@ -339,6 +354,115 @@ function agruparSerie(puntos: PuntoSerie[], dias: number, metrica: MetricaGrafic
   });
 }
 
+function DetalleDiario({
+  local,
+  fecha,
+  referencia,
+}: {
+  local: LocalDash;
+  fecha: string;
+  referencia: string;
+}) {
+  const comparable = local.diasConDatos === 1 && local.baseComparable;
+
+  if (local.diasConDatos === 0) {
+    return (
+      <Panel>
+        <EmptyState>
+          <strong className="block text-slate-800 dark:text-[#f2f7f4]">Sin ventas registradas</strong>
+          <span className="mt-1 block">No hay un cierre de Fudo sincronizado para {local.nombre} el {fmtFecha(fecha)}.</span>
+        </EmptyState>
+      </Panel>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <Panel>
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <div>
+            <h2 className="font-semibold">{fmtFechaLarga(fecha)}</h2>
+            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Ventas registradas en {local.nombre}.</p>
+          </div>
+          <Badge tone="emerald">Día sincronizado</Badge>
+        </div>
+        <section className="grid grid-cols-2 divide-x divide-y divide-slate-200 md:grid-cols-4 md:divide-y-0 dark:divide-[#29403b]">
+          <Metrica
+            label="Ventas del día"
+            valor={plataCompacta(local.ventas)}
+            valorCompleto={plata(local.ventas)}
+            delta={comparable ? local.variacionVentas : null}
+            textoDelta="vs. día anterior"
+          />
+          <Metrica
+            label="Tickets"
+            valor={local.tickets.toLocaleString("es-AR")}
+            delta={comparable ? variacion(local.tickets, local.ticketsPrevio) : null}
+            textoDelta="vs. día anterior"
+          />
+          <Metrica
+            label="Ticket promedio"
+            valor={plata(local.ticketPromedio)}
+            delta={comparable ? variacion(local.ticketPromedio, local.ticketPromedioPrevio) : null}
+            textoDelta="vs. día anterior"
+          />
+          <Metrica
+            label="Resultado del día"
+            valor={plataCompacta(local.resultado)}
+            valorCompleto={plata(local.resultado)}
+            delta={comparable ? variacion(local.resultado, local.resultadoPrevio) : null}
+            textoDelta="vs. día anterior"
+            nota={local.costoIncompleto ? "estimado: faltan costos en Fudo" : undefined}
+            tono={local.resultado < 0 ? "negativo" : "normal"}
+          />
+        </section>
+        <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <Badge tone="slate">Referencia: {fmtFecha(referencia)}</Badge>
+          <Badge tone="slate">{local.personas.toLocaleString("es-AR")} comensales</Badge>
+          <Badge tone={local.porcentajeDescuentos >= 5 ? "amber" : "slate"}>
+            {plata(local.descuentos)} en descuentos
+          </Badge>
+          {local.anulaciones > 0 && <Badge tone="amber">{plata(local.anulaciones)} anulado</Badge>}
+        </div>
+      </Panel>
+
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]">
+        <Panel>
+          <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <h2 className="font-semibold">Cómo se vendió</h2>
+            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Canales, cobros y categorías de la fecha elegida.</p>
+          </div>
+          <div className="grid gap-8 p-4 lg:grid-cols-3">
+            <Reparto titulo="Canal" datos={local.porCanal} etiquetas={ETIQUETA_CANAL} />
+            <Reparto titulo="Medio de pago" datos={local.porMedioPago} />
+            <Reparto titulo="Categoría" datos={local.porCategoria} />
+          </div>
+        </Panel>
+
+        <Panel>
+          <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <h2 className="font-semibold">Productos con más facturación</h2>
+            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Ranking del día según el cierre de Fudo.</p>
+          </div>
+          {local.topProductos.length === 0 ? (
+            <p className="px-4 py-5 text-sm text-slate-500 dark:text-[#94a19c]">No hay detalle por producto para esta fecha.</p>
+          ) : (
+            <ol className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+              {local.topProductos.slice(0, 8).map((producto, indice) => (
+                <li key={producto.nombre} className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-baseline gap-2 py-3 text-sm">
+                  <span className="text-xs tabular-nums text-slate-400 dark:text-[#74817b]">{indice + 1}</span>
+                  <span className="truncate font-medium text-slate-700 dark:text-[#c1cbc6]" title={producto.nombre}>{producto.nombre}</span>
+                  <span className="font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{plata(producto.valor)}</span>
+                </li>
+              ))}
+            </ol>
+          )}
+        </Panel>
+      </div>
+    </div>
+  );
+}
+
 function DashboardSkeleton() {
   return (
     <div className="animate-pulse space-y-5" aria-label="Cargando tablero">
@@ -358,6 +482,7 @@ export type EstadoInicial = {
   anio?: string;
   desde?: string;
   hasta?: string;
+  dia?: string;
   local?: string;
 };
 
@@ -379,6 +504,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   );
   const [desde, setDesde] = useState(esDia(inicial.desde) ? inicial.desde : sumarDias(hoy, -29));
   const [hasta, setHasta] = useState(esDia(inicial.hasta) ? inicial.hasta : hoy);
+  const [fechaLocal, setFechaLocal] = useState(esDia(inicial.dia) ? inicial.dia : hoy);
   const [alcance, setAlcance] = useState(inicial.local ?? "");
   const [metricaGrafico, setMetricaGrafico] = useState<MetricaGrafico>("ventas");
   const [datos, setDatos] = useState<Dash | null>(null);
@@ -387,6 +513,9 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   const [revision, setRevision] = useState(0);
   const [sincronizando, setSincronizando] = useState(false);
   const [avisoSync, setAvisoSync] = useState("");
+  const [datosDia, setDatosDia] = useState<Dash | null>(null);
+  const [cargandoDia, setCargandoDia] = useState(false);
+  const [errorDia, setErrorDia] = useState("");
 
   useEffect(() => {
     const controlador = new AbortController();
@@ -418,6 +547,31 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
     return () => controlador.abort();
   }, [periodo, mesElegido, anioElegido, desde, hasta, revision]);
 
+  useEffect(() => {
+    if (vista !== "locales" || !alcance) return;
+    const controlador = new AbortController();
+    const params = new URLSearchParams({ periodo: "rango", desde: fechaLocal, hasta: fechaLocal });
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch reactivo sin librería de datos
+    setCargandoDia(true);
+    setErrorDia("");
+    fetch(`/api/dashboard?${params}`, { signal: controlador.signal })
+      .then(async (respuesta) => {
+        if (!respuesta.ok) throw new Error("No se pudo cargar el día");
+        return respuesta.json();
+      })
+      .then((respuesta) => setDatosDia(respuesta))
+      .catch((err: unknown) => {
+        if (err instanceof DOMException && err.name === "AbortError") return;
+        setErrorDia("No pudimos cargar las ventas de ese día. Revisá la conexión y volvé a intentar.");
+        setDatosDia(null);
+      })
+      .finally(() => {
+        if (!controlador.signal.aborted) setCargandoDia(false);
+      });
+    return () => controlador.abort();
+  }, [vista, alcance, fechaLocal, revision]);
+
   // El estado vive también en la URL: recargar no vuelve a la vista por
   // defecto y el link que se manda muestra lo mismo que se está viendo.
   // `replaceState` y no `router.replace` a propósito: los datos ya se piden
@@ -433,9 +587,10 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
       params.set("hasta", hasta);
     }
     if (alcance) params.set("local", alcance);
+    if (vista === "locales" && alcance) params.set("dia", fechaLocal);
     const query = params.toString();
     window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
-  }, [vista, periodo, mesElegido, anioElegido, desde, hasta, alcance]);
+  }, [vista, periodo, mesElegido, anioElegido, desde, hasta, alcance, fechaLocal]);
 
   async function sincronizar() {
     if (!datos) return;
@@ -467,6 +622,9 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   const alertas = (datos?.alertas ?? []).filter((alerta) => !alcance || alerta.localId === alcance || alerta.localId == null);
   const diasCompletos = serie?.actual.filter((punto) => punto.completo).length ?? 0;
   const etiquetaAlcance = localActivo?.nombre ?? "Toda la cadena";
+  const modoDetalleDiario = vista === "locales" && Boolean(localActivo);
+  const localDia = datosDia?.locales.find((local) => local.localId === alcance);
+  const referenciaDia = datosDia?.rangoPrevio.desde ?? sumarDias(fechaLocal, -1);
   const formatoGrafico = metricaGrafico === "ventas" || metricaGrafico === "ticketPromedio" ? plataCompacta : numeroCompacto;
 
   return (
@@ -519,13 +677,60 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                 ))}
               </div>
             </div>
-            <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
-              <CalendarRange size={16} className="shrink-0 text-slate-400" aria-hidden />
-              <SelectorSegmentado opciones={PERIODOS} valor={periodo} onChange={setPeriodo} label="Período del tablero" />
-            </div>
+            {modoDetalleDiario ? (
+              <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
+                <CalendarDays size={16} className="shrink-0 text-slate-400" aria-hidden />
+                <div className="flex min-w-max items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]">
+                  <button
+                    type="button"
+                    onClick={() => setFechaLocal((fecha) => sumarDias(fecha, -1))}
+                    className="grid h-9 w-9 place-items-center rounded-md text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#94a19c] dark:hover:bg-[#1d4e48] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0]"
+                    aria-label="Día anterior"
+                    title="Día anterior"
+                  >
+                    <ChevronLeft size={17} aria-hidden />
+                  </button>
+                  <Input
+                    type="date"
+                    max={hoy}
+                    value={fechaLocal}
+                    onChange={(evento) => {
+                      if (evento.target.value) setFechaLocal(evento.target.value);
+                    }}
+                    aria-label="Fecha de ventas"
+                    required
+                    className="h-9 w-[10.5rem] rounded-md border-0 bg-white px-2 py-1 text-sm shadow-sm dark:bg-[#1d4e48]"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setFechaLocal((fecha) => sumarDias(fecha, 1))}
+                    disabled={fechaLocal >= hoy}
+                    className="grid h-9 w-9 place-items-center rounded-md text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:cursor-not-allowed disabled:opacity-35 dark:text-[#94a19c] dark:hover:bg-[#1d4e48] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0]"
+                    aria-label="Día siguiente"
+                    title="Día siguiente"
+                  >
+                    <ChevronRight size={17} aria-hidden />
+                  </button>
+                  {fechaLocal !== hoy && (
+                    <button
+                      type="button"
+                      onClick={() => setFechaLocal(hoy)}
+                      className="h-9 rounded-md px-3 text-xs font-semibold text-emerald-700 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#4ee6b0] dark:hover:bg-[#1d4e48] dark:focus-visible:ring-[#37e6b0]"
+                    >
+                      Hoy
+                    </button>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
+                <CalendarRange size={16} className="shrink-0 text-slate-400" aria-hidden />
+                <SelectorSegmentado opciones={PERIODOS} valor={periodo} onChange={setPeriodo} label="Período del tablero" />
+              </div>
+            )}
           </div>
 
-          {(periodo === "mes-calendario" || periodo === "anio-calendario" || periodo === "rango") && (
+          {!modoDetalleDiario && (periodo === "mes-calendario" || periodo === "anio-calendario" || periodo === "rango") && (
             <div className="flex flex-wrap items-end gap-3 border-t border-slate-100 pt-3 dark:border-[#1c2521]">
               {periodo === "mes-calendario" && (
                 <div className="w-full sm:w-48">
@@ -560,7 +765,14 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
             </div>
           )}
 
-          {datos && (
+          {modoDetalleDiario ? (
+            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs dark:border-[#1c2521]">
+              <p className="text-slate-500 dark:text-[#94a19c]">
+                <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fmtFechaLarga(fechaLocal)}
+              </p>
+              <p className="text-slate-400 dark:text-[#74817b]">Referencia: día anterior · {fmtFecha(referenciaDia)}</p>
+            </div>
+          ) : datos && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs dark:border-[#1c2521]">
               <p className="text-slate-500 dark:text-[#94a19c]">
                 <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fmtFecha(datos.rango.desde)} a {fmtFecha(datos.rango.hasta)}
@@ -667,9 +879,8 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
             <div className="space-y-5">
               {locales.length === 0 ? (
                 <EmptyState>Ningún local tiene Fudo configurado todavía.</EmptyState>
-              ) : (
-                <>
-                  <Panel>
+              ) : !localActivo ? (
+                <Panel>
                     <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
                       <h2 className="font-semibold">Comparación entre locales</h2>
                       <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Mismo período y misma referencia para todas las sucursales.</p>
@@ -752,37 +963,16 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                         </tbody>
                       </table>
                     </div>
-                  </Panel>
-
-                  {localActivo ? (
-                    <Panel>
-                      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
-                        <div>
-                          <h2 className="font-semibold">Cómo se compone {localActivo.nombre}</h2>
-                          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Canales, cobros y categorías dentro del período seleccionado.</p>
-                        </div>
-                        <Link href={`/admin/pronostico?localId=${localActivo.localId}`} className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-[#29403b] dark:text-[#e0e7e3] dark:hover:bg-[#172724]">
-                          <BrainCircuit size={15} aria-hidden /> Ver pronóstico
-                        </Link>
-                      </div>
-                      <div className="grid gap-8 p-4 lg:grid-cols-3">
-                        <Reparto titulo="Canal" datos={localActivo.porCanal} etiquetas={ETIQUETA_CANAL} />
-                        <Reparto titulo="Medio de pago" datos={localActivo.porMedioPago} />
-                        <Reparto titulo="Categoría" datos={localActivo.porCategoria} />
-                      </div>
-                      <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3 dark:border-[#1c2521]">
-                        <Badge tone="slate">{localActivo.personas.toLocaleString("es-AR")} comensales declarados</Badge>
-                        <Badge tone={localActivo.porcentajeDescuentos >= 5 ? "amber" : "slate"}>{plata(localActivo.descuentos)} en descuentos</Badge>
-                        {localActivo.anulaciones > 0 && <Badge tone="amber">{plata(localActivo.anulaciones)} anulado</Badge>}
-                        {localActivo.sincronizadoEn && <Badge tone="slate">Sync {new Date(localActivo.sincronizadoEn).toLocaleString("es-AR")}</Badge>}
-                      </div>
-                    </Panel>
-                  ) : (
-                    <Panel className="p-5">
-                      <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">Elegí un local en la tabla o en la barra superior para abrir su composición sin perder el período.</p>
-                    </Panel>
-                  )}
-                </>
+                </Panel>
+              ) : errorDia ? (
+                <EmptyState>
+                  <span>{errorDia}</span>
+                  <Button type="button" variant="ghost" className="mx-auto mt-3" onClick={() => setRevision((valor) => valor + 1)}>Reintentar</Button>
+                </EmptyState>
+              ) : cargandoDia || !datosDia || !localDia ? (
+                <DashboardSkeleton />
+              ) : (
+                <DetalleDiario local={localDia} fecha={fechaLocal} referencia={referenciaDia} />
               )}
             </div>
           )}
