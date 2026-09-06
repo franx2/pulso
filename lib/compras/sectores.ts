@@ -216,3 +216,68 @@ export function sinClasificar(
   }
   return [...porProducto.values()].sort((a, b) => b.facturacion - a.facturacion);
 }
+
+export type CompraLinea = { detalle: string; total: number };
+
+export type MargenSector = ResumenSector & {
+  compra: number;
+  margen: number;
+  /** Margen sobre venta. Null si el sector no vendió nada en el período. */
+  margenPct: number | null;
+  /** Compra sobre venta: el food cost del sector. */
+  costoPct: number | null;
+};
+
+/**
+ * Venta, compra y margen por sector.
+ *
+ * Las compras se clasifican con las MISMAS reglas que las ventas, sobre el
+ * detalle del remito. Eso es lo que permite comparar: si un helado entra por
+ * remito y sale por cucurucho, las dos puntas caen en el mismo sector.
+ *
+ * El período de compra y el de venta son el mismo mes a propósito. La
+ * mercadería de esta cadena rota una vez por mes como máximo, así que lo
+ * comprado en el mes es una buena aproximación de lo consumido; no hace falta
+ * inventario inicial y final para que el margen mensual signifique algo.
+ */
+export function margenPorSector(
+  ventas: FilaProducto[],
+  compras: CompraLinea[],
+  overrides: Map<string, Sector> = new Map()
+): {
+  sectores: MargenSector[];
+  total: number;
+  totalCompra: number;
+  cobertura: number;
+  promosRepartidas: number;
+  promosSupuestas: number;
+  /** Compras que no se pudieron atribuir: insumos varios, packaging. */
+  compraSinClasificar: number;
+} {
+  const resumen = resumirPorSector(ventas, overrides);
+
+  const porSector = new Map<Sector, number>();
+  for (const linea of compras) {
+    const sector = sectorDe(linea.detalle, null, overrides);
+    porSector.set(sector, (porSector.get(sector) ?? 0) + linea.total);
+  }
+
+  const sectores: MargenSector[] = resumen.sectores.map((s) => {
+    const compra = porSector.get(s.sector) ?? 0;
+    const margen = s.facturacion - compra;
+    return {
+      ...s,
+      compra,
+      margen,
+      margenPct: s.facturacion > 0 ? (margen / s.facturacion) * 100 : null,
+      costoPct: s.facturacion > 0 ? (compra / s.facturacion) * 100 : null,
+    };
+  });
+
+  return {
+    ...resumen,
+    sectores,
+    totalCompra: compras.reduce((s, c) => s + c.total, 0),
+    compraSinClasificar: porSector.get("SIN_CLASIFICAR") ?? 0,
+  };
+}

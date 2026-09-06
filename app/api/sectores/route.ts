@@ -6,7 +6,7 @@ import { requireAdminApi } from "@/lib/session";
 import { definicionDe, PROMOS } from "@/lib/compras/promos";
 import {
   claveProducto,
-  resumirPorSector,
+  margenPorSector,
   sectorDe,
   sinClasificar,
   type FilaProducto,
@@ -33,7 +33,7 @@ export async function GET(request: Request) {
   const hasta = hoyAR();
   const desde = sumarDias(hasta, -(dias - 1));
 
-  const [prods, overrides, locales] = await Promise.all([
+  const [prods, compras, overrides, locales] = await Promise.all([
     db.productoDiario.groupBy({
       by: ["producto", "categoria"],
       where: {
@@ -41,6 +41,17 @@ export async function GET(request: Request) {
         ...(localId ? { localId } : {}),
       },
       _sum: { facturacion: true, cantidad: true },
+    }),
+    // Sólo mercadería: el royalty es un servicio y no puede entrar al costo.
+    db.compraItem.findMany({
+      where: {
+        compra: {
+          tipo: "MERCADERIA",
+          fecha: { gte: fechaSql(desde), lte: fechaSql(hasta) },
+          ...(localId ? { localId } : { localId: { not: null } }),
+        },
+      },
+      select: { detalle: true, totalConAjuste: true },
     }),
     cargarOverrides(),
     db.local.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
@@ -53,7 +64,12 @@ export async function GET(request: Request) {
     cantidad: p._sum.cantidad ?? 0,
   }));
 
-  const { sectores, total, cobertura, promosRepartidas, promosSupuestas } = resumirPorSector(filas, overrides);
+  const { sectores, total, totalCompra, cobertura, promosRepartidas, promosSupuestas, compraSinClasificar } =
+    margenPorSector(
+      filas,
+      compras.map((c) => ({ detalle: c.detalle, total: c.totalConAjuste })),
+      overrides
+    );
 
   // Las promos que todavía no tienen composición declarada: es la lista de
   // trabajo que falta para cerrar la cobertura.
@@ -88,6 +104,11 @@ export async function GET(request: Request) {
     locales,
     total,
     cobertura,
+    totalCompra,
+    compraSinClasificar,
+    // Con qué locales se pudo comparar venta contra compra: los que no tienen
+    // remitos cargados muestran mix pero no margen.
+    localesConCompras: [...new Set(compras.map(() => 1))].length > 0,
     promosRepartidas,
     promosSupuestas,
     promosSinDefinir,

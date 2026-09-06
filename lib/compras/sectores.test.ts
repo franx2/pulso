@@ -1,6 +1,7 @@
 import assert from "node:assert";
 import {
   claveProducto,
+  margenPorSector,
   resumirPorSector,
   sectorDe,
   sinClasificar,
@@ -186,5 +187,38 @@ for (const promo of PROMOS) {
   const suma = Object.values(promo.reparto).reduce((s, v) => s + (v ?? 0), 0);
   assert.ok(Math.abs(suma - 1) < 1e-9, `el reparto de "${promo.nombre}" suma ${suma}, no 1`);
 }
+
+// --- Margen por sector ---
+
+const conCompras = margenPorSector(
+  [
+    { producto: "HELADO 1/4", categoria: null, facturacion: 1000, cantidad: 10 },
+    { producto: "CORTADO", categoria: null, facturacion: 2000, cantidad: 20 },
+  ],
+  [
+    { detalle: "HELADO DE PISTACHO", total: 400 },
+    { detalle: "CAFE PRESTIGE", total: 500 },
+    { detalle: "INSUMOS VARIOS DE COMPRAS", total: 300 },
+  ]
+);
+const m = new Map(conCompras.sectores.map((s) => [s.sector, s]));
+assert.strictEqual(m.get("HELADOS")!.compra, 400);
+assert.strictEqual(m.get("HELADOS")!.margen, 600);
+assert.strictEqual(m.get("HELADOS")!.margenPct, 60);
+assert.strictEqual(m.get("HELADOS")!.costoPct, 40);
+assert.strictEqual(m.get("CAFETERIA")!.margenPct, 75);
+assert.strictEqual(conCompras.totalCompra, 1200);
+
+// Lo que no se puede atribuir se reporta aparte y NO se reparte entre los
+// sectores: prorratear insumos varios inventaría precisión que no existe.
+assert.strictEqual(conCompras.compraSinClasificar, 300);
+
+// Un sector sin venta no puede tener margen: null y no 0, o el promedio
+// mentiría hacia arriba.
+const sinVenta = margenPorSector([], [{ detalle: "HELADO DE PISTACHO", total: 400 }]);
+const helados = sinVenta.sectores.find((s) => s.sector === "HELADOS")!;
+assert.strictEqual(helados.compra, 400);
+assert.strictEqual(helados.margenPct, null);
+assert.strictEqual(helados.costoPct, null);
 
 console.log("lib/compras/sectores.test.ts: todos los checks pasaron");

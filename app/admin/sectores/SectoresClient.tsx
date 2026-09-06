@@ -11,6 +11,10 @@ type ResumenSector = {
   cantidad: number;
   productos: number;
   porcentaje: number;
+  compra: number;
+  margen: number;
+  margenPct: number | null;
+  costoPct: number | null;
 };
 type Producto = { producto: string; categoria: string | null; facturacion: number; cantidad: number };
 type Respuesta = {
@@ -20,6 +24,8 @@ type Respuesta = {
   localId: string;
   locales: { id: string; nombre: string }[];
   total: number;
+  totalCompra: number;
+  compraSinClasificar: number;
   cobertura: number;
   sectores: ResumenSector[];
   ejemplos: Partial<Record<SectorClave, { producto: string; facturacion: number }[]>>;
@@ -162,20 +168,90 @@ export default function SectoresClient() {
           </div>
         </div>
 
-        <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <div className="overflow-x-auto border-t border-slate-100 dark:border-[#1c2521]">
+          <table className="w-full min-w-[38rem] text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+                <th className="px-4 py-2.5 font-semibold">Sector</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Venta</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Compra</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Costo %</th>
+                <th className="px-3 py-2.5 text-right font-semibold">Margen</th>
+                <th className="px-4 py-2.5 text-right font-semibold">Margen %</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+              {conVenta.map((s) => (
+                <tr key={s.sector}>
+                  <td className="px-4 py-2.5">
+                    <span className="inline-flex items-center gap-2 font-medium">
+                      <span className={`h-2.5 w-2.5 rounded-full ${COLOR[s.sector]}`} aria-hidden />
+                      {s.etiqueta}
+                    </span>
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">{plata(s.facturacion)}</td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    {s.compra > 0 ? plata(s.compra) : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    {s.costoPct != null && s.compra > 0 ? `${s.costoPct.toFixed(1)}%` : "—"}
+                  </td>
+                  <td className="px-3 py-2.5 text-right tabular-nums">
+                    {s.compra > 0 ? plata(s.margen) : "—"}
+                  </td>
+                  <td
+                    className={`px-4 py-2.5 text-right font-semibold tabular-nums ${
+                      s.margenPct != null && s.compra > 0
+                        ? s.margenPct >= 0
+                          ? "text-emerald-700 dark:text-[#4ee6b0]"
+                          : "text-rose-600 dark:text-rose-400"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {s.margenPct != null && s.compra > 0 ? `${s.margenPct.toFixed(1)}%` : "—"}
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-slate-200 font-semibold dark:border-[#29403b]">
+                <td className="px-4 py-2.5">Total</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.total)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.totalCompra)}</td>
+                <td className="px-3 py-2.5 text-right tabular-nums">
+                  {datos.total > 0 ? `${((datos.totalCompra / datos.total) * 100).toFixed(1)}%` : "—"}
+                </td>
+                <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.total - datos.totalCompra)}</td>
+                <td className="px-4 py-2.5 text-right tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                  {datos.total > 0
+                    ? `${(((datos.total - datos.totalCompra) / datos.total) * 100).toFixed(1)}%`
+                    : "—"}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+          {datos.compraSinClasificar > 0 && (
+            <p className="px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+              {plata(datos.compraSinClasificar)} de compras sin clasificar —insumos varios y
+              packaging— están en el total pero no en ningún sector, así que los márgenes por
+              sector salen algo optimistas.
+            </p>
+          )}
+          {datos.totalCompra === 0 && (
+            <p className="px-4 py-2.5 text-xs text-slate-500 dark:text-[#94a19c]">
+              Sin remitos cargados para este local y período: hay mix de venta, pero no margen.
+            </p>
+          )}
+        </div>
+
+        <div className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-[#1c2521] dark:border-[#1c2521]">
           {conVenta.map((s) => (
-            <div key={s.sector} className="px-4 py-3">
+            <div key={s.sector} className="px-4 py-2">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <span className="inline-flex items-center gap-2 font-semibold">
+                <span className="inline-flex items-center gap-2 text-sm font-medium">
                   <span className={`h-2.5 w-2.5 rounded-full ${COLOR[s.sector]}`} aria-hidden />
                   {s.etiqueta}
                 </span>
-                <span className="flex items-baseline gap-3 text-sm">
-                  <span className="text-slate-500 dark:text-[#94a19c]">{s.productos} productos</span>
-                  <span className="font-semibold tabular-nums">{plata(s.facturacion)}</span>
-                  <span className="w-14 text-right font-semibold tabular-nums text-slate-500 dark:text-[#94a19c]">
-                    {s.porcentaje.toFixed(1)}%
-                  </span>
+                <span className="text-xs text-slate-500 dark:text-[#94a19c]">
+                  {s.productos} productos
                 </span>
               </div>
               {datos.ejemplos[s.sector] && (
