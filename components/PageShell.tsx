@@ -34,7 +34,11 @@ export function PageShell({
       <main
         className={`mx-auto w-full flex-1 px-4 sm:px-6 ${
           conSidebar
-            ? "pt-5 sm:pt-6 md:ml-18 md:w-auto md:max-w-none md:px-8 md:pt-0"
+            ? // El rail es `fixed` y se agranda de 72px a 240px al pasar el mouse
+              // o enfocarlo; sin este margen creciendo junto con él, el flyout
+              // tapaba 168px de contenido y cortaba el título de la pantalla a
+              // la mitad ("Compras y consumo" se leía "s y consumo").
+              "pt-5 sm:pt-6 md:ml-18 md:w-auto md:max-w-none md:px-8 md:pt-0 md:transition-[margin-left] md:duration-200 md:ease-out md:peer-hover/sidebar:ml-60 md:peer-focus-within/sidebar:ml-60"
             : "max-w-3xl pt-5 sm:pt-6"
         } ${nav ? "pb-28 md:pb-8" : "pb-8"}`}
       >

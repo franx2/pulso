@@ -30,7 +30,7 @@ export function Sidebar({ active, rol, nombre }: { active: NavActivo; rol: Rol; 
   }
 
   return (
-    <aside className="group/sidebar fixed inset-y-0 left-0 z-30 hidden w-18 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-200 ease-out hover:w-60 hover:shadow-[8px_0_24px_rgba(15,23,42,0.12)] focus-within:w-60 focus-within:shadow-[8px_0_24px_rgba(15,23,42,0.12)] md:flex dark:border-[#26312d] dark:bg-[#0b1412] dark:hover:shadow-[8px_0_28px_rgba(0,0,0,0.35)] dark:focus-within:shadow-[8px_0_28px_rgba(0,0,0,0.35)]">
+    <aside className="group/sidebar peer/sidebar fixed inset-y-0 left-0 z-30 hidden w-18 flex-col overflow-hidden border-r border-slate-200 bg-white transition-all duration-200 ease-out hover:w-60 hover:shadow-[8px_0_24px_rgba(15,23,42,0.12)] focus-within:w-60 focus-within:shadow-[8px_0_24px_rgba(15,23,42,0.12)] md:flex dark:border-[#26312d] dark:bg-[#0b1412] dark:hover:shadow-[8px_0_28px_rgba(0,0,0,0.35)] dark:focus-within:shadow-[8px_0_28px_rgba(0,0,0,0.35)]">
       <div className="shrink-0 border-b border-slate-100 px-4 py-4 dark:border-[#1c2521]">
         <Brand collapsible />
       </div>
