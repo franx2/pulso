@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import ClasificadorSectores, { SectorChip } from "@/components/ClasificadorSectores";
+import CuentaCorrientePanel from "./CuentaCorrientePanel";
 import {
   AlertTriangle,
   ArrowRight,
@@ -159,7 +160,7 @@ type CafeLocal = ResumenCafe & {
   diasConVentas: number;
 };
 
-type Vista = "resumen" | "helado" | "cafe" | "remitos" | "royalty" | "clasificacion";
+type Vista = "resumen" | "helado" | "cafe" | "remitos" | "royalty" | "clasificacion" | "cuenta";
 
 const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "resumen", label: "Resumen" },
@@ -168,6 +169,7 @@ const VISTAS: { clave: Vista; label: string }[] = [
   { clave: "remitos", label: "Remitos" },
   { clave: "royalty", label: "Royalty" },
   { clave: "clasificacion", label: "Clasificación" },
+  { clave: "cuenta", label: "Cuenta corriente" },
 ];
 
 const kilosOSinBase = (n: number | null | undefined) => (n == null ? "Sin base" : kilos(n));
@@ -1166,6 +1168,12 @@ export default function ComprasClient() {
               <ClasificadorSectores onCambio={() => setRevision((v) => v + 1)} />
             </div>
           </Panel>
+        </div>
+      )}
+
+      {vista === "cuenta" && (
+        <div id="compras-panel-cuenta" role="tabpanel" aria-labelledby="compras-tab-cuenta">
+          <CuentaCorrientePanel localId={localId} setLocalId={setLocalId} />
         </div>
       )}
     </div>

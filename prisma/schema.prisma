@@ -159,6 +159,15 @@ model Local {
   comisionBilletera Float @default(0.02)
   comisionDelivery  Float @default(0.27)
 
+  /// Cuenta corriente con la fábrica (Bianconero): lo que este local le debía
+  /// antes de empezar a cargar remitos y pagos acá. El saldo actual es este
+  /// número más los remitos —mercadería y servicio, el royalty es la misma
+  /// empresa— con fecha posterior a `saldoInicialProveedorFecha`, menos los
+  /// pagos cargados. Es por local porque cada sucursal factura con su propio
+  /// CUIT (`cuitCompras`), así que cada una tiene su propia cuenta.
+  saldoInicialProveedor      Float     @default(0)
+  saldoInicialProveedorFecha DateTime? @db.Date
+
   empleados   Empleado[]        @relation("LocalPrincipal")
   asignados   AsignacionLocal[]
   turnos      Turno[]
@@ -179,6 +188,7 @@ model Local {
   pronosticos      Pronostico[]
   compras          Compra[]
   costosFijos      CostoFijo[]
+  pagosProveedor   PagoProveedor[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -914,4 +924,24 @@ model CostoFijo {
 
   @@unique([localId, mes, concepto])
   @@index([localId, mes])
+}
+
+/// Un pago a la fábrica, cargado a mano. Junto con los remitos (`Compra`,
+/// que ya se cargan solos por mail) y el saldo inicial del local, compone la
+/// cuenta corriente: no se guarda un saldo, se recalcula siempre de estas
+/// tres fuentes para que nunca quede desincronizado de los remitos reales.
+model PagoProveedor {
+  id      String @id @default(cuid())
+  local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+
+  fecha DateTime @db.Date
+  monto Float
+  /// Transferencia, efectivo, cheque... texto libre, no hay un medio fijo.
+  medio String?
+  nota  String?
+
+  creadoEn DateTime @default(now())
+
+  @@index([localId, fecha])
 }

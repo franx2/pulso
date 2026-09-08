@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { hoyAR } from "@/lib/fechaAR";
+import { fechaSql, hoyAR } from "@/lib/fechaAR";
 import { requireAdminApi, requireEncargadoApi } from "@/lib/session";
 import { readJsonBody } from "@/lib/http";
 
@@ -74,11 +74,22 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     comisionDelivery?: number;
     cuitCompras?: string | null;
     razonSocialCompras?: string | null;
+    saldoInicialProveedor?: number;
+    saldoInicialProveedorFecha?: string | null;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
   if (body.nombre !== undefined && !body.nombre.trim()) {
     return NextResponse.json({ error: "El nombre no puede quedar vacío" }, { status: 400 });
+  }
+  if (body.saldoInicialProveedor !== undefined && !Number.isFinite(body.saldoInicialProveedor)) {
+    return NextResponse.json({ error: "El saldo inicial tiene que ser un número" }, { status: 400 });
+  }
+  if (
+    body.saldoInicialProveedorFecha != null &&
+    !/^\d{4}-\d{2}-\d{2}$/.test(body.saldoInicialProveedorFecha)
+  ) {
+    return NextResponse.json({ error: "Fecha de corte inválida, se espera AAAA-MM-DD" }, { status: 400 });
   }
   // Una comisión fuera de 0-100% es un error de tipeo (poner 27 en vez de
   // 0,27), y guardarla multiplicaría el costo de venta por cien.
@@ -143,6 +154,16 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
         : {}),
       ...(body.razonSocialCompras !== undefined
         ? { razonSocialCompras: body.razonSocialCompras?.trim() || null }
+        : {}),
+      ...(body.saldoInicialProveedor !== undefined
+        ? { saldoInicialProveedor: body.saldoInicialProveedor }
+        : {}),
+      ...(body.saldoInicialProveedorFecha !== undefined
+        ? {
+            saldoInicialProveedorFecha: body.saldoInicialProveedorFecha
+              ? fechaSql(body.saldoInicialProveedorFecha)
+              : null,
+          }
         : {}),
     },
   });
