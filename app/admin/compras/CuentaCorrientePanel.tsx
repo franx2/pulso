@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
+import { AlertTriangle, CheckCircle2, HelpCircle, Pencil, Plus, Trash2 } from "lucide-react";
 import { Badge, Button, EmptyState, Input, Label, Panel, SelectorSegmentado } from "@/components/ui";
 import { plata, fechaCorta } from "@/lib/formato";
 import { hoyAR } from "@/lib/fechaAR";
@@ -43,6 +43,9 @@ function coincideFiltro(m: Movimiento, filtro: FiltroMovimiento): boolean {
   return true;
 }
 
+type MovimientoBanco = { id: string; fecha: string; descripcion: string; referencia: string | null; debito: number };
+type PagoConvalidado = { pago: { id: string }; movimiento: MovimientoBanco | null; diferenciaDias: number | null };
+
 type CuentaLocal = {
   localId: string;
   local: string;
@@ -52,6 +55,7 @@ type CuentaLocal = {
   totalRemitos: number;
   totalPagos: number;
   saldo: number;
+  convalidacion: { pagos: PagoConvalidado[]; sinRegistrar: MovimientoBanco[] };
 };
 
 type Respuesta = {
@@ -160,6 +164,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
   // primero, y el saldo de cada fila ya viene calculado — invertir el orden
   // de exhibición no lo toca.
   const movimientosVisibles = [...cuenta.movimientos].reverse().filter((m) => coincideFiltro(m, filtro));
+  const convalidacionPorPago = new Map(cuenta.convalidacion.pagos.map((c) => [c.pago.id, c]));
 
   async function guardarSaldoInicial(e: React.FormEvent) {
     e.preventDefault();
@@ -381,6 +386,9 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                           <Badge tone="slate">corte</Badge>
                         </span>
                       )}
+                      {m.tipo === "PAGO" && m.pagoId && (
+                        <IconoConvalidacion convalidacion={convalidacionPorPago.get(m.pagoId)} />
+                      )}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{m.debe > 0 ? plata(m.debe) : "—"}</td>
                     <td className="px-3 py-2 text-right tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
@@ -407,6 +415,72 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
           </div>
         )}
       </Panel>
+
+      {cuenta.convalidacion.sinRegistrar.length > 0 && (
+        <Panel className="border-amber-200 dark:border-amber-500/30">
+          <div className="border-b border-amber-100 px-4 py-3 dark:border-amber-500/20">
+            <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200">
+              <AlertTriangle size={16} aria-hidden />
+              Transferencias a proveedor sin cargar
+            </h2>
+            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+              El banco tiene salidas marcadas como pago a proveedor que ningún pago cargado acá
+              reclama. Puede ser este pago, sin registrar todavía.
+            </p>
+          </div>
+          <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+            {cuenta.convalidacion.sinRegistrar.map((m) => (
+              <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {fechaCorta(m.fecha)} · {plata(m.debito)}
+                  </p>
+                  <p className="truncate text-xs text-slate-500 dark:text-[#94a19c]">
+                    {m.descripcion}
+                    {m.referencia && ` · ${m.referencia}`}
+                  </p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setFecha(m.fecha);
+                    setMonto(String(m.debito));
+                    setMostrarForm(true);
+                  }}
+                >
+                  Cargar como pago
+                </Button>
+              </div>
+            ))}
+          </div>
+        </Panel>
+      )}
     </>
+  );
+}
+
+function IconoConvalidacion({ convalidacion }: { convalidacion: PagoConvalidado | undefined }) {
+  if (!convalidacion) return null;
+  if (convalidacion.movimiento) {
+    const dias = convalidacion.diferenciaDias ?? 0;
+    return (
+      <span
+        className="ml-1.5 inline-flex translate-y-[-1px] items-center text-emerald-600 dark:text-[#4ee6b0]"
+        title={`Respaldado por el banco: ${convalidacion.movimiento.descripcion}${
+          convalidacion.movimiento.referencia ? ` · ${convalidacion.movimiento.referencia}` : ""
+        }${dias !== 0 ? ` (${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"} de diferencia)` : ""}`}
+      >
+        <CheckCircle2 size={14} aria-label="Respaldado por el banco" />
+      </span>
+    );
+  }
+  return (
+    <span
+      className="ml-1.5 inline-flex translate-y-[-1px] items-center text-amber-600 dark:text-amber-400"
+      title="No encontramos ninguna transferencia parecida en el extracto. Puede ser efectivo, cheque, o falta cargar el banco de esta fecha."
+    >
+      <HelpCircle size={14} aria-label="Sin respaldo en el banco" />
+    </span>
   );
 }
