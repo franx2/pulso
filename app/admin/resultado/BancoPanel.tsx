@@ -8,7 +8,7 @@ import { plata, fechaCorta, porcentaje as pct } from "@/lib/formato";
 /**
  * Conciliación bancaria e impuestos del período.
  *
- * Se sube el CSV que exporta el banco, se categoriza solo, y se compara
+ * Se sube el CSV o el PDF que exporta el banco, se categoriza solo, y se compara
  * contra lo que Fudo dice que se cobró por tarjeta y transferencia. Es por
  * período y medio de pago, no remito por remito: el banco liquida en lotes y
  * con demora, así que una diferencia chica es esperable y no un error.
@@ -85,7 +85,18 @@ const FILTROS: { clave: FiltroMovimiento; label: string }[] = [
   { clave: "OTRO", label: "Otro" },
 ];
 
-export default function BancoPanel({ localId, periodo }: { localId: string; periodo: URLSearchParams }) {
+export default function BancoPanel({
+  localId,
+  periodo,
+  onPeriodoDetectado,
+}: {
+  localId: string;
+  periodo: URLSearchParams;
+  /** Se llama con "AAAA-MM" cuando el archivo subido cae entero en un mes,
+   * para que el filtro de arriba salte solo ahí en vez de mostrar "sin
+   * movimientos" porque estaba mirando otro período. */
+  onPeriodoDetectado?: (mes: string) => void;
+}) {
   const [datos, setDatos] = useState<Respuesta | null>(null);
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
@@ -128,16 +139,33 @@ export default function BancoPanel({ localId, periodo }: { localId: string; peri
   const actual = datos.porLocal.find((l) => l.localId === localId);
   if (!actual) return <EmptyState>No encontramos esta sucursal.</EmptyState>;
 
-  return <DetalleLocal cuenta={actual} onCambio={() => setRevision((v) => v + 1)} />;
+  return (
+    <DetalleLocal
+      cuenta={actual}
+      onCambio={() => setRevision((v) => v + 1)}
+      onPeriodoDetectado={onPeriodoDetectado}
+    />
+  );
 }
 
-function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () => void }) {
+function DetalleLocal({
+  cuenta,
+  onCambio,
+  onPeriodoDetectado,
+}: {
+  cuenta: CuentaLocal;
+  onCambio: () => void;
+  onPeriodoDetectado?: (mes: string) => void;
+}) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [subiendo, setSubiendo] = useState(false);
   const [resultadoCarga, setResultadoCarga] = useState<{
     leidas: number;
     importadas: number;
     yaCargadas: number;
+    desde?: string;
+    hasta?: string;
+    mesDetectado?: string;
   } | null>(null);
   const [errorCarga, setErrorCarga] = useState("");
   const [filtro, setFiltro] = useState<FiltroMovimiento>("todos");
@@ -147,18 +175,30 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
     setErrorCarga("");
     setResultadoCarga(null);
     try {
-      const csv = await archivo.text();
+      const esPdf = archivo.type === "application/pdf" || archivo.name.toLowerCase().endsWith(".pdf");
+      const cuerpo = esPdf ? { pdfBase64: await base64DeArchivo(archivo) } : { csv: await archivo.text() };
+
       const res = await fetch(`/api/locales/${cuenta.localId}/banco`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ csv }),
+        body: JSON.stringify(cuerpo),
       });
       const data = await res.json();
       if (!res.ok) {
         setErrorCarga(data.error ?? "No se pudo leer el archivo.");
         return;
       }
-      setResultadoCarga(data);
+
+      // Si el archivo cae entero en un mes, el filtro de arriba salta solo
+      // ahí: sin esto, subir el extracto de agosto mientras se mira
+      // septiembre mostraba "sin movimientos" y parecía que la carga falló.
+      const mesDetectado: string | undefined =
+        data.desde && data.hasta && data.desde.slice(0, 7) === data.hasta.slice(0, 7)
+          ? data.desde.slice(0, 7)
+          : undefined;
+      if (mesDetectado) onPeriodoDetectado?.(mesDetectado);
+
+      setResultadoCarga({ ...data, mesDetectado });
       onCambio();
     } finally {
       setSubiendo(false);
@@ -178,14 +218,15 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
           <div>
             <h2 className="font-semibold">Extracto bancario</h2>
             <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
-              El CSV que exporta el banco para {cuenta.local}. Subirlo dos veces no duplica nada.
+              El CSV o el PDF que exporta el banco para {cuenta.local}. Subirlo dos veces no
+              duplica nada, y el período de arriba salta solo al mes que cubre el archivo.
             </p>
           </div>
           <div>
             <input
               ref={inputRef}
               type="file"
-              accept=".csv,text/csv"
+              accept=".csv,text/csv,.pdf,application/pdf"
               className="hidden"
               onChange={(e) => {
                 const archivo = e.target.files?.[0];
@@ -194,24 +235,34 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
             />
             <Button type="button" disabled={subiendo} onClick={() => inputRef.current?.click()}>
               <Upload size={16} />
-              {subiendo ? "Leyendo…" : "Subir CSV"}
+              {subiendo ? "Leyendo…" : "Subir extracto"}
             </Button>
           </div>
         </div>
         {errorCarga && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{errorCarga}</p>}
         {resultadoCarga && (
-          <p className="mt-2 flex items-center gap-1.5 text-sm text-emerald-700 dark:text-[#4ee6b0]">
-            <CheckCircle2 size={15} aria-hidden />
-            {resultadoCarga.importadas} movimientos nuevos
-            {resultadoCarga.yaCargadas > 0 && ` · ${resultadoCarga.yaCargadas} ya estaban cargados`}
-          </p>
+          <div className="mt-2 flex flex-col gap-1 text-sm text-emerald-700 dark:text-[#4ee6b0]">
+            <p className="flex items-center gap-1.5">
+              <CheckCircle2 size={15} aria-hidden />
+              {resultadoCarga.importadas} movimientos nuevos
+              {resultadoCarga.yaCargadas > 0 && ` · ${resultadoCarga.yaCargadas} ya estaban cargados`}
+            </p>
+            {resultadoCarga.desde && resultadoCarga.hasta && (
+              <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+                Período del archivo: {fechaCorta(resultadoCarga.desde)} a {fechaCorta(resultadoCarga.hasta)}
+                {resultadoCarga.mesDetectado
+                  ? " · el filtro de arriba se movió a ese mes solo"
+                  : " · abarca más de un mes, ajustá el filtro de arriba para verlo"}
+              </p>
+            )}
+          </div>
         )}
       </Panel>
 
       {cuenta.movimientos.length === 0 ? (
         <EmptyState>
-          Sin movimientos bancarios cargados en este período para {cuenta.local}. Subí el CSV del
-          banco para ver la conciliación.
+          Sin movimientos bancarios cargados en este período para {cuenta.local}. Subí el extracto
+          del banco (CSV o PDF) para ver la conciliación.
         </EmptyState>
       ) : (
         <>
@@ -394,9 +445,24 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
         <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           Hay movimientos cargados pero ninguno cayó en Tarjeta ni Transferencia: revisá que el
-          CSV sea del banco correcto para este período.
+          extracto sea del banco correcto para este período.
         </p>
       )}
     </div>
   );
+}
+
+/**
+ * `File` → base64, en trozos: `String.fromCharCode(...bytes)` con todo el
+ * archivo de una vez rompe el límite de argumentos del motor en un PDF de
+ * este tamaño (cientos de miles de bytes).
+ */
+async function base64DeArchivo(archivo: File): Promise<string> {
+  const bytes = new Uint8Array(await archivo.arrayBuffer());
+  const TROZO = 8192;
+  let binario = "";
+  for (let i = 0; i < bytes.length; i += TROZO) {
+    binario += String.fromCharCode(...bytes.subarray(i, i + TROZO));
+  }
+  return btoa(binario);
 }

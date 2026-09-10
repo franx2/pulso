@@ -3,12 +3,16 @@ import { db } from "@/lib/db";
 import { fechaSql } from "@/lib/fechaAR";
 import { requireAdminApi } from "@/lib/session";
 import { readJsonBody } from "@/lib/http";
-import { parsearCsvBanco, ExtractoIlegible } from "@/lib/compras/banco";
+import { parsearCsvBanco, parsearPdfBanco, ExtractoIlegible, type MovimientoBanco } from "@/lib/compras/banco";
+import { textoDePdf } from "@/lib/compras/pdf";
+
+/** Un extracto de varias páginas trae cientos de movimientos para insertar. */
+export const maxDuration = 60;
 
 /**
- * Cargar el extracto bancario de este local, desde el CSV que exporta el
- * banco. Se puede volver a subir el mismo mes sin miedo: la fila se
- * descarta si ya existe una idéntica (`localId`, fecha, saldo).
+ * Cargar el extracto bancario de este local, desde el CSV o el PDF que
+ * exporta el banco. Se puede volver a subir el mismo mes sin miedo: la fila
+ * se descarta si ya existe una idéntica (`localId`, fecha, saldo).
  */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const session = await requireAdminApi();
@@ -18,12 +22,19 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const local = await db.local.findUnique({ where: { id }, select: { id: true } });
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 404 });
 
-  const body = await readJsonBody<{ csv?: string }>(request);
-  if (!body?.csv?.trim()) return NextResponse.json({ error: "Falta el contenido del CSV" }, { status: 400 });
+  const body = await readJsonBody<{ csv?: string; pdfBase64?: string }>(request);
+  if (!body?.csv?.trim() && !body?.pdfBase64?.trim()) {
+    return NextResponse.json({ error: "Falta el contenido del archivo" }, { status: 400 });
+  }
 
-  let filas: ReturnType<typeof parsearCsvBanco>;
+  let filas: MovimientoBanco[];
   try {
-    filas = parsearCsvBanco(body.csv);
+    if (body.pdfBase64) {
+      const texto = await textoDePdf(new Uint8Array(Buffer.from(body.pdfBase64, "base64")));
+      filas = parsearPdfBanco(texto);
+    } else {
+      filas = parsearCsvBanco(body.csv!);
+    }
   } catch (e) {
     const mensaje = e instanceof ExtractoIlegible ? e.message : "No pudimos leer el archivo";
     return NextResponse.json({ error: mensaje }, { status: 400 });
@@ -49,6 +60,11 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const porCategoria: Record<string, number> = {};
   for (const f of filas) porCategoria[f.categoria] = (porCategoria[f.categoria] ?? 0) + 1;
 
+  // El período que cubre el archivo, para que la pantalla pueda saltar sola
+  // al mes correspondiente en vez de mostrar "sin movimientos" si el filtro
+  // de arriba estaba en otro momento.
+  const fechas = filas.map((f) => f.fecha).sort();
+
   return NextResponse.json({
     leidas: filas.length,
     importadas: resultado.count,
@@ -56,5 +72,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     // no un error, es lo esperado si se vuelve a subir el mismo extracto.
     yaCargadas: filas.length - resultado.count,
     porCategoria,
+    desde: fechas[0],
+    hasta: fechas[fechas.length - 1],
   });
 }

@@ -130,7 +130,13 @@ export default function ResultadoClient() {
         <SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Vista de resultado" />
       </div>
 
-      {vista === "banco" && <BancoPanel localId={localId} periodo={periodo} />}
+      {vista === "banco" && (
+        <BancoPanel
+          localId={localId}
+          periodo={periodo}
+          onPeriodoDetectado={(mes) => setValor({ ...valor, periodo: "mes-calendario", mes })}
+        />
+      )}
 
       {vista === "resumen" &&
         (!datos || !total ? (

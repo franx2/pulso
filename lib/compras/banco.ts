@@ -175,3 +175,91 @@ export function parsearCsvBanco(texto: string): MovimientoBanco[] {
 
   return movimientos;
 }
+
+/**
+ * Lee el extracto en PDF (Banco Galicia), para cuando bajar el CSV es más
+ * trabajo que bajar el PDF de siempre.
+ *
+ * El texto llega con las columnas reconstruidas por posición (ver
+ * `lib/compras/pdf.ts`), pero cada movimiento se estira a dos o más
+ * renglones: uno con fecha, descripción, importe y saldo, y uno o más sueltos
+ * abajo con la referencia ("Operación XXXX", el mes al que corresponde un
+ * descuento, quién transfirió). Se toman sólo los renglones que empiezan con
+ * fecha y traen dos importes —el movimiento y el saldo que queda—; todo lo
+ * demás (encabezados repetidos, pie de página, el casillero de datos de la
+ * cuenta en la primera página) no calza con ese patrón y queda afuera solo,
+ * sin necesidad de una lista de qué ignorar.
+ */
+const LINEA_CON_FECHA = /^(\d{1,2}\/\d{1,2}\/\d{2,4})\s+(.+)$/;
+const PLATA_EN_LINEA = /-?\d[\d.]*,\d{2}/g;
+
+/** Texto de página que puede aparecer entre dos movimientos y no es referencia de ninguno. */
+const ES_TEXTO_DE_PAGINA = [
+  /Resumen de Cuenta Corriente en Pesos/i,
+  /P[aá]gina\s+\d+\s*\/\s*\d+/i,
+  /^Fecha\s+Descripci[oó]n/i,
+  // El código del documento que Galicia imprime al pie de cada página
+  // ("20260831047001347H"): bastante más largo que un CUIT (11 dígitos) para
+  // no confundirse con uno que venga como referencia de una transferencia.
+  /^\d{14,}[A-Za-z]?$/,
+];
+
+/**
+ * Dónde termina la lista de movimientos y empieza el resumen de cierre: una
+ * tabla de retenciones del mes, aclaraciones legales y datos de contacto que
+ * no tienen fecha y por eso, sin este corte, se le pegaban enteros como
+ * "referencia" al último movimiento del extracto.
+ */
+const ES_FIN_DE_MOVIMIENTOS = [/^Total\s+.*\$/, /Consolidado de retenci[oó]n de impuestos/i];
+
+export function parsearPdfBanco(texto: string): MovimientoBanco[] {
+  const movimientos: MovimientoBanco[] = [];
+  let actual: MovimientoBanco | null = null;
+  let terminado = false;
+
+  for (const cruda of texto.split(/\r?\n/)) {
+    const linea = cruda.trim();
+    if (!linea) continue;
+    if (terminado) continue;
+    if (ES_FIN_DE_MOVIMIENTOS.some((r) => r.test(linea))) {
+      terminado = true;
+      continue;
+    }
+
+    const conFecha = linea.match(LINEA_CON_FECHA);
+    if (conFecha) {
+      const fecha = fechaDeCelda(conFecha[1]);
+      const importes = conFecha[2].match(PLATA_EN_LINEA);
+      // Un movimiento real trae el importe del movimiento y el saldo que
+      // queda; con menos de dos números no hay nada confiable que leer acá.
+      if (fecha && importes && importes.length >= 2) {
+        const textoSaldo = importes[importes.length - 1];
+        const textoMonto = importes[importes.length - 2];
+        const descripcion = conFecha[2].slice(0, conFecha[2].indexOf(textoMonto)).trim();
+        const monto = numeroDeCelda(textoMonto);
+        actual = {
+          fecha,
+          descripcion,
+          referencia: null,
+          categoria: categoriaDe(descripcion),
+          credito: monto > 0 ? monto : 0,
+          debito: monto < 0 ? -monto : 0,
+          saldo: numeroDeCelda(textoSaldo),
+        };
+        movimientos.push(actual);
+        continue;
+      }
+    }
+
+    // No es un renglón de movimiento: si hay uno abierto y esto no es texto
+    // de página, es su referencia (a veces son dos o tres renglones seguidos).
+    if (actual && !ES_TEXTO_DE_PAGINA.some((r) => r.test(linea))) {
+      actual.referencia = actual.referencia ? `${actual.referencia} · ${linea}` : linea;
+    }
+  }
+
+  if (movimientos.length === 0) {
+    throw new ExtractoIlegible("No encontré ningún movimiento con fecha e importe en el PDF");
+  }
+  return movimientos;
+}
