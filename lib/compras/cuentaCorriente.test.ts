@@ -36,6 +36,13 @@ assert.strictEqual(r.totalPagos, 40_000);
 // El royalty entra como remito, con su propia etiqueta.
 assert.ok(r.movimientos.some((m) => m.descripcion === "Royalty 16-5011"));
 
+// El subtipo distingue mercadería de royalty sin parsear la descripción, que
+// es texto para mostrar y no una clave para filtrar por.
+const filaRoyalty = r.movimientos.find((m) => m.descripcion === "Royalty 16-5011")!;
+assert.strictEqual(filaRoyalty.subtipo, "SERVICIO");
+const filaRemito = r.movimientos.find((m) => m.descripcion === "Remito 16-5010")!;
+assert.strictEqual(filaRemito.subtipo, "MERCADERIA");
+
 // --- El saldo corre en orden cronológico, no en el orden en que se cargó ---
 
 const fechas = r.movimientos.map((m) => m.fecha);

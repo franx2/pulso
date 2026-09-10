@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, Pencil, Plus, Trash2 } from "lucide-react";
-import { Badge, Button, EmptyState, Input, Label, Panel } from "@/components/ui";
+import { Badge, Button, EmptyState, Input, Label, Panel, SelectorSegmentado } from "@/components/ui";
 import { plata, fechaCorta } from "@/lib/formato";
 import { hoyAR } from "@/lib/fechaAR";
 
@@ -18,12 +18,30 @@ import { hoyAR } from "@/lib/fechaAR";
 type Movimiento = {
   fecha: string;
   tipo: "SALDO_INICIAL" | "REMITO" | "PAGO";
+  subtipo?: "MERCADERIA" | "SERVICIO";
   descripcion: string;
   debe: number;
   haber: number;
   saldo: number;
   pagoId?: string;
 };
+
+type FiltroMovimiento = "todos" | "remitos" | "royalty" | "pagos";
+
+const FILTROS: { clave: FiltroMovimiento; label: string }[] = [
+  { clave: "todos", label: "Todos" },
+  { clave: "remitos", label: "Remitos" },
+  { clave: "royalty", label: "Royalty" },
+  { clave: "pagos", label: "Pagos" },
+];
+
+function coincideFiltro(m: Movimiento, filtro: FiltroMovimiento): boolean {
+  if (filtro === "todos") return true;
+  if (filtro === "pagos") return m.tipo === "PAGO";
+  if (filtro === "royalty") return m.tipo === "REMITO" && m.subtipo === "SERVICIO";
+  if (filtro === "remitos") return m.tipo === "REMITO" && m.subtipo === "MERCADERIA";
+  return true;
+}
 
 type CuentaLocal = {
   localId: string;
@@ -136,6 +154,12 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
   const [nota, setNota] = useState("");
   const [guardandoPago, setGuardandoPago] = useState(false);
   const [errorPago, setErrorPago] = useState("");
+
+  const [filtro, setFiltro] = useState<FiltroMovimiento>("todos");
+  // Del último al primero: lo que se acaba de cargar es lo que se quiere ver
+  // primero, y el saldo de cada fila ya viene calculado — invertir el orden
+  // de exhibición no lo toca.
+  const movimientosVisibles = [...cuenta.movimientos].reverse().filter((m) => coincideFiltro(m, filtro));
 
   async function guardarSaldoInicial(e: React.FormEvent) {
     e.preventDefault();
@@ -288,6 +312,12 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
           </Button>
         </div>
 
+        {cuenta.movimientos.length > 0 && (
+          <div className="scrollbar-hidden overflow-x-auto border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <SelectorSegmentado label="Filtrar movimientos" valor={filtro} onChange={setFiltro} opciones={FILTROS} />
+          </div>
+        )}
+
         {mostrarForm && (
           <form onSubmit={agregarPago} className="flex flex-wrap items-end gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
             <div className="w-36">
@@ -323,6 +353,8 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
 
         {cuenta.movimientos.length === 0 ? (
           <EmptyState>Sin movimientos todavía.</EmptyState>
+        ) : movimientosVisibles.length === 0 ? (
+          <EmptyState>Ningún movimiento coincide con este filtro.</EmptyState>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full min-w-[36rem] text-sm">
@@ -337,7 +369,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
-                {cuenta.movimientos.map((m, i) => (
+                {movimientosVisibles.map((m, i) => (
                   <tr key={`${m.tipo}-${m.fecha}-${i}`}>
                     <td className="px-4 py-2 tabular-nums text-slate-500 dark:text-[#94a19c]">
                       {fechaCorta(m.fecha)}

@@ -32,6 +32,9 @@ export type PagoMovimiento = {
 export type MovimientoCuenta = {
   fecha: string;
   tipo: "SALDO_INICIAL" | "REMITO" | "PAGO";
+  /** Sólo en remitos: para filtrar mercadería y royalty por separado sin
+   * depender de parsear la descripción, que es texto para mostrar. */
+  subtipo?: "MERCADERIA" | "SERVICIO";
   descripcion: string;
   /** Lo que aumenta la deuda: el saldo inicial y cada remito. */
   debe: number;
@@ -82,6 +85,7 @@ export function calcularCuentaCorriente(params: {
     filas.push({
       fecha: r.fecha,
       tipo: "REMITO",
+      subtipo: r.tipo,
       descripcion: r.tipo === "SERVICIO" ? `Royalty ${r.numero}` : `Remito ${r.numero}`,
       debe: r.total,
       haber: 0,
