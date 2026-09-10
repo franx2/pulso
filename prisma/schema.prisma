@@ -189,6 +189,7 @@ model Local {
   compras          Compra[]
   costosFijos      CostoFijo[]
   pagosProveedor   PagoProveedor[]
+  movimientosBancarios MovimientoBancario[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -924,6 +925,53 @@ model CostoFijo {
 
   @@unique([localId, mes, concepto])
   @@index([localId, mes])
+}
+
+enum CategoriaBancaria {
+  /// Tarjeta de crédito, débito, prepaga, Mercado Pago, QR, posnet: todo lo
+  /// que Nave liquida como "PAGO CON TARJETA" en el extracto.
+  TARJETA
+  /// Transferencias recibidas: lo que Nave liquida como "PAGO CON
+  /// TRANSFERENCIA", y las transferencias directas de otros orígenes.
+  TRANSFERENCIA
+  /// Impuestos y comisiones que cobra el banco (Ley 25413, IVA, percepciones,
+  /// comisión de mantenimiento): nunca es venta, así que queda afuera de la
+  /// conciliación pero se muestra aparte porque también es plata real.
+  IMPUESTO_COMISION
+  /// Pagos a proveedores, débitos automáticos, movimientos de caja: todo lo
+  /// que no es ni cobro de venta ni costo bancario.
+  OTRO
+}
+
+/// Un renglón del extracto bancario, importado desde el CSV que exporta el
+/// banco. Sirve para conciliar lo que Fudo dice que se cobró por tarjeta y
+/// transferencia contra lo que de verdad entró a la cuenta: Fudo registra la
+/// venta el día que se hizo, el banco la acredita uno o más días después y ya
+/// neta de la comisión de Nave, así que los dos números nunca van a calzar
+/// exacto — la conciliación es por período, no remito por remito.
+model MovimientoBancario {
+  id      String @id @default(cuid())
+  local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+
+  fecha       DateTime @db.Date
+  descripcion String
+  /// La columna "Origen" del extracto: número de operación, quién transfirió.
+  referencia  String?
+  categoria   CategoriaBancaria
+
+  credito Float @default(0)
+  debito  Float @default(0)
+  /// Saldo acumulado que informa el banco después de este movimiento. Es la
+  /// clave que evita cargar el mismo extracto dos veces: en un extracto real
+  /// es prácticamente irrepetible fila a fila, a diferencia de la fecha o el
+  /// monto solos, que sí se repiten.
+  saldo   Float?
+
+  creadoEn DateTime @default(now())
+
+  @@unique([localId, fecha, saldo])
+  @@index([localId, fecha])
 }
 
 /// Un pago a la fábrica, cargado a mano. Junto con los remitos (`Compra`,

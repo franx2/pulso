@@ -4,8 +4,15 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
-import { Badge, EmptyState, Metrica, PageTitle, Panel, Select } from "@/components/ui";
+import { Badge, EmptyState, Metrica, PageTitle, Panel, Select, SelectorSegmentado } from "@/components/ui";
 import { plata, porcentaje as pct } from "@/lib/formato";
+import BancoPanel from "./BancoPanel";
+
+type Vista = "resumen" | "banco";
+const VISTAS: { clave: Vista; label: string }[] = [
+  { clave: "resumen", label: "Resumen" },
+  { clave: "banco", label: "Banco" },
+];
 
 /**
  * Resultado operativo.
@@ -62,6 +69,7 @@ const ARREGLO: Record<string, { texto: string; href: string }> = {
 export default function ResultadoClient() {
   const { valor, setValor, params: periodo, hoy } = usePeriodo("mtd");
   const [localId, setLocalId] = useState("");
+  const [vista, setVista] = useState<Vista>("resumen");
   const [datos, setDatos] = useState<Respuesta | null>(null);
   const [error, setError] = useState("");
 
@@ -118,7 +126,14 @@ export default function ResultadoClient() {
         </div>
       </Panel>
 
-      {!datos || !total ? (
+      <div className="scrollbar-hidden overflow-x-auto">
+        <SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Vista de resultado" />
+      </div>
+
+      {vista === "banco" && <BancoPanel localId={localId} periodo={periodo} />}
+
+      {vista === "resumen" &&
+        (!datos || !total ? (
         <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Calculando" />
       ) : total.ventaBruta === 0 ? (
         <EmptyState>No hay ventas sincronizadas en este período.</EmptyState>
@@ -311,7 +326,7 @@ export default function ResultadoClient() {
             </Panel>
           )}
         </>
-      )}
+      ))}
     </div>
   );
 }
