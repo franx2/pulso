@@ -70,9 +70,14 @@ export default function ValidadorCertificadosPage() {
         </div>
       </div>
 
-      {/* Barra de pestañas */}
+      {/* Barra de pestañas: en un celular las cinco no entran en una línea,
+          así que la fila hace scroll horizontal en vez de partir cada
+          etiqueta en dos o tres renglones y romper el alto de la barra. */}
       <div style={{ background: "#FAFAFA", borderBottom: "1px solid #D4D4D4", height: 40 }}>
-        <div style={{ maxWidth: 1170, margin: "0 auto", padding: "0 20px", display: "flex", height: "100%" }}>
+        <div
+          className="scrollbar-hidden"
+          style={{ maxWidth: 1170, margin: "0 auto", padding: "0 20px", display: "flex", height: "100%", overflowX: "auto" }}
+        >
           {TABS.map((t) => (
             <span
               key={t.label}
@@ -82,6 +87,8 @@ export default function ValidadorCertificadosPage() {
                 padding: "10px 15px",
                 fontSize: 13,
                 lineHeight: "20px",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
                 background: t.activo ? AZUL_ACTIVO : "transparent",
                 color: t.activo ? "#fff" : GRIS_TEXTO_NAV,
                 cursor: "default",
@@ -120,12 +127,13 @@ export default function ValidadorCertificadosPage() {
             }}
           >
             <h1
+              className="text-[28px] sm:text-[40px]"
               style={{
                 textAlign: "center",
                 fontWeight: 700,
-                fontSize: 40,
+                lineHeight: 1.2,
                 color: "#333333",
-                margin: "20px 0 30px",
+                margin: "10px 0 20px",
               }}
             >
               Certificado Válido
