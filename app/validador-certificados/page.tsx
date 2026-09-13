@@ -35,13 +35,19 @@ const TABS = [
 export default function ValidadorCertificadosPage() {
   const [documento, setDocumento] = useState("");
   const [codigo, setCodigo] = useState("");
-  const [mensaje, setMensaje] = useState("");
+  // Maqueta: cualquier documento y código cargados dan "válido". No hay
+  // origen de datos real todavía, y nada de lo tipeado se guarda ni se envía.
+  const [validado, setValidado] = useState(false);
 
   function validar(e: React.FormEvent) {
     e.preventDefault();
-    // Maqueta: no hay origen de datos todavía. No se guarda ni se envía nada
-    // de lo tipeado a ningún lado.
-    setMensaje("Vista previa sin conectar: todavía no hay una base de certificados contra la que validar.");
+    setValidado(true);
+  }
+
+  function volver() {
+    setValidado(false);
+    setDocumento("");
+    setCodigo("");
   }
 
   return (
@@ -99,81 +105,133 @@ export default function ValidadorCertificadosPage() {
           Validador de Certificados
         </h2>
 
-        <div
-          style={{
-            background: ALERTA_BG,
-            border: `1px solid ${ALERTA_BORDE}`,
-            borderRadius: 4,
-            padding: "8px 14px",
-            fontSize: 13,
-            color: "#333",
-            margin: "20px 0",
-          }}
-        >
-          Ingrese su <strong>Número de Documento</strong>, y luego el <strong>Código de Validación</strong> impreso
-          en el certificado.
-        </div>
-
-        <form onSubmit={validar} style={{ maxWidth: 400 }}>
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 400, marginBottom: 5, color: "#333" }}>
-              Número de Documento
-            </label>
-            <input
-              type="text"
-              value={documento}
-              onChange={(e) => setDocumento(e.target.value)}
-              style={{
-                width: 206,
-                padding: "4px 6px",
-                fontSize: 14,
-                border: `1px solid ${BORDE_INPUT}`,
-                borderRadius: 4,
-                color: "#555",
-              }}
-            />
-          </div>
-
-          <div style={{ marginBottom: 10 }}>
-            <label style={{ display: "block", fontSize: 14, fontWeight: 400, marginBottom: 5, color: "#333" }}>
-              Código de Validación
-            </label>
-            <input
-              type="text"
-              value={codigo}
-              onChange={(e) => setCodigo(e.target.value)}
-              style={{
-                width: 206,
-                padding: "4px 6px",
-                fontSize: 14,
-                border: `1px solid ${BORDE_INPUT}`,
-                borderRadius: 4,
-                color: "#555",
-              }}
-            />
-          </div>
-
-          <button
-            type="submit"
+        {validado ? (
+          <div
             style={{
-              background: BOTON_BG,
-              color: "#fff",
-              border: "none",
+              background: "#F5F5F5",
+              border: "1px solid #E3E3E3",
               borderRadius: 4,
-              padding: "4px 12px",
-              fontSize: 14,
-              cursor: "pointer",
+              padding: 19,
+              boxShadow: "inset 0 1px 1px rgba(0,0,0,.05)",
             }}
           >
-            Validar
-          </button>
+            <h1
+              style={{
+                textAlign: "center",
+                fontWeight: 700,
+                fontSize: 40,
+                color: "#333333",
+                margin: "20px 0 30px",
+              }}
+            >
+              Certificado Válido
+            </h1>
 
-          {mensaje && (
-            <p style={{ marginTop: 15, fontSize: 13, color: "#8a6d3b", background: "#fcf8e3", border: "1px solid #faebcc", borderRadius: 4, padding: "8px 14px" }}>
-              {mensaje}
-            </p>
-          )}
-        </form>
+            <div
+              style={{
+                background: "#DFF0D8",
+                border: "1px solid #D6E9C6",
+                borderRadius: 4,
+                padding: "8px 14px",
+                fontSize: 14,
+                color: "#333",
+                textAlign: "center",
+                marginBottom: 20,
+              }}
+            >
+              El certificado es válido y está vigente
+            </div>
+
+            <button
+              type="button"
+              onClick={volver}
+              style={{
+                background: "#1B75BC",
+                color: "#fff",
+                border: "none",
+                borderRadius: 4,
+                padding: "8px 16px",
+                fontSize: 15,
+                fontWeight: 700,
+                cursor: "pointer",
+              }}
+            >
+              Volver
+            </button>
+          </div>
+        ) : (
+          <>
+            <div
+              style={{
+                background: ALERTA_BG,
+                border: `1px solid ${ALERTA_BORDE}`,
+                borderRadius: 4,
+                padding: "8px 14px",
+                fontSize: 13,
+                color: "#333",
+                margin: "20px 0",
+              }}
+            >
+              Ingrese su <strong>Número de Documento</strong>, y luego el <strong>Código de Validación</strong>{" "}
+              impreso en el certificado.
+            </div>
+
+            <form onSubmit={validar} style={{ maxWidth: 400 }}>
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 400, marginBottom: 5, color: "#333" }}>
+                  Número de Documento
+                </label>
+                <input
+                  type="text"
+                  value={documento}
+                  onChange={(e) => setDocumento(e.target.value)}
+                  style={{
+                    width: 206,
+                    padding: "4px 6px",
+                    fontSize: 14,
+                    border: `1px solid ${BORDE_INPUT}`,
+                    borderRadius: 4,
+                    color: "#555",
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: 10 }}>
+                <label style={{ display: "block", fontSize: 14, fontWeight: 400, marginBottom: 5, color: "#333" }}>
+                  Código de Validación
+                </label>
+                <input
+                  type="text"
+                  value={codigo}
+                  onChange={(e) => setCodigo(e.target.value)}
+                  style={{
+                    width: 206,
+                    padding: "4px 6px",
+                    fontSize: 14,
+                    border: `1px solid ${BORDE_INPUT}`,
+                    borderRadius: 4,
+                    color: "#555",
+                  }}
+                />
+              </div>
+
+              <button
+                type="submit"
+                style={{
+                  background: BOTON_BG,
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "4px 12px",
+                  fontSize: 14,
+                  cursor: "pointer",
+                }}
+              >
+                Validar
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </div>
   );
