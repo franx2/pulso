@@ -32,12 +32,12 @@ const TABS = [
   { label: "Ayuda" },
 ];
 
-// Código precargado para que la demo quede lista casi sin tipear; el
-// documento se deja vacío para completarlo a mano cada vez.
+// Precargados para que la demo quede lista para tocar Validar sin tipear nada.
+const DOCUMENTO_DEFECTO = "43152755";
 const CODIGO_DEFECTO = "26091222274963";
 
 export default function ValidadorCertificadosPage() {
-  const [documento, setDocumento] = useState("");
+  const [documento, setDocumento] = useState(DOCUMENTO_DEFECTO);
   const [codigo, setCodigo] = useState(CODIGO_DEFECTO);
   // Maqueta: cualquier documento y código cargados dan "válido". No hay
   // origen de datos real todavía, y nada de lo tipeado se guarda ni se envía.
@@ -50,7 +50,7 @@ export default function ValidadorCertificadosPage() {
 
   function volver() {
     setValidado(false);
-    setDocumento("");
+    setDocumento(DOCUMENTO_DEFECTO);
     setCodigo(CODIGO_DEFECTO);
   }
 
