@@ -56,7 +56,10 @@ export default function ValidadorCertificadosPage() {
 
   return (
     <div style={{ fontFamily: '"Helvetica Neue", Helvetica, Arial, sans-serif', background: "#fff", minHeight: "100vh", color: "#333" }}>
-      {/* Header: logo */}
+      {/* Header + barra de pestañas: mismo gris de fondo en las dos franjas,
+          para que no se note la costura entre una y otra (en el sitio real
+          son dos tonos casi iguales pero no iguales, y en un celular esa
+          diferencia mínima se ve como un error). */}
       <div style={{ background: "#F7F7F7", padding: "10px 0 15px" }}>
         <div style={{ maxWidth: 1170, margin: "0 auto", padding: "0 20px" }}>
           <Image
@@ -73,7 +76,7 @@ export default function ValidadorCertificadosPage() {
       {/* Barra de pestañas: en un celular las cinco no entran en una línea,
           así que la fila hace scroll horizontal en vez de partir cada
           etiqueta en dos o tres renglones y romper el alto de la barra. */}
-      <div style={{ background: "#FAFAFA", borderBottom: "1px solid #D4D4D4", height: 40 }}>
+      <div style={{ background: "#F7F7F7", borderBottom: "1px solid #D4D4D4", height: 40 }}>
         <div
           className="scrollbar-hidden"
           style={{ maxWidth: 1170, margin: "0 auto", padding: "0 20px", display: "flex", height: "100%", overflowX: "auto" }}
