@@ -116,7 +116,11 @@ export function parsearFactura(texto: string): FacturaParseada {
   const netoCrudo = campo(texto, /Importe Neto Gravado\s+\$\s*([\d.,]+)/);
   const totalCrudo = campo(texto, /Importe Total\s+\$\s*([\d.,]+)/);
   if (!netoCrudo || !totalCrudo) throw new RemitoIlegible("No encontré el neto gravado o el total");
-  const iva = [...texto.matchAll(/IVA\s+\d+(?:,\d+)?%\s+\$\s*([\d.,]+)/g)].reduce((s, m) => s + num(m[1]), 0);
+  // En una factura de varias páginas el pie se repite en cada una: un IVA por
+  // alícuota, el último que aparece. Sumarlos todos contaba el IVA dos veces.
+  const ivaPorAlicuota = new Map<string, number>();
+  for (const m of texto.matchAll(/IVA\s+(\d+(?:,\d+)?)%\s+\$\s*([\d.,]+)/g)) ivaPorAlicuota.set(m[1], num(m[2]));
+  const iva = [...ivaPorAlicuota.values()].reduce((s, v) => s + v, 0);
 
   const observaciones = campo(texto, /Observaciones:\s*([\s\S]*?)\s*Impuestos/)?.replace(/\s+/g, " ") || null;
 

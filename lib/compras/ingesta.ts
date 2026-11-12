@@ -66,6 +66,30 @@ export function asignarLocal(remito: RemitoParseado, locales: LocalCompras[]): L
   return porNombre.length === 1 ? porNombre[0] : null;
 }
 
+/**
+ * El remito ya cargado que esta factura factura, si lo hay.
+ *
+ * Primero por el número de presupuesto ("REMITO 08/09 PPTO 5084" → remito
+ * 16-5084), que es exacto: ese día puede haber dos remitos. Si la factura no
+ * lo trae, por la fecha del remito en el mismo local.
+ */
+async function buscarRemitoFacturado(factura: FacturaParseada, localId: string): Promise<string | null> {
+  const ppto = factura.observaciones?.match(/PPTO\s*(\d+)/i)?.[1];
+  if (ppto) {
+    const porNumero = await db.compra.findFirst({
+      where: { localId, numero: `${factura.puntoVenta}-${Number(ppto)}`, ivaCredito: null },
+      select: { numero: true },
+    });
+    if (porNumero) return porNumero.numero;
+  }
+  if (!factura.remitoReferido) return null;
+  const porFecha = await db.compra.findFirst({
+    where: { localId, fecha: fechaSql(factura.remitoReferido), ivaCredito: null },
+    select: { numero: true },
+  });
+  return porFecha?.numero ?? null;
+}
+
 export type ResultadoIngesta = {
   numero: string;
   estado: "guardado" | "duplicado" | "ilegible" | "no_es_remito";
@@ -125,18 +149,22 @@ export async function ingerirRemito(
   const tipo = clasificarRemito(remito);
   const problemas = [...verificacion.problemas];
 
-  // La factura de un remito que ya se cargó es la MISMA compra: sumarla
-  // duplicaría el costo y la deuda. Pasa en el empalme entre los dos
-  // formatos. No se adivina cuál vale: queda marcada para que alguien la mire.
-  if (factura?.remitoReferido && local) {
-    const remitoPrevio = await db.compra.findFirst({
-      where: { localId: local.id, fecha: fechaSql(factura.remitoReferido), ivaCredito: null },
-      select: { numero: true },
-    });
+  // La factura de un remito que ya se cargó es la MISMA compra: guardarla
+  // duplicaría el costo y la deuda, porque ninguna suma mira `verificado`.
+  // Pasa con todo lo de antes de octubre: hasta ahí llegaban los dos
+  // documentos. No se guarda; el remito sigue siendo la compra.
+  if (factura && local) {
+    const remitoPrevio = await buscarRemitoFacturado(factura, local.id);
     if (remitoPrevio) {
-      problemas.push(
-        `Ya hay un remito cargado del ${factura.remitoReferido} (${remitoPrevio.numero}) y esta factura dice "${factura.observaciones}": puede ser la misma compra contada dos veces.`
-      );
+      return {
+        numero: remito.numero,
+        estado: "duplicado",
+        local: local.nombre,
+        fecha: remito.fecha,
+        total: remito.subtotal,
+        tipo,
+        problemas: [`Factura del remito ${remitoPrevio}, que ya está cargado: no se suma de nuevo.`],
+      };
     }
   }
   if (!local) {

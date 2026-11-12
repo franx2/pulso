@@ -59,6 +59,12 @@ assert.ok(!verificarFactura(sinUnaLinea).ok);
 const conPercepcion = parsearFactura(FACTURA.replace("$ 33.565,00", "$ 34.000,00"));
 assert.ok(verificarFactura(conPercepcion).problemas.some((p) => p.includes("percepciones")));
 
+// Dos páginas: el pie se repite y el IVA no se cuenta dos veces.
+const pie = FACTURA.slice(FACTURA.indexOf("                                                 Impuestos"));
+const dosPaginas = parsearFactura(FACTURA.replace("Página 1 de 1", "Página 1 de 2\n" + pie));
+assert.strictEqual(dosPaginas.iva, 5565);
+assert.ok(verificarFactura(dosPaginas).ok);
+
 // Remito de diciembre facturado en enero: el año es el anterior.
 const enero = parsearFactura(FACTURA.replace("10/11/2026", "05/01/2027").replace("REMITO 07/11", "REMITO 30/12"));
 assert.strictEqual(enero.remitoReferido, "2026-12-30");
