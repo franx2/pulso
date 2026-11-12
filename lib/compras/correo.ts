@@ -38,6 +38,12 @@ export type Diagnostico = {
    * son los archivos que el lector no está abriendo.
    */
   adjuntosIgnorados: { nombre: string; tipo: string; bytes: number; motivo: string }[];
+  /**
+   * Remitentes de mails que se bajaron y se descartaron por no pasar el
+   * filtro. Si el proveedor cambia de dirección, aparece acá en vez de
+   * desaparecer: así se perdieron los remitos de octubre.
+   */
+  descartadosPorRemitente: string[];
 };
 
 export type AdjuntoPdf = {
@@ -138,9 +144,13 @@ async function buscar(
   if (remitente) {
     // Sin el "@" inicial: Gmail lo trata como separador y con él suele no
     // devolver nada.
-    const patron = remitente.replace(/^@/, "");
-    const conFiltro = await cliente.search({ since: desde, from: patron }, { uid: true });
-    if (conFiltro && conFiltro.length > 0) return conFiltro;
+    const encontrados = new Set<number>();
+    for (const patron of remitentes(remitente)) {
+      for (const uid of (await cliente.search({ since: desde, from: patron.replace(/^@/, "") }, { uid: true })) || []) {
+        encontrados.add(uid);
+      }
+    }
+    if (encontrados.size > 0) return [...encontrados].sort((a, b) => a - b);
   }
   const todos = await cliente.search({ since: desde }, { uid: true });
   return todos || [];
@@ -217,9 +227,19 @@ async function pdfsDelAdjunto(
 }
 
 /** Si el mensaje es del proveedor, mirando el encabezado ya parseado. */
-function esDelProveedor(remitenteMail: string, filtro: string | null): boolean {
+export function esDelProveedor(remitenteMail: string, filtro: string | null): boolean {
   if (!filtro) return true;
-  return remitenteMail.toLowerCase().includes(filtro.replace(/^@/, "").toLowerCase());
+  const mail = remitenteMail.toLowerCase();
+  return remitentes(filtro).some((p) => mail.includes(p.replace(/^@/, "").toLowerCase()));
+}
+
+/**
+ * `REMITOS_REMITENTE` acepta varios, separados por coma. El proveedor cambió
+ * de sistema de envío a fines de septiembre y con un solo remitente los mails
+ * nuevos se descartaban sin avisar.
+ */
+function remitentes(filtro: string): string[] {
+  return filtro.split(",").map((s) => s.trim()).filter(Boolean);
 }
 
 /**
@@ -241,7 +261,13 @@ export async function traerRemitosSinLeer(
   });
 
   const adjuntos: AdjuntoPdf[] = [];
-  const diagnostico: Diagnostico = { candidatos: 0, procesados: 0, omitidosPorTope: 0, adjuntosIgnorados: [] };
+  const diagnostico: Diagnostico = {
+    candidatos: 0,
+    procesados: 0,
+    omitidosPorTope: 0,
+    adjuntosIgnorados: [],
+    descartadosPorRemitente: [],
+  };
   await cliente.connect();
   try {
     const cerrojo = await cliente.getMailboxLock(config.carpeta);
@@ -277,7 +303,12 @@ export async function traerRemitosSinLeer(
         const remitente = mail.from?.text ?? "desconocido";
         // La verificación real del remitente pasa acá, sobre el encabezado ya
         // parseado, porque la búsqueda del servidor puede haber traído de más.
-        if (!esDelProveedor(remitente, config.remitente)) continue;
+        if (!esDelProveedor(remitente, config.remitente)) {
+          if (!diagnostico.descartadosPorRemitente.includes(remitente)) {
+            diagnostico.descartadosPorRemitente.push(remitente);
+          }
+          continue;
+        }
         for (const adjunto of mail.attachments ?? []) {
           const nombre = adjunto.filename ?? "adjunto";
           const tipo = adjunto.contentType ?? "";
