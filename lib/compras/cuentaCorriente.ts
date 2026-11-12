@@ -93,7 +93,10 @@ export function calcularCuentaCorriente(params: {
     });
   }
 
-  for (const p of pagos) {
+  // Los pagos anteriores al corte también ya están adentro del saldo inicial:
+  // restarlos de nuevo dejaba la deuda por debajo de la real.
+  const pagosPosteriores = fechaInicial ? pagos.filter((p) => p.fecha > fechaInicial) : pagos;
+  for (const p of pagosPosteriores) {
     filas.push({
       fecha: p.fecha,
       tipo: "PAGO",
@@ -117,7 +120,7 @@ export function calcularCuentaCorriente(params: {
   }
 
   const totalRemitos = remitosPosteriores.reduce((s, r) => s + r.total, 0);
-  const totalPagos = pagos.reduce((s, p) => s + p.monto, 0);
+  const totalPagos = pagosPosteriores.reduce((s, p) => s + p.monto, 0);
 
   return {
     saldoInicial,

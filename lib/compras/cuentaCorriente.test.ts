@@ -71,6 +71,21 @@ const soloInicial = calcularCuentaCorriente({
 assert.strictEqual(soloInicial.saldo, 500_000);
 assert.strictEqual(soloInicial.movimientos.length, 1);
 
+// --- Un pago anterior al corte ya está adentro del saldo inicial ---
+// Restarlo de nuevo dejaba la deuda por debajo de la que manda el proveedor.
+
+const conPagoViejo = calcularCuentaCorriente({
+  saldoInicial: 500_000,
+  fechaInicial: "2026-08-31",
+  remitos: [],
+  pagos: [
+    { id: "viejo", fecha: "2026-08-15", monto: 300_000, medio: "Transferencia", nota: null },
+    { id: "nuevo", fecha: "2026-09-05", monto: 100_000, medio: "Transferencia", nota: null },
+  ],
+});
+assert.strictEqual(conPagoViejo.saldo, 400_000, "sólo resta el pago posterior al corte");
+assert.strictEqual(conPagoViejo.totalPagos, 100_000);
+
 // --- Un pago no puede volverse deuda por error de signo ---
 
 for (const m of r.movimientos.filter((m) => m.tipo === "PAGO")) {
