@@ -51,5 +51,9 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json({ resultados: await sincronizarResumenTodos(dias) });
+  // Si algún local falla, 502: con 200 el job de GitHub quedaba en verde y
+  // tres locales estuvieron dos meses sin actualizar sin que nadie se enterara.
+  const resultados = await sincronizarResumenTodos(dias);
+  const fallo = resultados.some((r) => !r.ok);
+  return NextResponse.json({ resultados }, { status: fallo ? 502 : 200 });
 }
