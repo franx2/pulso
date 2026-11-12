@@ -157,6 +157,15 @@ assert.deepStrictEqual(
   "los dos caminos tienen que leer las mismas líneas"
 );
 
+// --- Dos renglones idénticos son dos entregas, no un duplicado ---
+
+// En el 16-5148 había dos "TORTA ROGEL ... 19.438,01" y el lector descartaba
+// la segunda: el remito no cerraba por exactamente ese importe.
+const lineaCafe = fixture("remito-5004").split("\n").find((r) => /^\s*1\.099\s/.test(r))!;
+const conRepetida = parsearRemito(fixture("remito-5004").replace(lineaCafe, `${lineaCafe}\n${lineaCafe}`));
+assert.strictEqual(conRepetida.lineas.length, r5004.lineas.length + 1, "la línea repetida cuenta");
+assert.strictEqual(conRepetida.lineas.filter((l) => l.codigo === "1099").length, 2);
+
 // --- Que falle ruidosamente ---
 
 assert.throws(() => parsearRemito("cualquier cosa"), RemitoIlegible, "sin número tiene que tirar error");

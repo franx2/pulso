@@ -105,16 +105,13 @@ export function parsearRemito(texto: string): RemitoParseado {
   if (!cliente) throw new RemitoIlegible("No encontré el nombre del cliente");
 
   const lineas: LineaRemito[] = [];
-  const vistas = new Set<string>();
   for (const renglon of texto.split("\n")) {
     const m = renglon.match(LINEA);
     if (!m) continue;
-    // El PDF repite el encabezado en cada página; una línea idéntica repetida
-    // sí puede ser real (dos entregas del mismo producto), así que se
-    // deduplica por el renglón completo y no por el código.
-    const huella = renglon.trim();
-    if (vistas.has(huella)) continue;
-    vistas.add(huella);
+    // Sin deduplicar: dos renglones idénticos son dos entregas del mismo
+    // producto ("2× TORTA ROGEL 19.438,01"). Descartar el segundo dejaba
+    // remitos sin cerrar contra su subtotal. El encabezado que se repite en
+    // cada página no matchea LINEA, así que no hace falta defenderse de él.
     const precioUnitario = num(m[5]);
     const total = num(m[6]);
     lineas.push({
