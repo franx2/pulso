@@ -51,7 +51,7 @@ export async function GET(request: Request) {
         fecha: { gte: desdeSql, lte: hastaSql },
         ...(localId ? { localId } : { localId: { not: null } }),
       },
-      select: { localId: true, tipo: true, subtotal: true },
+      select: { localId: true, tipo: true, subtotal: true, ivaCredito: true },
     }),
     db.empleado.findMany({
       where: { activo: true, ...(localId ? { localId } : {}) },
@@ -92,12 +92,18 @@ export async function GET(request: Request) {
     };
 
     const susCompras = compras.filter((c) => c.localId === local.id);
-    const mercaderiaBruta = susCompras
+    // Remitos (sin IVA discriminado) por un lado, facturas A por el otro: las
+    // facturas ya traen su neto y su IVA exactos.
+    const remitos = susCompras.filter((c) => c.ivaCredito == null);
+    const facturas = susCompras.filter((c) => c.ivaCredito != null);
+    const mercaderiaBruta = remitos
       .filter((c) => c.tipo === "MERCADERIA")
       .reduce((s, c) => s + c.subtotal, 0);
-    const royaltyBruto = susCompras
+    const royaltyBruto = remitos
       .filter((c) => c.tipo === "SERVICIO")
       .reduce((s, c) => s + c.subtotal, 0);
+    const netoFactura = (tipo: "MERCADERIA" | "SERVICIO") =>
+      facturas.filter((c) => c.tipo === tipo).reduce((s, c) => s + c.subtotal - c.ivaCredito!, 0);
 
     const susEmpleados = empleados.filter((e) => e.localId === local.id);
     const horasPorEmpleado = horasTrabajadas(fichajes, local.id);
@@ -134,6 +140,11 @@ export async function GET(request: Request) {
         // cargada, el crédito fiscal de compras es cero y el IVA de esa
         // mercadería es un costo real que ya está adentro de la línea.
         comprasConFactura: 0,
+        facturas: {
+          mercaderiaNeta: netoFactura("MERCADERIA"),
+          royaltyNeto: netoFactura("SERVICIO"),
+          ivaCredito: facturas.reduce((s, c) => s + c.ivaCredito!, 0),
+        },
         costoLaboral,
         costosFijos: fijosDelPeriodo,
         hayRemitos: susCompras.length > 0,

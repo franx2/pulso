@@ -14,6 +14,7 @@ import { db } from "@/lib/db";
 import { fechaSql } from "@/lib/fechaAR";
 import { textoDePdf } from "@/lib/compras/pdf";
 import { costoPorLinea, parsearRemito, verificarRemito, type RemitoParseado } from "@/lib/compras/remito";
+import { pareceFactura, parsearFactura, verificarFactura, type FacturaParseada } from "@/lib/compras/factura";
 
 /**
  * Conceptos que NO son mercadería y no pueden entrar al food cost.
@@ -86,16 +87,24 @@ export async function ingerirRemito(
   contexto: { origen?: string; proveedor?: string } = {}
 ): Promise<ResultadoIngesta> {
   let remito: RemitoParseado;
+  // Desde fines de octubre de 2026 llegan facturas A en vez de remitos.
+  let factura: FacturaParseada | null = null;
   let texto = "";
   try {
     texto = await textoDePdf(pdf);
-    remito = parsearRemito(texto);
+    if (pareceFactura(texto)) {
+      factura = parsearFactura(texto);
+      remito = factura;
+    } else {
+      remito = parsearRemito(texto);
+    }
   } catch (error) {
     // El proveedor manda en el mismo mail el estado de cuenta además de los
     // remitos. Ese PDF no es un remito y nunca va a parsear: distinguirlo de
     // un remito roto importa, porque si no cada semana aparecerían errores
     // que no hay que investigar y los de verdad se perderían entre ellos.
-    const parece = /Nro:\s*[\d.]+\s*-/.test(texto) && /C[óo]d\.\s*Producto/i.test(texto);
+    const parece =
+      pareceFactura(texto) || (/Nro:\s*[\d.]+\s*-/.test(texto) && /C[óo]d\.\s*Producto/i.test(texto));
     return {
       numero: "?",
       estado: parece ? "ilegible" : "no_es_remito",
@@ -112,9 +121,24 @@ export async function ingerirRemito(
     orderBy: { nombre: "asc" },
   });
   const local = asignarLocal(remito, locales);
-  const verificacion = verificarRemito(remito);
+  const verificacion = factura ? verificarFactura(factura) : verificarRemito(remito);
   const tipo = clasificarRemito(remito);
   const problemas = [...verificacion.problemas];
+
+  // La factura de un remito que ya se cargó es la MISMA compra: sumarla
+  // duplicaría el costo y la deuda. Pasa en el empalme entre los dos
+  // formatos. No se adivina cuál vale: queda marcada para que alguien la mire.
+  if (factura?.remitoReferido && local) {
+    const remitoPrevio = await db.compra.findFirst({
+      where: { localId: local.id, fecha: fechaSql(factura.remitoReferido), ivaCredito: null },
+      select: { numero: true },
+    });
+    if (remitoPrevio) {
+      problemas.push(
+        `Ya hay un remito cargado del ${factura.remitoReferido} (${remitoPrevio.numero}) y esta factura dice "${factura.observaciones}": puede ser la misma compra contada dos veces.`
+      );
+    }
+  }
   if (!local) {
     problemas.push(
       `No pude asignar el local: el remito viene a nombre de "${remito.cliente}"` +
@@ -139,7 +163,11 @@ export async function ingerirRemito(
     };
   }
 
-  const lineas = costoPorLinea(remito);
+  // En la factura, `total` es el neto de la línea y `totalConAjuste` lo que se
+  // paga por ella, con su IVA: el mismo sentido que en el remito.
+  const lineas = factura
+    ? factura.lineas.map((l) => ({ ...l, costoLista: l.total, costoConAjuste: l.totalConIva }))
+    : costoPorLinea(remito);
   await db.compra.create({
     data: {
       localId: local?.id ?? null,
@@ -155,7 +183,8 @@ export async function ingerirRemito(
       subtotal: remito.subtotal,
       total: remito.total,
       tipo,
-      verificado: verificacion.ok && local != null,
+      ivaCredito: factura ? factura.iva : null,
+      verificado: problemas.length === 0 && local != null,
       problemas,
       origen: contexto.origen ?? null,
       textoPlano: texto,

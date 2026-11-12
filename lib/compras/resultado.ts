@@ -64,6 +64,12 @@ export type EntradaResultado = {
   royaltyBruto: number;
   /** Parte de la mercadería respaldada con Factura A, que da crédito fiscal. */
   comprasConFactura: number;
+  /**
+   * Compras con Factura A cargadas con su IVA discriminado: ya vienen netas,
+   * así que no pasan por `neto()` (que asume 21% y erra con lo que va al
+   * 10,5%). Su IVA es crédito fiscal exacto. Opcionales: sin facturas, cero.
+   */
+  facturas?: { mercaderiaNeta: number; royaltyNeto: number; ivaCredito: number };
   /** Sueldos del período. */
   costoLaboral: number;
   /** Costos fijos cargados a mano para el mes. */
@@ -79,8 +85,9 @@ export const neto = (bruto: number) => bruto / (1 + IVA);
 
 export function calcularResultado(e: EntradaResultado): Resultado {
   const ventaNeta = neto(e.ventaBruta);
-  const mercaderia = neto(e.mercaderiaBruta);
-  const royalty = neto(e.royaltyBruto);
+  const facturas = e.facturas ?? { mercaderiaNeta: 0, royaltyNeto: 0, ivaCredito: 0 };
+  const mercaderia = neto(e.mercaderiaBruta) + facturas.mercaderiaNeta;
+  const royalty = neto(e.royaltyBruto) + facturas.royaltyNeto;
 
   // Ingresos Brutos se calcula sobre TODA la venta neta. Lo que depende del
   // medio de pago es la retención, que es un pago a cuenta del mismo
@@ -160,7 +167,7 @@ export function calcularResultado(e: EntradaResultado): Resultado {
 
   const resultado = ventaNeta + lineas.reduce((suma, l) => suma + l.monto, 0);
   const debito = ventaNeta * IVA;
-  const credito = neto(e.comprasConFactura) * IVA;
+  const credito = neto(e.comprasConFactura) * IVA + facturas.ivaCredito;
 
   return {
     ventaBruta: e.ventaBruta,

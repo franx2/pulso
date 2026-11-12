@@ -826,6 +826,12 @@ model Compra {
   /// no puede entrar al food cost junto con el café.
   tipo        TipoCompra @default(MERCADERIA)
 
+  /// IVA discriminado en la Factura A: crédito fiscal. Null en los remitos
+  /// ("Presupuesto X"), que no dan crédito. Con esto el Resultado toma el
+  /// neto real (subtotal − IVA) y no lo estima con la alícuota general, que
+  /// erra con los productos al 10,5%.
+  ivaCredito  Float?
+
   /// Qué dijo la verificación contra los totales del propio remito. Un remito
   /// con problemas se guarda igual pero no se suma a los costos hasta que
   /// alguien lo mire.
