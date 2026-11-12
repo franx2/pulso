@@ -107,8 +107,9 @@ const ALIAS: Record<string, string[]> = {
   fecha: ["fecha"],
   descripcion: ["descripcion", "concepto", "detalle", "movimiento"],
   referencia: ["origen", "referencia"],
-  debito: ["debito", "debe"],
-  credito: ["credito", "haber"],
+  // Galicia exporta el CSV con las columnas en plural.
+  debito: ["debito", "debitos", "debe"],
+  credito: ["credito", "creditos", "haber"],
   saldo: ["saldo", "saldo acumulado"],
 };
 
@@ -144,6 +145,13 @@ export function parsearCsvBanco(texto: string): MovimientoBanco[] {
   const iDebito = indiceDeColumna(encabezado, "debito");
   const iCredito = indiceDeColumna(encabezado, "credito");
   const iSaldo = indiceDeColumna(encabezado, "saldo");
+  // En el CSV de Galicia "Origen" es un código de canal ("GAOF", "MEDI") y lo
+  // que identifica el movimiento —a quién se le pagó, su CUIT, la operación—
+  // viene en "Leyenda Adicional1..4". Sin esto, un pago al proveedor no se
+  // distinguía de cualquier otra transferencia.
+  const iLeyendas = encabezado
+    .map((c, i) => (normalizar(c).startsWith("leyenda adicional") ? i : -1))
+    .filter((i) => i >= 0);
 
   if (iFecha < 0) throw new ExtractoIlegible("No encontré la columna Fecha");
   if (iDescripcion < 0) throw new ExtractoIlegible("No encontré la columna Descripción/Concepto");
@@ -162,10 +170,14 @@ export function parsearCsvBanco(texto: string): MovimientoBanco[] {
     if (debito === 0 && credito === 0) continue; // Nada financiero en esta fila.
 
     const descripcion = (celdas[iDescripcion] ?? "").trim();
+    const leyendas = iLeyendas
+      .map((i) => (celdas[i] ?? "").trim())
+      .filter((t) => t && t !== "0")
+      .join(" · ");
     movimientos.push({
       fecha,
       descripcion,
-      referencia: iReferencia >= 0 ? celdas[iReferencia]?.trim() || null : null,
+      referencia: leyendas || (iReferencia >= 0 ? celdas[iReferencia]?.trim() || null : null),
       categoria: categoriaDe(descripcion),
       credito,
       debito,

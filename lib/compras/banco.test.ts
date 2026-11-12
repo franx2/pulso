@@ -170,4 +170,20 @@ assert.strictEqual(filasPdf[5].referencia, null, "el resumen de cierre no es la 
 // Un PDF sin ningún renglón con fecha e importe es ilegible, no una lista vacía.
 assert.throws(() => parsearPdfBanco("Esto no es un extracto bancario, es otra cosa"), ExtractoIlegible);
 
+// --- El CSV real de Galicia (encabezado tal cual, datos de ejemplo) ---
+// Columnas en plural, "Origen" es un código de canal y a quién se pagó viene
+// en las leyendas. Con el lector viejo esto tiraba "No encontré Débito/Crédito".
+const GALICIA = [
+  "Fecha;Descripción;Origen;Débitos;Créditos;Grupo de Conceptos;Concepto;Numero de Terminal;Observaciones Cliente;Numero de Comprobante;Leyenda Adicional1;Leyenda Adicional2;Leyenda Adicional3;Leyenda Adicional4;Tipo de Movimiento;Saldo",
+  "07/08/2026;NAVE PAGO CON TARJETA;MEDI;;119877,70;000907 - Transferencias;917403 - NAVE - VENTA CON TARJETA;;;0;Grupo de acreditación APF000000001;;;;Imputado;+12353137,75;",
+  "12/11/2026;TRF INMED PROVEED;GAOF;4190374,39;;907269 - TRF INMED PROVEED;;;;00000001;Proveedor de Ejemplo SRL;30111111110;VARIOS;BANCO EJEMPLO S.A.;Imputado;+8162763,36;",
+].join("\n");
+const galicia = parsearCsvBanco(GALICIA);
+assert.strictEqual(galicia.length, 2);
+assert.strictEqual(galicia[0].credito, 119877.7);
+assert.strictEqual(galicia[0].saldo, 12353137.75);
+assert.strictEqual(galicia[1].debito, 4190374.39);
+assert.strictEqual(galicia[1].fecha, "2026-11-12");
+assert.strictEqual(galicia[1].referencia, "Proveedor de Ejemplo SRL · 30111111110 · VARIOS · BANCO EJEMPLO S.A.");
+
 console.log("lib/compras/banco.test.ts: todos los checks pasaron");
