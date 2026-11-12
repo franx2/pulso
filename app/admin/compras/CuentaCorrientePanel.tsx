@@ -2,8 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { AlertTriangle, CheckCircle2, HelpCircle, Pencil, Plus, Trash2 } from "lucide-react";
-import { Badge, Button, EmptyState, Input, Label, Panel, SelectorSegmentado } from "@/components/ui";
-import { plata, fechaCorta } from "@/lib/formato";
+import { Badge, Button, EmptyState, Input, Label, Panel, SelectorSegmentado, useConfirm } from "@/components/ui";
+import { plata, fechaCorta, fechaLarga } from "@/lib/formato";
 import { hoyAR } from "@/lib/fechaAR";
 
 /**
@@ -121,7 +121,7 @@ export default function CuentaCorrientePanel({
                     ? "text-rose-600 dark:text-rose-400"
                     : l.saldo < 0
                       ? "text-emerald-700 dark:text-[#4ee6b0]"
-                      : "text-slate-400"
+                      : "text-slate-500"
                 }`}
               >
                 {plata(l.saldo)}
@@ -217,9 +217,22 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
     onCambio();
   }
 
-  async function borrarPago(id: string) {
-    await fetch(`/api/pagos-proveedor/${id}`, { method: "DELETE" });
-    onCambio();
+  // Borrar un pago mueve el saldo de la deuda: no se hace de un toque.
+  const { confirm, dialog } = useConfirm();
+
+  function pedirBorrarPago(m: Movimiento) {
+    if (!m.pagoId) return;
+    const id = m.pagoId;
+    confirm({
+      title: "Borrar este pago",
+      message: `Se borra el pago de ${plata(m.haber)} del ${fechaLarga(m.fecha)}. El saldo de la deuda vuelve a subir ese monto.`,
+      confirmLabel: "Borrar pago",
+      tone: "danger",
+      onConfirm: async () => {
+        await fetch(`/api/pagos-proveedor/${id}`, { method: "DELETE" });
+        onCambio();
+      },
+    });
   }
 
   return (
@@ -238,26 +251,26 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
           >
             {plata(cuenta.saldo)}
           </p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
             {cuenta.saldo > 0 ? "le debemos a la fábrica" : cuenta.saldo < 0 ? "a favor nuestro" : "al día"}
           </p>
         </div>
         <div className="p-4">
           <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">Saldo inicial</p>
           <p className="mt-1 text-xl font-bold tabular-nums md:text-2xl">{plata(cuenta.saldoInicial)}</p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
             {cuenta.fechaInicial ? `al ${fechaCorta(cuenta.fechaInicial)}` : "sin fecha de corte"}
           </p>
         </div>
         <div className="p-4">
           <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">Remitos posteriores</p>
           <p className="mt-1 text-xl font-bold tabular-nums md:text-2xl">{plata(cuenta.totalRemitos)}</p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">mercadería y royalty</p>
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">mercadería y royalty</p>
         </div>
         <div className="p-4">
           <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">Pagos cargados</p>
           <p className="mt-1 text-xl font-bold tabular-nums md:text-2xl">{plata(cuenta.totalPagos)}</p>
-          <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">
+          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
             {cuenta.movimientos.filter((m) => m.tipo === "PAGO").length} pagos
           </p>
         </div>
@@ -361,10 +374,55 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
         ) : movimientosVisibles.length === 0 ? (
           <EmptyState>Ningún movimiento coincide con este filtro.</EmptyState>
         ) : (
-          <div className="overflow-x-auto">
+          <>
+          {/* Celular: una fila por movimiento, completa. Seis columnas no
+              entran en 375px y obligaban a deslizar de costado para ver el saldo. */}
+          <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+            {movimientosVisibles.map((m, i) => (
+              <li key={`${m.tipo}-${m.fecha}-${i}`} className="flex items-start justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="font-medium">
+                    {m.descripcion}
+                    {m.tipo === "SALDO_INICIAL" && (
+                      <span className="ml-2 inline-block">
+                        <Badge tone="slate">corte</Badge>
+                      </span>
+                    )}
+                    {m.tipo === "PAGO" && m.pagoId && (
+                      <IconoConvalidacion convalidacion={convalidacionPorPago.get(m.pagoId)} />
+                    )}
+                  </p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">{fechaLarga(m.fecha)}</p>
+                </div>
+                <div className="shrink-0 text-right">
+                  <p
+                    className={`font-semibold tabular-nums ${
+                      m.haber > 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : ""
+                    }`}
+                  >
+                    {m.haber > 0 ? plata(-m.haber) : plata(m.debe)}
+                  </p>
+                  <p className="mt-0.5 text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">saldo {plata(m.saldo)}</p>
+                </div>
+                {m.pagoId && (
+                  <button
+                    type="button"
+                    onClick={() => pedirBorrarPago(m)}
+                    title="Borrar este pago"
+                    aria-label="Borrar este pago"
+                    className="-mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
+                  >
+                    <Trash2 size={16} aria-hidden />
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[36rem] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
                   <th className="px-4 py-2 font-semibold">Fecha</th>
                   <th className="px-3 py-2 font-semibold">Movimiento</th>
                   <th className="px-3 py-2 text-right font-semibold">Debe</th>
@@ -399,12 +457,12 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                       {m.pagoId && (
                         <button
                           type="button"
-                          onClick={() => borrarPago(m.pagoId!)}
+                          onClick={() => pedirBorrarPago(m)}
                           title="Borrar este pago"
                           aria-label="Borrar este pago"
-                          className="text-slate-400 transition-colors hover:text-rose-600 dark:hover:text-rose-400"
+                          className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
                         >
-                          <Trash2 size={14} />
+                          <Trash2 size={14} aria-hidden />
                         </button>
                       )}
                     </td>
@@ -413,8 +471,10 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
               </tbody>
             </table>
           </div>
+          </>
         )}
       </Panel>
+      {dialog}
 
       {cuenta.convalidacion.sinRegistrar.length > 0 && (
         <Panel className="border-amber-200 dark:border-amber-500/30">

@@ -73,7 +73,7 @@ export default function HorarioSemanal({ localId }: { localId: string }) {
                     onChange={(e) => actualizar(d.diaSemana, { abre: e.target.value })}
                     className="w-auto! py-1.5"
                   />
-                  <span className="text-slate-400">a</span>
+                  <span className="text-slate-500">a</span>
                   <Input
                     type="time"
                     value={d.cierra ?? ""}

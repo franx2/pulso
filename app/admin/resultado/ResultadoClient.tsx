@@ -196,20 +196,20 @@ export default function ResultadoClient() {
               </p>
             </div>
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[36rem] text-sm">
+              <table className="w-full text-sm">
                 <tbody>
                   <tr className="border-b border-slate-100 dark:border-[#1c2521]">
-                    <td className="w-1/2 px-4 py-3 font-semibold">Venta neta</td>
-                    <td className="px-3 py-3 text-right font-semibold tabular-nums">
+                    <td className="py-3 pl-4 pr-2 font-semibold">Venta neta</td>
+                    <td className="whitespace-nowrap px-2 py-3 text-right font-semibold tabular-nums">
                       {plata(total.ventaNeta)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-slate-400 dark:text-[#74817b]">
+                    <td className="whitespace-nowrap py-3 pl-2 pr-4 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
                       100,0%
                     </td>
                   </tr>
                   {total.lineas.map((l) => (
                     <tr key={l.id} className="border-b border-slate-100 dark:border-[#1c2521]">
-                      <td className="px-4 py-3">
+                      <td className="py-3 pl-4 pr-2">
                         <p className="flex flex-wrap items-center gap-2 font-medium">
                           {l.etiqueta}
                           {!l.completa && (
@@ -234,16 +234,16 @@ export default function ResultadoClient() {
                           )}
                         </p>
                       </td>
-                      <td className="px-3 py-3 text-right tabular-nums">{plata(l.monto)}</td>
-                      <td className="px-4 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                      <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums">{plata(l.monto)}</td>
+                      <td className="whitespace-nowrap py-3 pl-2 pr-4 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
                         {pct(l.porcentaje)}
                       </td>
                     </tr>
                   ))}
                   <tr className="border-t-2 border-slate-200 dark:border-[#29403b]">
-                    <td className="px-4 py-3.5 text-base font-semibold">Resultado operativo</td>
+                    <td className="py-3.5 pl-4 pr-2 text-base font-semibold">Resultado operativo</td>
                     <td
-                      className={`px-3 py-3.5 text-right text-base font-bold tabular-nums ${
+                      className={`whitespace-nowrap px-2 py-3.5 text-right text-base font-bold tabular-nums ${
                         total.resultado >= 0
                           ? "text-emerald-700 dark:text-[#4ee6b0]"
                           : "text-rose-600 dark:text-rose-400"
@@ -252,7 +252,7 @@ export default function ResultadoClient() {
                       {plata(total.resultado)}
                     </td>
                     <td
-                      className={`px-4 py-3.5 text-right font-semibold tabular-nums ${
+                      className={`whitespace-nowrap py-3.5 pl-2 pr-4 text-right font-semibold tabular-nums ${
                         total.resultado >= 0
                           ? "text-emerald-700 dark:text-[#4ee6b0]"
                           : "text-rose-600 dark:text-rose-400"
@@ -283,13 +283,13 @@ export default function ResultadoClient() {
                 </p>
               </div>
               <div className="overflow-x-auto">
-                <table className="w-full min-w-[34rem] text-sm">
+                <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
-                      <th className="w-2/5 px-4 py-2 font-semibold">Local</th>
-                      <th className="px-3 py-2 text-right font-semibold">Venta neta</th>
-                      <th className="px-3 py-2 text-right font-semibold">Resultado</th>
-                      <th className="px-4 py-2 text-right font-semibold">Margen</th>
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+                      <th className="py-2 pl-4 pr-2 font-semibold">Local</th>
+                      <th className="hidden px-3 py-2 text-right font-semibold sm:table-cell">Venta neta</th>
+                      <th className="px-2 py-2 text-right font-semibold sm:px-3">Resultado</th>
+                      <th className="py-2 pl-2 pr-4 text-right font-semibold">Margen</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
@@ -297,7 +297,7 @@ export default function ResultadoClient() {
                       .sort((a, b) => b.resultado - a.resultado)
                       .map((l) => (
                         <tr key={l.localId}>
-                          <td className="px-4 py-2.5">
+                          <td className="py-2.5 pl-4 pr-2">
                             <span className="inline-flex flex-wrap items-center gap-2 font-medium">
                               {l.local}
                               {l.incompletas > 0 ? (
@@ -311,9 +311,9 @@ export default function ResultadoClient() {
                               )}
                             </span>
                           </td>
-                          <td className="px-3 py-2.5 text-right tabular-nums">{plata(l.ventaNeta)}</td>
+                          <td className="hidden px-3 py-2.5 text-right tabular-nums sm:table-cell">{plata(l.ventaNeta)}</td>
                           <td
-                            className={`px-3 py-2.5 text-right font-semibold tabular-nums ${
+                            className={`whitespace-nowrap px-2 py-2.5 text-right font-semibold tabular-nums sm:px-3 ${
                               l.resultado >= 0
                                 ? "text-emerald-700 dark:text-[#4ee6b0]"
                                 : "text-rose-600 dark:text-rose-400"
@@ -321,7 +321,7 @@ export default function ResultadoClient() {
                           >
                             {plata(l.resultado)}
                           </td>
-                          <td className="px-4 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                          <td className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
                             {pct(l.resultadoPct)}
                           </td>
                         </tr>

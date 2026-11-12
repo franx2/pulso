@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Badge, Card, SectionTitle, SelectorSegmentado, Spinner } from "@/components/ui";
+import { Badge, Button, Card, SectionTitle, SelectorSegmentado, Spinner } from "@/components/ui";
 import { etiquetaCategoria, numero, plata } from "@/lib/formato";
 
 type ProductoLocal = { local: string; cantidad: number; facturacion: number; precioPromedio: number };
@@ -45,20 +45,30 @@ export default function ProductosPanel({
 }) {
   const [datos, setDatos] = useState<Analisis | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+  const [intento, setIntento] = useState(0);
   const [vista, setVista] = useState<Vista>("facturan");
 
   useEffect(() => {
+    // Cambiar de período o de local dos veces seguidas dejaba en pantalla la
+    // respuesta que más tardó, no la última pedida: la anterior se cancela.
+    const controlador = new AbortController();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-change, no data lib
     setCargando(true);
+    setError(false);
     const params = new URLSearchParams({ desde, hasta, ...(localId ? { localId } : {}) });
-    fetch(`/api/productos?${params}`)
-      .then((r) => (r.ok ? r.json() : null))
-      .then((d) => {
-        setDatos(d);
-        setCargando(false);
+    fetch(`/api/productos?${params}`, { signal: controlador.signal })
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("fallo"))))
+      .then((d) => setDatos(d))
+      .catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setError(true);
       })
-      .catch(() => setCargando(false));
-  }, [desde, hasta, localId]);
+      .finally(() => {
+        if (!controlador.signal.aborted) setCargando(false);
+      });
+    return () => controlador.abort();
+  }, [desde, hasta, localId, intento]);
 
   if (cargando) {
     return (
@@ -68,7 +78,31 @@ export default function ProductosPanel({
       </Card>
     );
   }
-  if (!datos || datos.totalProductos === 0) return null;
+  // Un error de red no es "no se vendió nada": antes el panel entero
+  // desaparecía en los dos casos y no había forma de saber cuál era.
+  if (error) {
+    return (
+      <Card>
+        <SectionTitle>Productos</SectionTitle>
+        <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
+          <span className="text-rose-600 dark:text-rose-400">No pudimos cargar los productos. Revisá la conexión.</span>
+          <Button type="button" variant="ghost" onClick={() => setIntento((v) => v + 1)}>
+            Reintentar
+          </Button>
+        </div>
+      </Card>
+    );
+  }
+  if (!datos || datos.totalProductos === 0) {
+    return (
+      <Card>
+        <SectionTitle>Productos</SectionTitle>
+        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+          No hay ventas de productos sincronizadas en este período y alcance.
+        </p>
+      </Card>
+    );
+  }
 
   const lista =
     vista === "facturan" ? datos.masFacturan : vista === "vendidos" ? datos.masVendidos : datos.menosVendidos;
@@ -77,7 +111,7 @@ export default function ProductosPanel({
     <Card className="flex flex-col gap-4">
       <SectionTitle
         action={
-          <span className="text-xs text-slate-400 dark:text-[#74817b]">
+          <span className="text-xs text-slate-500 dark:text-[#7a8882]">
             {datos.totalProductos} productos con venta
           </span>
         }
@@ -127,7 +161,7 @@ export default function ProductosPanel({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[34rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
                 <th className="w-2/5 py-2 pr-3 font-semibold">Producto</th>
                 <th className="py-2 pr-3 text-right font-semibold">Unidades</th>
                 <th className="py-2 pr-3 text-right font-semibold">Facturación</th>
@@ -141,7 +175,7 @@ export default function ProductosPanel({
                   <td className="py-2 pr-3">
                     <span className="font-medium">{p.nombre}</span>
                     {p.categoria && (
-                      <span className="ml-1.5 text-xs text-slate-400 dark:text-[#74817b]">{etiquetaCategoria(p.categoria)}</span>
+                      <span className="ml-1.5 text-xs text-slate-500 dark:text-[#7a8882]">{etiquetaCategoria(p.categoria)}</span>
                     )}
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">{unidades(p.cantidad)}</td>
@@ -155,7 +189,7 @@ export default function ProductosPanel({
             </tbody>
           </table>
           {vista === "menos" && (
-            <p className="mt-2 text-xs text-slate-400 dark:text-[#74817b]">
+            <p className="mt-2 text-xs text-slate-500 dark:text-[#7a8882]">
               Son los que menos salieron entre los que se vendieron al menos una vez. Un producto
               con cero ventas no aparece: Fudo no reporta lo que nunca se vendió.
             </p>
@@ -165,10 +199,10 @@ export default function ProductosPanel({
 
       {vista !== "precios" && datos.desparejos.length > 0 && (
         <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-3 dark:border-[#1c2521]">
-          <p className="text-xs font-semibold uppercase text-slate-400 dark:text-[#5d6d67]">
+          <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
             Se venden en un solo local
           </p>
-          <p className="text-xs text-slate-400 dark:text-[#74817b]">
+          <p className="text-xs text-slate-500 dark:text-[#7a8882]">
             Puede ser carta distinta a propósito, o un producto que en las otras sucursales no se
             está ofreciendo.
           </p>
@@ -176,7 +210,7 @@ export default function ProductosPanel({
             <div key={`${d.nombre}-${d.local}`} className="flex items-baseline justify-between gap-2 text-sm">
               <span className="truncate text-slate-600 dark:text-[#c1cbc6]">
                 {d.nombre}
-                <span className="ml-1.5 text-xs text-slate-400 dark:text-[#74817b]">sólo {d.local}</span>
+                <span className="ml-1.5 text-xs text-slate-500 dark:text-[#7a8882]">sólo {d.local}</span>
               </span>
               <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
                 {plata(d.facturacion)}

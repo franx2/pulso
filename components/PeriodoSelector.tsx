@@ -80,7 +80,7 @@ export default function PeriodoSelector({
   const set = (parcial: Partial<ValorPeriodo>) => onChange({ ...valor, ...parcial });
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex min-w-0 flex-wrap items-center gap-2">
       <div
         className="scrollbar-hidden inline-flex max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-[#29403b] dark:bg-[#0b1412]"
         role="tablist"
@@ -152,7 +152,7 @@ export default function PeriodoSelector({
             onChange={(e) => set({ desde: e.target.value })}
             className={`${campo} w-36`}
           />
-          <span className="text-xs text-slate-400 dark:text-[#74817b]">a</span>
+          <span className="text-xs text-slate-500 dark:text-[#7a8882]">a</span>
           <label className="sr-only" htmlFor={`${id}-hasta`}>
             Hasta
           </label>

@@ -145,7 +145,7 @@ export function SectorChip({
       <button
         type="button"
         onClick={() => setAbierto(false)}
-        className="min-h-7 px-1.5 text-xs text-slate-400 hover:text-slate-700 dark:text-[#74817b]"
+        className="min-h-7 px-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-[#7a8882]"
       >
         Cancelar
       </button>
@@ -226,7 +226,7 @@ export default function ClasificadorSectores({
         <div className="relative min-w-0 flex-1 sm:max-w-xs">
           <Search
             size={15}
-            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+            className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500"
             aria-hidden
           />
           <Input
@@ -292,14 +292,14 @@ export default function ClasificadorSectores({
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-[#74817b]">
+                <p className="text-xs text-slate-500 dark:text-[#7a8882]">
                   {f.venta > 0 && `Vendido ${plata(f.venta)}`}
                   {f.venta > 0 && f.compra > 0 && " · "}
                   {f.compra > 0 && `Comprado ${plata(f.compra)}`}
                   {f.venta === 0 && f.compra === 0 && "Sin movimiento"}
                 </p>
               </div>
-              <div className="flex shrink-0 flex-wrap gap-1">
+              <div className="flex max-w-full flex-wrap gap-1">
                 {SECTORES.map((s) => (
                   <button
                     key={s.clave}
@@ -323,7 +323,7 @@ export default function ClasificadorSectores({
                     disabled={guardando === f.producto}
                     onClick={() => asignar(f.producto, "")}
                     title="Volver a lo que digan las reglas"
-                    className="min-h-8 rounded-md px-2 text-xs font-medium text-slate-400 underline-offset-2 transition-colors hover:text-slate-700 hover:underline disabled:opacity-40 dark:text-[#74817b] dark:hover:text-[#f2f7f4]"
+                    className="min-h-8 rounded-md px-2 text-xs font-medium text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline disabled:opacity-40 dark:text-[#7a8882] dark:hover:text-[#f2f7f4]"
                   >
                     Deshacer
                   </button>

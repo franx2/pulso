@@ -164,7 +164,7 @@ function CorrelacionFila({ correlacion }: { correlacion: Correlacion }) {
         </div>
         <div className="text-right">
           <p className="font-semibold tabular-nums">{correlacion.r == null ? "—" : `r ${correlacion.r.toFixed(2)}`}</p>
-          <p className="text-xs text-slate-400 dark:text-[#74817b]">{lecturaCorrelacion(correlacion.r)} · n={correlacion.n}</p>
+          <p className="text-xs text-slate-500 dark:text-[#7a8882]">{lecturaCorrelacion(correlacion.r)} · n={correlacion.n}</p>
         </div>
       </div>
       <div className="relative mt-3 h-2 rounded-full bg-slate-100 dark:bg-[#18201d]" aria-hidden>
@@ -172,7 +172,7 @@ function CorrelacionFila({ correlacion }: { correlacion: Correlacion }) {
         <span className={`absolute inset-y-0 rounded-full ${correlacion.r != null && correlacion.r < 0 ? "bg-rose-500" : "bg-emerald-600 dark:bg-[#37e6b0]"}`} style={{ left: `${inicio}%`, width: `${ancho}%` }} />
         {correlacion.r != null && <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-800 shadow-sm dark:border-[#101c19] dark:bg-[#f2f7f4]" style={{ left: `${posicion}%` }} />}
       </div>
-      <div className="mt-1 flex justify-between text-[11px] text-slate-400 dark:text-[#74817b]"><span>−1 inversa</span><span>0</span><span>+1 directa</span></div>
+      <div className="mt-1 flex justify-between text-[11px] text-slate-500 dark:text-[#7a8882]"><span>−1 inversa</span><span>0</span><span>+1 directa</span></div>
     </div>
   );
 }
@@ -252,7 +252,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
         <Panel className="md:sticky md:top-[4.75rem] md:z-[9]">
           <div className="flex flex-col gap-3 p-3.5 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 items-center gap-2">
-              <BarChart3 size={16} className="shrink-0 text-slate-400" aria-hidden />
+              <BarChart3 size={16} className="shrink-0 text-slate-500" aria-hidden />
               <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Local</span>
               <div className="scrollbar-hidden min-w-0 overflow-x-auto">
                 <SelectorSegmentado
@@ -264,7 +264,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <CalendarClock size={16} className="shrink-0 text-slate-400" aria-hidden />
+              <CalendarClock size={16} className="shrink-0 text-slate-500" aria-hidden />
               <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Horizonte</span>
               <SelectorSegmentado
                 opciones={HORIZONTES.map((dias) => ({ clave: dias, label: `${dias} días` }))}
@@ -328,13 +328,13 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
               <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
                 {resumen.pico && (
                   <div className="py-4">
-                    <p className="text-xs text-slate-400 dark:text-[#74817b]">Día de mayor demanda</p>
+                    <p className="text-xs text-slate-500 dark:text-[#7a8882]">Día de mayor demanda</p>
                     <p className="mt-1 font-semibold">{capitalizar(fechaLarga(resumen.pico.fecha))}</p>
                     <p className="mt-1 text-sm tabular-nums text-slate-500 dark:text-[#94a19c]">{numero(resumen.pico.tickets)} tickets · rango {numero(resumen.pico.ticketsMin)}–{numero(resumen.pico.ticketsMax)}</p>
                   </div>
                 )}
                 <div className="py-4">
-                  <p className="text-xs text-slate-400 dark:text-[#74817b]">Cambio contra la base</p>
+                  <p className="text-xs text-slate-500 dark:text-[#7a8882]">Cambio contra la base</p>
                   <p className={`mt-1 inline-flex items-center gap-1.5 font-semibold ${factores && factores.factorFinal >= 1 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
                     {factores && factores.factorFinal >= 1 ? <TrendingUp size={16} aria-hidden /> : <TrendingDown size={16} aria-hidden />}
                     {factores ? pctFactor(factores.factorFinal) : "—"}
@@ -342,7 +342,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
                   <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">Promedio ponderado de tendencia, clima, calendario y ajustes.</p>
                 </div>
                 <div className="py-4">
-                  <p className="text-xs text-slate-400 dark:text-[#74817b]">Señales activas</p>
+                  <p className="text-xs text-slate-500 dark:text-[#7a8882]">Señales activas</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {[...new Set(datos.pronostico.flatMap((dia) => dia.motivos))].slice(0, 5).map((motivo) => <Badge key={motivo} tone="slate">{motivo}</Badge>)}
                     {datos.pronostico.every((dia) => dia.motivos.length === 0) && <span className="text-sm text-slate-500 dark:text-[#94a19c]">Sin desvíos relevantes del patrón habitual.</span>}
@@ -437,7 +437,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
                 <div key={label} className="px-4 py-4">
                   <p className="text-xs text-slate-500 dark:text-[#94a19c]">{label}</p>
                   <p className="mt-1 text-lg font-bold tabular-nums">{valor}</p>
-                  <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">{nota}</p>
+                  <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">{nota}</p>
                 </div>
               ))}
             </div>
@@ -497,7 +497,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
                 <h2 className="font-semibold">Efecto climático medido</h2>
                 <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Compara contra el mismo día de semana y atenúa el factor cuando hay poca evidencia.</p>
               </div>
-              <CloudRain size={19} className="text-slate-400" aria-hidden />
+              <CloudRain size={19} className="text-slate-500" aria-hidden />
             </div>
             {datos.sensibilidadClima.length === 0 ? (
               <p className="p-4 text-sm text-slate-500 dark:text-[#94a19c]">Todavía no hay suficiente historia climática para este tipo de local.</p>

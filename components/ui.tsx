@@ -2,6 +2,8 @@
 
 import {
   useEffect,
+  useId,
+  useRef,
   useState,
   type ButtonHTMLAttributes,
   type HTMLAttributes,
@@ -85,13 +87,45 @@ export function Card({
   );
 }
 
-export function Label({ children }: { children: ReactNode }) {
-  return <label className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">{children}</label>;
+/**
+ * Etiqueta de un campo.
+ *
+ * Había 65 `<Label>` en 14 pantallas y ninguna estaba asociada a su campo: un
+ * lector de pantalla anunciaba "cuadro de texto" sin nombre, y tocar la
+ * etiqueta en el celular no llevaba el foco al campo. Cambiar los 65 usos uno
+ * por uno era propenso a errores, así que la convención del proyecto —la
+ * etiqueta va inmediatamente antes de su campo, solo o dentro de un
+ * contenedor— se resuelve acá, en un único lugar.
+ *
+ * Un `htmlFor` explícito siempre gana. Una etiqueta que no antecede a ningún
+ * campo (un rótulo de grupo) queda como está.
+ */
+export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: string }) {
+  const etiqueta = useRef<HTMLLabelElement>(null);
+  const idAutomatico = useId();
+
+  useEffect(() => {
+    const nodo = etiqueta.current;
+    if (!nodo || htmlFor) return;
+    const siguiente = nodo.nextElementSibling;
+    if (!siguiente) return;
+    const selector = "input:not([type=hidden]), select, textarea";
+    const control = siguiente.matches(selector) ? siguiente : siguiente.querySelector(selector);
+    if (!control) return;
+    if (!control.id) control.id = idAutomatico;
+    nodo.htmlFor = control.id;
+  });
+
+  return (
+    <label ref={etiqueta} htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
+      {children}
+    </label>
+  );
 }
 
 export function Spinner() {
   return (
-    <div className="flex items-center justify-center py-16 text-slate-400">
+    <div className="flex items-center justify-center py-16 text-slate-500">
       <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600" />
     </div>
   );
@@ -133,7 +167,13 @@ export function SectionTitle({ children, action }: { children: ReactNode; action
 
 export function ErrorText({ children }: { children: ReactNode }) {
   if (!children) return null;
-  return <p className="text-sm font-medium text-red-600 dark:text-red-400">{children}</p>;
+  // role="alert": un error que aparece debajo de un formulario no se anuncia
+  // solo; sin esto quien usa lector de pantalla no se entera de que falló.
+  return (
+    <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400">
+      {children}
+    </p>
+  );
 }
 
 export function EmptyState({ children, inCard = true }: { children: ReactNode; inCard?: boolean }) {
@@ -185,6 +225,25 @@ export function Badge({
   return <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${tones[tone]}`}>{children}</span>;
 }
 
+const ENFOCABLES =
+  'a[href], button:not([disabled]), input:not([disabled]):not([type=hidden]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
+
+/** Pila de diálogos abiertos: sólo el de arriba responde a Escape y a Tab. */
+const dialogosAbiertos: symbol[] = [];
+
+/**
+ * Diálogo modal.
+ *
+ * Es un diálogo de verdad para el teclado y los lectores de pantalla: declara
+ * su rol y su título, se cierra con Escape, lleva el foco adentro al abrir, lo
+ * mantiene adentro con Tab, lo devuelve a lo que lo abrió y no deja scrollear
+ * el fondo. Antes era un div con fondo oscuro: con teclado se podía tabular
+ * hasta los controles de atrás sin darse cuenta.
+ *
+ * El foco inicial va al primer control del contenido (el primer campo de un
+ * formulario; "Cancelar" en una confirmación, que es la opción segura), no a
+ * la X de cerrar.
+ */
 export function Modal({
   title,
   onClose,
@@ -196,13 +255,79 @@ export function Modal({
   children: ReactNode;
   maxWidth?: string;
 }) {
+  const idTitulo = useId();
+  const panel = useRef<HTMLDivElement>(null);
+  const contenido = useRef<HTMLDivElement>(null);
+  const alCerrar = useRef(onClose);
+
+  useEffect(() => {
+    alCerrar.current = onClose;
+  });
+
+  useEffect(() => {
+    const clave = Symbol("modal");
+    dialogosAbiertos.push(clave);
+    const quienLoAbrio = document.activeElement as HTMLElement | null;
+    const overflowPrevio = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const enfocables = () =>
+      [...(panel.current?.querySelectorAll<HTMLElement>(ENFOCABLES) ?? [])].filter(
+        (el) => el.getClientRects().length > 0
+      );
+
+    const inicial = contenido.current?.querySelector<HTMLElement>(ENFOCABLES) ?? enfocables()[0] ?? panel.current;
+    inicial?.focus();
+
+    function alTeclear(e: KeyboardEvent) {
+      if (dialogosAbiertos[dialogosAbiertos.length - 1] !== clave) return;
+      if (e.key === "Escape") {
+        e.preventDefault();
+        alCerrar.current();
+        return;
+      }
+      if (e.key !== "Tab") return;
+      const lista = enfocables();
+      if (lista.length === 0) {
+        e.preventDefault();
+        return;
+      }
+      const primero = lista[0];
+      const ultimo = lista[lista.length - 1];
+      const activo = document.activeElement;
+      if (e.shiftKey && (activo === primero || !panel.current?.contains(activo))) {
+        e.preventDefault();
+        ultimo.focus();
+      } else if (!e.shiftKey && (activo === ultimo || !panel.current?.contains(activo))) {
+        e.preventDefault();
+        primero.focus();
+      }
+    }
+
+    document.addEventListener("keydown", alTeclear);
+    return () => {
+      document.removeEventListener("keydown", alTeclear);
+      const posicion = dialogosAbiertos.indexOf(clave);
+      if (posicion >= 0) dialogosAbiertos.splice(posicion, 1);
+      document.body.style.overflow = overflowPrevio;
+      quienLoAbrio?.focus?.();
+    };
+  }, []);
+
   return (
     <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 px-0 sm:items-center sm:px-4">
       <div
-        className={`max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-t-2xl bg-white shadow-2xl dark:bg-[#0b1412] sm:rounded-2xl`}
+        ref={panel}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={idTitulo}
+        tabIndex={-1}
+        className={`max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-t-2xl bg-white shadow-2xl outline-none dark:bg-[#0b1412] sm:rounded-2xl`}
       >
         <div className="sticky top-0 flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4 dark:border-[#29403b] dark:bg-[#0b1412]">
-          <h3 className="text-lg font-bold">{title}</h3>
+          <h3 id={idTitulo} className="text-lg font-bold">
+            {title}
+          </h3>
           <button
             type="button"
             onClick={onClose}
@@ -212,7 +337,9 @@ export function Modal({
             <X size={20} strokeWidth={2.3} />
           </button>
         </div>
-        <div className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4">{children}</div>
+        <div ref={contenido} className="px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-4">
+          {children}
+        </div>
       </div>
     </div>
   );
@@ -419,7 +546,7 @@ export function SelectorSegmentado<T extends string | number>({
  */
 export function Delta({ valor, texto = "vs. período anterior" }: { valor: number | null; texto?: string }) {
   if (valor == null) {
-    return <span className="text-xs text-slate-400 dark:text-[#74817b]">sin base comparable</span>;
+    return <span className="text-xs text-slate-500 dark:text-[#7a8882]">sin base comparable</span>;
   }
   const sube = valor >= 0;
   const Icono = sube ? TrendingUp : TrendingDown;
@@ -476,7 +603,7 @@ export function Metrica({
       >
         {valor}
       </p>
-      <div className="mt-1 min-h-5 text-xs text-slate-400 dark:text-[#74817b]">
+      <div className="mt-1 min-h-5 text-xs text-slate-500 dark:text-[#7a8882]">
         {delta !== undefined ? <Delta valor={delta} texto={textoDelta} /> : nota}
       </div>
     </div>

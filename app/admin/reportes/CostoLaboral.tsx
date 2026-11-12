@@ -95,7 +95,7 @@ export default function CostoLaboral({
         </>
       )}
 
-      {cargando && <p className="text-sm text-slate-400 dark:text-[#74817b]">Consultando Fudo…</p>}
+      {cargando && <p className="text-sm text-slate-500 dark:text-[#7a8882]">Consultando Fudo…</p>}
       <ErrorText>{error}</ErrorText>
 
       {ventas != null && !cargando && (

@@ -115,7 +115,7 @@ const GRUPOS: { estado: Estado; titulo: string; Icono: typeof LogIn; tono: strin
   { estado: "FALTA", titulo: "Sin fichar", Icono: AlertTriangle, tono: "text-red-600 dark:text-red-400" },
   { estado: "AUSENTE", titulo: "De licencia", Icono: Palmtree, tono: "text-sky-600 dark:text-sky-400" },
   { estado: "TERMINO", titulo: "Jornada terminada", Icono: LogOut, tono: "text-slate-500" },
-  { estado: "SIN_TURNO", titulo: "Sin turno hoy", Icono: CircleSlash, tono: "text-slate-400" },
+  { estado: "SIN_TURNO", titulo: "Sin turno hoy", Icono: CircleSlash, tono: "text-slate-500" },
 ];
 
 const REFRESCO_MS = 30_000;
@@ -336,7 +336,7 @@ export default function PresenciaClient() {
               <Card key={c.id} className="flex flex-col gap-3">
                 <div>
                   <p className="flex items-center gap-1.5 font-semibold">
-                    <PencilLine size={15} className="shrink-0 text-slate-400" />
+                    <PencilLine size={15} className="shrink-0 text-slate-500" />
                     {c.empleado}
                   </p>
                   <p className="mt-1 text-sm text-slate-600 dark:text-[#c1cbc6]">
@@ -395,7 +395,7 @@ export default function PresenciaClient() {
               <Card key={a.id} className="flex flex-col gap-3">
                 <div>
                   <p className="flex items-center gap-1.5 font-semibold">
-                    <Palmtree size={15} className="shrink-0 text-slate-400" />
+                    <Palmtree size={15} className="shrink-0 text-slate-500" />
                     {a.empleado}
                   </p>
                   <p className="mt-1 text-sm text-slate-600 dark:text-[#c1cbc6]">

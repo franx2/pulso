@@ -170,7 +170,7 @@ export default function AjustesClient() {
         </Button>
 
         {config.ajustes.length === 0 ? (
-          <p className="text-sm text-slate-400 dark:text-[#74817b]">
+          <p className="text-sm text-slate-500 dark:text-[#7a8882]">
             Sin ajustes manuales: el pronóstico va tal cual lo calcula el modelo.
           </p>
         ) : (
@@ -181,13 +181,13 @@ export default function AjustesClient() {
                   <strong className="tabular-nums">×{a.valor.toFixed(2)}</strong> · {a.local}
                   {a.diaSemana != null && ` · ${NOMBRE_DIA[a.diaSemana]}`}
                   {a.fecha && ` · ${a.fecha}`}
-                  {a.motivo && <span className="ml-1 text-slate-400 dark:text-[#74817b]">({a.motivo})</span>}
+                  {a.motivo && <span className="ml-1 text-slate-500 dark:text-[#7a8882]">({a.motivo})</span>}
                 </span>
                 <button
                   type="button"
                   onClick={() => guardar({ tipo: "borrarAjusteK", id: a.id })}
                   aria-label="Quitar ajuste"
-                  className="shrink-0 text-slate-400 hover:text-red-600 dark:hover:text-red-400"
+                  className="shrink-0 text-slate-500 hover:text-red-600 dark:hover:text-red-400"
                 >
                   <Trash2 size={15} />
                 </button>
@@ -207,7 +207,7 @@ export default function AjustesClient() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
                 <th className="py-2 pr-3 font-semibold">Local</th>
                 <th className="py-2 pr-3 font-semibold">Sector</th>
                 <th className="py-2 pr-3 text-right font-semibold">Carga/hora por persona</th>
@@ -236,7 +236,7 @@ export default function AjustesClient() {
                   <td className="py-2 pr-3">
                     <BadgeOrigen origen={c.origen} />
                     {c.observaciones > 0 && (
-                      <span className="ml-1 text-xs text-slate-400 dark:text-[#74817b]">{c.observaciones} obs.</span>
+                      <span className="ml-1 text-xs text-slate-500 dark:text-[#7a8882]">{c.observaciones} obs.</span>
                     )}
                   </td>
                   <td className="py-2 text-xs text-slate-500 dark:text-[#94a19c]">
@@ -262,7 +262,7 @@ export default function AjustesClient() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[36rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
                 <th className="py-2 pr-3 font-semibold">Categoría</th>
                 {sectores.map((s) => (
                   <th key={s} className="py-2 pr-3 text-right font-semibold">
@@ -321,7 +321,7 @@ export default function AjustesClient() {
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="tabular-nums font-medium">×{c.factor.toFixed(2)}</span>
-                  <span className="text-xs text-slate-400 dark:text-[#74817b]">
+                  <span className="text-xs text-slate-500 dark:text-[#7a8882]">
                     {c.dias} días · confianza {(c.confianza * 100).toFixed(0)}%
                   </span>
                 </span>

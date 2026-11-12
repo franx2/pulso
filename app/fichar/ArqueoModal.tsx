@@ -57,7 +57,7 @@ export default function ArqueoModal({
             Debería haber ${efectivoEsperado.toFixed(2)} en la caja.
           </div>
           {fondoInicial != null && efectivoVendido != null && (
-            <p className="pl-6 text-xs text-slate-400 dark:text-[#74817b]">
+            <p className="pl-6 text-xs text-slate-500 dark:text-[#7a8882]">
               Fondo inicial ${fondoInicial.toFixed(2)} + vendido en efectivo $
               {efectivoVendido.toFixed(2)}
               {gastosEfectivo != null && gastosEfectivo > 0 && (

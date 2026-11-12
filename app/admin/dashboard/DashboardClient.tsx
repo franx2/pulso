@@ -149,7 +149,7 @@ const variacion = (actual: number, previo: number) => (previo > 0 ? ((actual - p
 function Reparto({ titulo, datos, etiquetas }: { titulo: string; datos: Mapa; etiquetas?: Record<string, string> }) {
   const filas = Object.entries(datos).sort((a, b) => b[1] - a[1]);
   const total = filas.reduce((s, [, valor]) => s + valor, 0);
-  if (total <= 0) return <p className="text-sm text-slate-400 dark:text-[#74817b]">Sin datos para este período.</p>;
+  if (total <= 0) return <p className="text-sm text-slate-500 dark:text-[#7a8882]">Sin datos para este período.</p>;
 
   return (
     <div>
@@ -175,54 +175,122 @@ function Reparto({ titulo, datos, etiquetas }: { titulo: string; datos: Mapa; et
 }
 
 type Stock = {
+  desde: string;
+  hasta: string;
   diasEnSerie: number;
   productosSeguidos: number;
   movimientos: { fecha: string; local: string; producto: string; stock: number; vendido: number; movimiento: number }[];
 };
 
-function SerieStock({ localNombre }: { localNombre?: string }) {
+/**
+ * Movimientos de stock que las ventas no explican, en el mismo alcance que el
+ * resto de "Productos y control": período y local elegidos arriba. Distingue
+ * cuatro situaciones que antes se veían igual (nada en pantalla): cargando,
+ * error de red, todavía no hay fotos de stock en ese rango, y hay fotos pero
+ * las diferencias son cero.
+ */
+function SerieStock({ desde, hasta, localId }: { desde: string; hasta: string; localId: string }) {
   const [stock, setStock] = useState<Stock | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [error, setError] = useState(false);
+  const [intento, setIntento] = useState(0);
 
   useEffect(() => {
-    fetch("/api/stock")
-      .then((respuesta) => (respuesta.ok ? respuesta.json() : null))
-      .then(setStock)
-      .catch(() => setStock(null));
-  }, []);
+    // Una respuesta vieja no puede pisar a una nueva: cambiar de período dos
+    // veces seguidas dejaba en pantalla el que tardó más en volver, no el último.
+    const controlador = new AbortController();
+    const params = new URLSearchParams({ desde, hasta, ...(localId ? { localId } : {}) });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch reactivo sin librería de datos
+    setCargando(true);
+    setError(false);
+    fetch(`/api/stock?${params}`, { signal: controlador.signal })
+      .then((respuesta) => (respuesta.ok ? respuesta.json() : Promise.reject(new Error("fallo"))))
+      .then((d: Stock) => setStock(d))
+      .catch((e: unknown) => {
+        if (e instanceof DOMException && e.name === "AbortError") return;
+        setError(true);
+      })
+      .finally(() => {
+        if (!controlador.signal.aborted) setCargando(false);
+      });
+    return () => controlador.abort();
+  }, [desde, hasta, localId, intento]);
 
-  if (!stock || stock.productosSeguidos === 0) return null;
-  const movimientos = localNombre
-    ? stock.movimientos.filter((movimiento) => movimiento.local === localNombre)
-    : stock.movimientos;
+  const encabezado = (
+    <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 className="font-semibold">Movimientos de stock sin explicar</h2>
+        {stock && stock.productosSeguidos > 0 && (
+          <span className="text-xs text-slate-500 dark:text-[#94a19c]">
+            {stock.productosSeguidos} productos · {stock.diasEnSerie} {stock.diasEnSerie === 1 ? "día" : "días"} con foto
+          </span>
+        )}
+      </div>
+      <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-[#94a19c]">
+        Diferencia entre el stock esperado por ventas y la foto diaria, del período elegido. Un valor negativo puede ser
+        faltante o ajuste manual.
+      </p>
+    </div>
+  );
+
+  let cuerpo: React.ReactNode;
+  if (cargando && !stock) {
+    cuerpo = <div className="my-4 h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-[#172724]" aria-label="Cargando stock" />;
+  } else if (error) {
+    cuerpo = (
+      <div className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
+        <span className="text-rose-600 dark:text-rose-400">No pudimos cargar el stock. Revisá la conexión.</span>
+        <Button type="button" variant="ghost" onClick={() => setIntento((v) => v + 1)}>
+          Reintentar
+        </Button>
+      </div>
+    );
+  } else if (!stock || stock.productosSeguidos === 0) {
+    cuerpo = (
+      <p className="py-5 text-sm text-slate-500 dark:text-[#94a19c]">
+        Todavía no hay fotos de stock en este período. La foto se toma sola a las 3 de la mañana: si el rango es anterior
+        a que se empezara a tomar, no hay nada que comparar.
+      </p>
+    );
+  } else if (stock.movimientos.length === 0) {
+    cuerpo = (
+      <p className="flex items-start gap-2 py-5 text-sm text-slate-600 dark:text-[#c1cbc6]">
+        <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+        Hay fotos de stock y todas coinciden con lo vendido: no hay movimientos para revisar.
+      </p>
+    );
+  } else {
+    cuerpo = (
+      <>
+        {stock.movimientos.slice(0, 12).map((movimiento) => (
+          <div
+            key={`${movimiento.fecha}-${movimiento.local}-${movimiento.producto}`}
+            className="flex items-baseline justify-between gap-3 py-3 text-sm"
+          >
+            <span className="min-w-0 text-slate-700 dark:text-[#c1cbc6]">
+              <span className="block truncate">{movimiento.producto}</span>
+              <span className="text-xs text-slate-500 dark:text-[#94a19c]">
+                {movimiento.local} · {fechaLarga(movimiento.fecha)}
+              </span>
+            </span>
+            <span
+              className={`shrink-0 font-semibold tabular-nums ${
+                movimiento.movimiento < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-[#c1cbc6]"
+              }`}
+            >
+              {movimiento.movimiento > 0 ? "+" : ""}
+              {numero(movimiento.movimiento)}
+            </span>
+          </div>
+        ))}
+      </>
+    );
+  }
 
   return (
     <Panel>
-      <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="font-semibold">Movimientos de stock sin explicar</h2>
-          <span className="text-xs text-slate-400 dark:text-[#74817b]">{stock.productosSeguidos} productos · {stock.diasEnSerie} días</span>
-        </div>
-        <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-[#94a19c]">
-          Diferencia entre el stock esperado por ventas y la foto diaria. Un valor negativo puede ser faltante o ajuste manual.
-        </p>
-      </div>
-      <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
-        {movimientos.length === 0 ? (
-          <p className="py-5 text-sm text-slate-500 dark:text-[#94a19c]">No hay movimientos para revisar en el alcance seleccionado.</p>
-        ) : (
-          movimientos.slice(0, 12).map((movimiento) => (
-            <div key={`${movimiento.fecha}-${movimiento.local}-${movimiento.producto}`} className="flex items-baseline justify-between gap-3 py-3 text-sm">
-              <span className="min-w-0 truncate text-slate-700 dark:text-[#c1cbc6]">
-                {movimiento.producto}
-                <span className="ml-2 text-xs text-slate-400 dark:text-[#74817b]">{movimiento.local} · {movimiento.fecha}</span>
-              </span>
-              <span className={`shrink-0 font-semibold tabular-nums ${movimiento.movimiento < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-[#c1cbc6]"}`}>
-                {movimiento.movimiento > 0 ? "+" : ""}{numero(movimiento.movimiento)}
-              </span>
-            </div>
-          ))
-        )}
-      </div>
+      {encabezado}
+      <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">{cuerpo}</div>
     </Panel>
   );
 }
@@ -362,7 +430,7 @@ function DetalleDiario({
             <ol className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
               {local.topProductos.slice(0, 8).map((producto, indice) => (
                 <li key={producto.nombre} className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-baseline gap-2 py-3 text-sm">
-                  <span className="text-xs tabular-nums text-slate-400 dark:text-[#74817b]">{indice + 1}</span>
+                  <span className="text-xs tabular-nums text-slate-500 dark:text-[#7a8882]">{indice + 1}</span>
                   <span className="truncate font-medium text-slate-700 dark:text-[#c1cbc6]" title={producto.nombre}>{producto.nombre}</span>
                   <span className="font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{plata(producto.valor)}</span>
                 </li>
@@ -545,6 +613,16 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   const alertasOrdenadas = [...alertas].sort((a, b) => (a.tono === b.tono ? 0 : a.tono === "rose" ? -1 : 1));
   const alertasPersonal = (datos?.alertasPersonal ?? []).filter((a) => !alcance || a.localId === alcance);
   const totalAlertas = alertas.length + alertasPersonal.length;
+  // Las del negocio (rojas primero) y detrás las de personal, que son las que
+  // alguien tiene que resolver. Es la lista que resume el panel de Rendimiento.
+  const resumenAlertas: { clave: string; tono: "rose" | "amber"; texto: string }[] = [
+    ...alertasOrdenadas.map((a) => ({ clave: `n-${a.texto}`, tono: a.tono, texto: a.texto })),
+    ...alertasPersonal.map((a) => ({
+      clave: `p-${a.id}`,
+      tono: "amber" as const,
+      texto: `${a.empleado}: ${(TIPO_ALERTA[a.tipo] ?? a.tipo).toLowerCase()} · ${fechaLarga(a.fecha)}`,
+    })),
+  ];
   const diasCompletos = serie?.actual.filter((punto) => punto.completo).length ?? 0;
   const etiquetaAlcance = localActivo?.nombre ?? "Toda la cadena";
   const modoDetalleDiario = vista === "locales" && Boolean(localActivo);
@@ -579,7 +657,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
         <div className="flex flex-col gap-3 p-3.5">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
             <div className="flex min-w-0 items-center gap-2">
-              <Building2 size={16} className="shrink-0 text-slate-400" aria-hidden />
+              <Building2 size={16} className="shrink-0 text-slate-500" aria-hidden />
               <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Local</span>
               <div className="scrollbar-hidden min-w-0 overflow-x-auto">
                 <SelectorSegmentado
@@ -595,7 +673,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
             </div>
             {modoDetalleDiario ? (
               <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
-                <CalendarDays size={16} className="shrink-0 text-slate-400" aria-hidden />
+                <CalendarDays size={16} className="shrink-0 text-slate-500" aria-hidden />
                 <div className="flex min-w-max items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]">
                   <button
                     type="button"
@@ -640,7 +718,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
               </div>
             ) : (
               <div className="flex min-w-0 items-center gap-2">
-                <CalendarRange size={16} className="shrink-0 text-slate-400" aria-hidden />
+                <CalendarRange size={16} className="shrink-0 text-slate-500" aria-hidden />
                 <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Período</span>
                 <PeriodoSelector
                   valor={{ periodo, mes: mesElegido, anio: anioElegido, desde, hasta }}
@@ -662,14 +740,14 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
               <p className="text-slate-500 dark:text-[#94a19c]">
                 <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fmtFechaLarga(fechaLocal)}
               </p>
-              <p className="text-slate-400 dark:text-[#74817b]">Referencia: día anterior · {fechaLarga(referenciaDia)}</p>
+              <p className="text-slate-500 dark:text-[#7a8882]">Referencia: día anterior · {fechaLarga(referenciaDia)}</p>
             </div>
           ) : datos && (
             <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs dark:border-[#1c2521]">
               <p className="text-slate-500 dark:text-[#94a19c]">
                 <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fechaLarga(datos.rango.desde)} a {fechaLarga(datos.rango.hasta)}
               </p>
-              <p className="text-slate-400 dark:text-[#74817b]">
+              <p className="text-slate-500 dark:text-[#7a8882]">
                 Referencia: {fechaLarga(datos.rangoPrevio.desde)} a {fechaLarga(datos.rangoPrevio.hasta)} · {diasCompletos}/{datos.dias} días completos
               </p>
             </div>
@@ -749,19 +827,23 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                       </div>
                     ) : (
                       <>
-                        {alertasOrdenadas.slice(0, 4).map((alerta) => (
-                          <div key={alerta.texto} className="flex items-start gap-2 py-3 text-sm">
+                        {/* Una sola lista con las dos fuentes: el número del badge
+                            es la suma de negocio y personal, así que el detalle
+                            tiene que serlo también. Antes, con 1 a 4 alertas sólo de
+                            personal, el panel mostraba "2" y ninguna fila. */}
+                        {resumenAlertas.slice(0, 4).map((alerta) => (
+                          <div key={alerta.clave} className="flex items-start gap-2 py-3 text-sm">
                             <AlertTriangle size={15} className={`mt-0.5 shrink-0 ${alerta.tono === "rose" ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`} aria-hidden />
                             <span className="text-slate-700 dark:text-[#c1cbc6]">{alerta.texto}</span>
                           </div>
                         ))}
-                        {totalAlertas > 4 && (
+                        {(totalAlertas > 4 || alertasPersonal.length > 0) && (
                           <button
                             type="button"
                             onClick={() => setVista("alertas")}
                             className="w-full py-3 text-left text-sm font-semibold text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#4ee6b0] dark:focus-visible:ring-[#37e6b0]"
                           >
-                            Ver las {totalAlertas} en Alertas
+                            {totalAlertas > 4 ? `Ver las ${totalAlertas} en Alertas` : "Revisar y dar por vistas en Alertas"}
                           </button>
                         )}
                       </>
@@ -807,11 +889,11 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                               <span>
                                 <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Facturación</span>
                                 <span className="mt-0.5 block font-semibold tabular-nums">{plata(local.ventas)}</span>
-                                <span className="block text-xs text-slate-400 dark:text-[#74817b]">{participacion}</span>
+                                <span className="block text-xs text-slate-500 dark:text-[#7a8882]">{participacion}</span>
                               </span>
                               <span>
                                 <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Variación</span>
-                                <span className={`mt-0.5 block font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-400" : local.variacionVentas >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>{variacionLocal}</span>
+                                <span className={`mt-0.5 block font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-500" : local.variacionVentas >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>{variacionLocal}</span>
                               </span>
                               <span>
                                 <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Tickets · promedio</span>
@@ -851,7 +933,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                               </td>
                               <td className="px-3 py-3 text-right font-semibold tabular-nums">{plata(local.ventas)}</td>
                               <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{ventas > 0 ? `${((local.ventas / datos.cadena.ventas) * 100).toFixed(0)}%` : "—"}</td>
-                              <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-400" : local.variacionVentas >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
+                              <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-500" : local.variacionVentas >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
                                 {local.variacionVentas == null ? "—" : `${local.variacionVentas >= 0 ? "+" : ""}${local.variacionVentas.toFixed(1)}%`}
                               </td>
                               <td className="px-3 py-3 text-right tabular-nums">{numero(local.tickets)}</td>
@@ -883,7 +965,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
           {vista === "control" && (
             <div className="space-y-5">
               <ProductosPanel desde={datos.rango.desde} hasta={datos.rango.hasta} localId={alcance} />
-              <SerieStock localNombre={localActivo?.nombre} />
+              <SerieStock desde={datos.rango.desde} hasta={datos.rango.hasta} localId={alcance} />
               {datos.cadena.localesSinFudo.length > 0 && (
                 <Panel className="p-4">
                   <p className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300">

@@ -95,7 +95,7 @@ function Leyenda({ color, trazo, children }: { color: string; trazo?: "linea" | 
 
 function EjeY({ maximo, formato }: { maximo: number; formato: (valor: number) => string }) {
   return (
-    <div className="relative h-48 w-[4.25rem] shrink-0 text-right text-[11px] tabular-nums text-slate-400 md:h-56 dark:text-[#74817b]">
+    <div className="relative h-48 w-[4.25rem] shrink-0 text-right text-[11px] tabular-nums text-slate-500 md:h-56 dark:text-[#7a8882]">
       <span className="absolute right-2 top-0">{formato(maximo)}</span>
       <span className="absolute right-2 top-1/2 -translate-y-1/2">{formato(maximo / 2)}</span>
       <span className="absolute bottom-0 right-2">0</span>
@@ -252,7 +252,7 @@ export function ComparisonChart({
             )}
           </div>
           {actual.length > 0 && (
-            <div className="mt-2 flex justify-between text-[11px] text-slate-400 dark:text-[#74817b]">
+            <div className="mt-2 flex justify-between text-[11px] text-slate-500 dark:text-[#7a8882]">
               <span>{fechaCorta(actual[0].fecha)}</span>
               <span>{fechaCorta(actual[Math.floor((actual.length - 1) / 2)].fecha)}</span>
               <span>{fechaCorta(actual[actual.length - 1].fecha)}</span>
@@ -411,7 +411,7 @@ export function ForecastChart({
             )}
           </div>
           {combinados.length > 0 && (
-            <div className="mt-2 grid grid-cols-3 text-[11px] text-slate-400 dark:text-[#74817b]">
+            <div className="mt-2 grid grid-cols-3 text-[11px] text-slate-500 dark:text-[#7a8882]">
               <span>{fechaCorta(combinados[0].fecha)}</span>
               <span className="text-center">{pronostico[0] ? fechaCorta(pronostico[0].fecha) : "Hoy"}</span>
               <span className="text-right">{fechaCorta(combinados[combinados.length - 1].fecha)}</span>

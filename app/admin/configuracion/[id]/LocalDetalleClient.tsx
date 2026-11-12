@@ -286,7 +286,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
       <div className="scrollbar-hidden flex items-end gap-5 overflow-x-auto border-b border-slate-200 dark:border-[#26312d]">
         {GRUPOS.map((grupo) => (
           <div key={grupo} className="shrink-0">
-            <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-400 dark:text-[#74817b]">
+            <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#7a8882]">
               {grupo}
             </p>
             <div className="flex gap-1">

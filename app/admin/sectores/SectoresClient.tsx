@@ -135,7 +135,102 @@ export default function SectoresClient() {
           </div>
         </div>
 
-        <div className="overflow-x-auto border-t border-slate-100 dark:border-[#1c2521]">
+        <div className="border-t border-slate-100 dark:border-[#1c2521]">
+          {/* Celular: un bloque por sector con lo que decide (el margen) a la
+              vista y el resto debajo. Siete columnas obligaban a deslizar de
+              costado, y el margen —lo único que se mira— quedaba a la derecha,
+              fuera de pantalla. */}
+          <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+            {conVenta.map((s) => {
+              const abierto = desplegado === s.sector;
+              const conMargen = s.margenPct != null && s.compra > 0;
+              return (
+                <li key={s.sector}>
+                  <button
+                    type="button"
+                    aria-expanded={abierto}
+                    onClick={() => setDesplegado(abierto ? null : s.sector)}
+                    className="w-full px-4 pb-1 pt-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0]"
+                  >
+                    <span className="flex items-center justify-between gap-3">
+                      <span className="flex min-w-0 items-center gap-2 font-medium">
+                        {abierto ? (
+                          <ChevronDown size={15} className="shrink-0 text-slate-500" aria-hidden />
+                        ) : (
+                          <ChevronRight size={15} className="shrink-0 text-slate-500" aria-hidden />
+                        )}
+                        <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${COLOR[s.sector]}`} aria-hidden />
+                        <span className="truncate">{s.etiqueta}</span>
+                      </span>
+                      <span
+                        className={`shrink-0 text-lg font-bold tabular-nums ${
+                          conMargen
+                            ? s.margenPct! >= 0
+                              ? "text-emerald-700 dark:text-[#4ee6b0]"
+                              : "text-rose-600 dark:text-rose-400"
+                            : "text-slate-500"
+                        }`}
+                      >
+                        {conMargen ? `${s.margenPct!.toFixed(1)}%` : "—"}
+                      </span>
+                    </span>
+                  </button>
+                    <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 pb-3 pl-10 pr-4 text-sm">
+                      <dt className="text-slate-500 dark:text-[#94a19c]">Venta</dt>
+                      <dd className="text-right tabular-nums">{plata(s.facturacion)}</dd>
+                      {s.compra > 0 ? (
+                        <>
+                          <dt className="text-slate-500 dark:text-[#94a19c]">Venta comparable</dt>
+                          <dd className="text-right tabular-nums">{plata(s.ventaComparable)}</dd>
+                          <dt className="text-slate-500 dark:text-[#94a19c]">Compra</dt>
+                          <dd className="text-right tabular-nums">{plata(s.compra)}</dd>
+                          <dt className="text-slate-500 dark:text-[#94a19c]">Costo</dt>
+                          <dd className="text-right tabular-nums">
+                            {s.costoPct != null ? `${s.costoPct.toFixed(1)}%` : "—"}
+                          </dd>
+                          <dt className="text-slate-500 dark:text-[#94a19c]">Margen</dt>
+                          <dd className="text-right tabular-nums">{plata(s.margen)}</dd>
+                        </>
+                      ) : (
+                        <>
+                          <dt className="col-span-2 text-xs text-slate-500 dark:text-[#94a19c]">
+                            Sin compras cargadas: no se puede medir el margen.
+                          </dt>
+                        </>
+                      )}
+                    </dl>
+                  {abierto && (
+                    <div className="bg-slate-50/70 px-4 py-4 dark:bg-[#0d1614]">
+                      <p className="mb-3 text-sm text-slate-500 dark:text-[#94a19c]">
+                        Todo lo que cae en {s.etiqueta.toLowerCase()}, de la venta y de la compra. Si algo no debería
+                        estar acá, cambiale el sector y las cifras se recalculan.
+                      </p>
+                      <ClasificadorSectores sectorFijo={s.sector} onCambio={() => setRevision((v) => v + 1)} />
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+            <li className="bg-slate-50 px-4 py-3 dark:bg-[#0d1614]">
+              <p className="font-semibold">Total</p>
+              <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 pl-6 text-sm">
+                <dt className="text-slate-500 dark:text-[#94a19c]">Venta</dt>
+                <dd className="text-right font-semibold tabular-nums">{plata(datos.total)}</dd>
+                <dt className="text-slate-500 dark:text-[#94a19c]">Venta comparable</dt>
+                <dd className="text-right tabular-nums">{plata(datos.ventaComparable)}</dd>
+                <dt className="text-slate-500 dark:text-[#94a19c]">Compra</dt>
+                <dd className="text-right tabular-nums">{plata(datos.totalCompra)}</dd>
+                <dt className="text-slate-500 dark:text-[#94a19c]">Margen</dt>
+                <dd className="text-right font-semibold tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                  {datos.ventaComparable > 0
+                    ? `${plata(datos.ventaComparable - datos.totalCompra)} · ${(((datos.ventaComparable - datos.totalCompra) / datos.ventaComparable) * 100).toFixed(1)}%`
+                    : "—"}
+                </dd>
+              </dl>
+            </li>
+          </ul>
+
+          <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[38rem] text-sm">
             <thead>
               <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
@@ -162,9 +257,9 @@ export default function SectoresClient() {
                       className="inline-flex items-center gap-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0]"
                     >
                       {desplegado === s.sector ? (
-                        <ChevronDown size={15} className="shrink-0 text-slate-400" aria-hidden />
+                        <ChevronDown size={15} className="shrink-0 text-slate-500" aria-hidden />
                       ) : (
-                        <ChevronRight size={15} className="shrink-0 text-slate-400" aria-hidden />
+                        <ChevronRight size={15} className="shrink-0 text-slate-500" aria-hidden />
                       )}
                       <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${COLOR[s.sector]}`} aria-hidden />
                       {s.etiqueta}
@@ -189,7 +284,7 @@ export default function SectoresClient() {
                         ? s.margenPct >= 0
                           ? "text-emerald-700 dark:text-[#4ee6b0]"
                           : "text-rose-600 dark:text-rose-400"
-                        : "text-slate-400"
+                        : "text-slate-500"
                     }`}
                   >
                     {s.margenPct != null && s.compra > 0 ? `${s.margenPct.toFixed(1)}%` : "—"}
@@ -229,6 +324,7 @@ export default function SectoresClient() {
               </tr>
             </tbody>
           </table>
+          </div>
           {datos.localesConMargen.length > 0 && (
             <p className="px-4 py-2.5 text-xs text-slate-500 dark:text-[#94a19c]">
               El margen se calcula sólo sobre {datos.localesConMargen.join(", ")}, que {datos.localesConMargen.length === 1 ? "es el único local" : "son los únicos locales"} con remitos
@@ -263,7 +359,7 @@ export default function SectoresClient() {
                 </span>
               </div>
               {datos.ejemplos[s.sector] && (
-                <p className="mt-1 truncate text-xs text-slate-400 dark:text-[#74817b]">
+                <p className="mt-1 truncate text-xs text-slate-500 dark:text-[#7a8882]">
                   {datos.ejemplos[s.sector]!.slice(0, 4).map((e) => e.producto).join(" · ")}
                 </p>
               )}
@@ -292,14 +388,14 @@ export default function SectoresClient() {
             <p className="mt-1 text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-300">
               {plata(datos.promosSupuestas)}
             </p>
-            <p className="text-xs text-slate-400 dark:text-[#74817b]">la promo deja elegir opciones de sectores distintos</p>
+            <p className="text-xs text-slate-500 dark:text-[#7a8882]">la promo deja elegir opciones de sectores distintos</p>
           </div>
           <div className="px-4 py-3">
             <p className="text-xs text-slate-500 dark:text-[#94a19c]">Sin definir</p>
             <p className="mt-1 text-xl font-semibold tabular-nums text-rose-600 dark:text-rose-400">
               {plata(promo?.facturacion ?? 0)}
             </p>
-            <p className="text-xs text-slate-400 dark:text-[#74817b]">
+            <p className="text-xs text-slate-500 dark:text-[#7a8882]">
               {datos.promosSinDefinir.length} promos que no están en la carta cargada
             </p>
           </div>
@@ -345,7 +441,7 @@ export default function SectoresClient() {
                     .join(" · ")}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 dark:text-[#74817b]">{p.contenido}</p>
+              <p className="text-xs text-slate-500 dark:text-[#7a8882]">{p.contenido}</p>
             </div>
           ))}
         </div>

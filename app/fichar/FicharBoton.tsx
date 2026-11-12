@@ -49,6 +49,7 @@ export default function FicharBoton({
   const [horasTrabajadas, setHorasTrabajadas] = useState(0);
   const [turnoHoy, setTurnoHoy] = useState<{ horaInicio: string; horaFin: string } | null>(null);
   const [cargando, setCargando] = useState(true);
+  const [errorCarga, setErrorCarga] = useState(false);
   const [marcando, setMarcando] = useState(false);
   const [paso, setPaso] = useState("");
   const [error, setError] = useState("");
@@ -76,86 +77,150 @@ export default function FicharBoton({
     });
   }
 
-  async function cargar() {
+  /**
+   * Trae el estado del día y lo devuelve. Los fichajes son lo esencial: si
+   * fallan, tira. La configuración del rostro es accesoria: si falla se sigue
+   * sin ella —el servidor igual deja el fichaje marcado "sin verificar" para el
+   * encargado— porque una cámara que no responde no puede dejar a nadie sin
+   * poder fichar.
+   */
+  async function cargar(): Promise<Fichaje[]> {
     const [resFichajes, resRostro] = await Promise.all([
       fetch("/api/fichajes"),
-      fetch("/api/rostro"),
+      fetch("/api/rostro").catch(() => null),
     ]);
+    if (!resFichajes.ok) throw new Error("No se pudieron cargar los fichajes");
     const data = await resFichajes.json();
-    const r = await resRostro.json();
-    setFichajesHoy(data.fichajesHoy ?? []);
+    const r = resRostro?.ok ? await resRostro.json().catch(() => ({})) : {};
+    const hoy: Fichaje[] = data.fichajesHoy ?? [];
+    setFichajesHoy(hoy);
     setProximoTipo(data.proximoTipo ?? "ENTRADA");
     setHorasTrabajadas(data.horasTrabajadas ?? 0);
     setTurnoHoy(data.turno ?? null);
     setRostro({ exigido: Boolean(r.exigido), registrado: Boolean(r.registrado) });
-    setCargando(false);
     // Con el control activo, los 6.5 MB de modelos se bajan mientras el
     // empleado mira la pantalla, no cuando aprieta el botón.
     if (r.exigido) precargarModelos();
+    return hoy;
+  }
+
+  async function cargarInicial() {
+    setErrorCarga(false);
+    setCargando(true);
+    try {
+      await cargar();
+    } catch {
+      // Antes la promesa rechazada quedaba sin atrapar y el spinner no se iba
+      // nunca: sin red, el empleado veía una rueda girando para siempre.
+      setErrorCarga(true);
+    } finally {
+      setCargando(false);
+    }
   }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount, no data lib
-    cargar();
+    cargarInicial();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  /**
+   * Se cortó la comunicación en medio de un fichaje: el servidor pudo haberlo
+   * recibido o no. Reintentar a ciegas arriesga duplicarlo, así que primero se
+   * mira cuántos fichajes hay de verdad.
+   */
+  async function reconciliar(cantidadAntes: number) {
+    try {
+      const hoy = await cargar();
+      if (hoy.length > cantidadAntes) {
+        setAviso("Se cortó la conexión, pero tu fichaje quedó registrado.");
+      } else {
+        setError("No se pudo registrar el fichaje. Revisá tu conexión y volvé a intentar.");
+      }
+    } catch {
+      setError(
+        "No pudimos confirmar si el fichaje quedó registrado. Antes de volver a marcar, esperá a tener conexión o avisale a tu encargado."
+      );
+    }
+  }
 
   async function marcar(tipo?: "DESCANSO_INICIO") {
     setMarcando(true);
     setError("");
     setAviso("");
+    const cantidadAntes = fichajesHoy.length;
 
-    setPaso("Buscando tu ubicación…");
-    const pos = await obtenerUbicacion();
+    try {
+      setPaso("Buscando tu ubicación…");
+      const pos = await obtenerUbicacion();
 
-    let datosRostro: ResultadoVerificacion = {};
-    if (rostro.exigido && rostro.registrado) {
-      datosRostro = await pedirVerificacionRostro();
-    }
+      let datosRostro: ResultadoVerificacion = {};
+      if (rostro.exigido && rostro.registrado) {
+        datosRostro = await pedirVerificacionRostro();
+      }
 
-    setPaso("Registrando…");
-    const res = await fetch("/api/fichajes", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        ...(pos ? { lat: pos.coords.latitude, lng: pos.coords.longitude } : {}),
-        ...(tipo ? { tipo } : {}),
-        ...datosRostro,
-      }),
-    });
-    const data = await res.json();
-    setPaso("");
-    if (!res.ok) {
-      setError(data.error ?? "No se pudo fichar");
-      setMarcando(false);
-      return;
-    }
-    // El fichaje quedó, pero el encargado lo va a ver marcado.
-    if (data.rostro && data.rostro !== "OK" && data.rostro !== "OMITIDA") {
-      setAviso(
-        data.rostro === "NO_COINCIDE"
-          ? "Fichaje registrado, pero no pudimos confirmar que seas vos. El encargado lo va a revisar."
-          : "Fichaje registrado sin verificar tu rostro. El encargado lo va a revisar."
-      );
-    }
-    if (data.fichaje?.efectivoEsperado != null) {
-      setArqueo({
-        fichajeId: data.fichaje.id,
-        efectivoEsperado: data.fichaje.efectivoEsperado,
-        fondoInicial: data.fondoInicial ?? null,
-        efectivoVendido: data.efectivoVendido ?? null,
-        gastosEfectivo: data.gastosEfectivo ?? null,
+      setPaso("Registrando…");
+      const res = await fetch("/api/fichajes", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...(pos ? { lat: pos.coords.latitude, lng: pos.coords.longitude } : {}),
+          ...(tipo ? { tipo } : {}),
+          ...datosRostro,
+        }),
       });
-    } else if (data.fichaje?.tipo === "ENTRADA" && data.usaCaja) {
-      setFondoInicialPendiente(data.fichaje.id);
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "No se pudo fichar");
+        return;
+      }
+      // El fichaje quedó, pero el encargado lo va a ver marcado.
+      if (data.rostro && data.rostro !== "OK" && data.rostro !== "OMITIDA") {
+        setAviso(
+          data.rostro === "NO_COINCIDE"
+            ? "Fichaje registrado, pero no pudimos confirmar que seas vos. El encargado lo va a revisar."
+            : "Fichaje registrado sin verificar tu rostro. El encargado lo va a revisar."
+        );
+      }
+      if (data.fichaje?.efectivoEsperado != null) {
+        setArqueo({
+          fichajeId: data.fichaje.id,
+          efectivoEsperado: data.fichaje.efectivoEsperado,
+          fondoInicial: data.fondoInicial ?? null,
+          efectivoVendido: data.efectivoVendido ?? null,
+          gastosEfectivo: data.gastosEfectivo ?? null,
+        });
+      } else if (data.fichaje?.tipo === "ENTRADA" && data.usaCaja) {
+        setFondoInicialPendiente(data.fichaje.id);
+      }
+      // El fichaje ya está hecho: si refrescar la pantalla falla, no es motivo
+      // para decirle al empleado que algo salió mal.
+      await cargar().catch(() => undefined);
+    } catch {
+      await reconciliar(cantidadAntes);
+    } finally {
+      setPaso("");
+      setMarcando(false);
     }
-    await cargar();
-    setMarcando(false);
   }
 
   if (cargando) {
     return (
-      <div className="flex items-center justify-center py-16 text-slate-400">
+      <div className="flex items-center justify-center py-16 text-slate-500">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600" />
+      </div>
+    );
+  }
+
+  if (errorCarga) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-12 text-center">
+        <p className="max-w-xs text-sm text-slate-600 dark:text-[#c1cbc6]">
+          No pudimos cargar tu fichaje. Revisá la conexión y probá de nuevo.
+        </p>
+        <Button type="button" onClick={cargarInicial}>
+          Reintentar
+        </Button>
       </div>
     );
   }
@@ -201,7 +266,7 @@ export default function FicharBoton({
         </Button>
       )}
 
-      <div className="flex items-center gap-1 text-xs text-slate-400 dark:text-[#74817b]">
+      <div className="flex items-center gap-1 text-xs text-slate-500 dark:text-[#7a8882]">
         <MapPin size={13} />
         Usamos tu ubicación solo para confirmar que estás en el local
       </div>
@@ -225,7 +290,7 @@ export default function FicharBoton({
         />
       )}
 
-      {rostro.exigido && <RegistrarRostro registrado={rostro.registrado} onListo={cargar} />}
+      {rostro.exigido && <RegistrarRostro registrado={rostro.registrado} onListo={() => void cargar().catch(() => undefined)} />}
 
       {fondoInicialPendiente && (
         <FondoInicialModal
@@ -256,7 +321,7 @@ export default function FicharBoton({
           Fichajes de hoy
         </SectionTitle>
         {fichajesHoy.length === 0 ? (
-          <p className="text-center text-sm text-slate-400 dark:text-[#74817b]">Sin fichajes todavía</p>
+          <p className="text-center text-sm text-slate-500 dark:text-[#7a8882]">Sin fichajes todavía</p>
         ) : (
           <ul className="flex flex-col gap-2">
             {fichajesHoy.map((f) => (

@@ -106,7 +106,7 @@ export default function CostosLocal({ localId }: { localId: string }) {
                     />
                     <span className="text-sm text-slate-500 dark:text-[#94a19c]">%</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-400 dark:text-[#74817b]">{campo.ayuda}</p>
+                  <p className="mt-0.5 text-xs text-slate-500 dark:text-[#7a8882]">{campo.ayuda}</p>
                 </div>
               ))}
             </div>

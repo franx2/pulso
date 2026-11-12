@@ -365,7 +365,7 @@ export default function TurnosClient() {
                           onChange={(e) => actualizarDiaIndividual(offset, { activo: e.target.checked })}
                         />
                         {nombreDia}
-                        {dd && <span className="text-xs font-normal text-slate-400">{dd}/{mm}</span>}
+                        {dd && <span className="text-xs font-normal text-slate-500">{dd}/{mm}</span>}
                       </label>
                       <Input
                         type="time"
@@ -374,7 +374,7 @@ export default function TurnosClient() {
                         onChange={(e) => actualizarDiaIndividual(offset, { horaInicio: e.target.value })}
                         className="w-auto! py-1.5"
                       />
-                      <span className="text-slate-400">a</span>
+                      <span className="text-slate-500">a</span>
                       <Input
                         type="time"
                         value={d.horaFin}
@@ -520,7 +520,7 @@ export default function TurnosClient() {
                         onChange={(e) => actualizarHorario(id, { horaInicio: e.target.value })}
                         className="w-auto! py-1.5"
                       />
-                      <span className="text-slate-400">a</span>
+                      <span className="text-slate-500">a</span>
                       <Input
                         type="time"
                         value={h.horaFin}

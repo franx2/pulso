@@ -192,7 +192,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
       ) : (
         <div className="flex flex-col gap-2">
           {demanda.length > 0 && (
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500">
               <span className="inline-flex items-center gap-1.5">
                 <svg width="16" height="10" viewBox="0 0 16 10" className="shrink-0">
                   <path d="M0 8 Q4 1 8 5 T16 2" fill="none" stroke="#f59e0b" strokeWidth="1.5" />
@@ -218,7 +218,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                 <div className="flex items-baseline justify-between gap-2">
                   <p className="flex items-center gap-2 text-sm font-semibold">
                     {NOMBRE_DIA[dia.getDay()]}{" "}
-                    <span className="font-normal text-slate-400">
+                    <span className="font-normal text-slate-500">
                       {fechaCorta(dia)}
                     </span>
                     {totalPorDia.has(dia.getDay()) && (
@@ -228,14 +228,14 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                     )}
                   </p>
                   {horario && !horario.cerrado && (
-                    <p className="shrink-0 text-xs text-slate-400">
+                    <p className="shrink-0 text-xs text-slate-500">
                       {horario.abre}–{horario.cierra}
                     </p>
                   )}
                 </div>
 
                 {!horario || horario.cerrado ? (
-                  <p className="text-xs text-slate-400">Cerrado</p>
+                  <p className="text-xs text-slate-500">Cerrado</p>
                 ) : (
                   <>
                     {demandaPorDia.has(dia.getDay()) &&
@@ -295,7 +295,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                                 {marcas.map((m) => (
                                   <span
                                     key={m.label}
-                                    className="absolute -translate-x-1/2 text-[11px] text-slate-400 dark:text-[#5d6d67]"
+                                    className="absolute -translate-x-1/2 text-[11px] text-slate-500 dark:text-[#7a8882]"
                                     style={{ left: `${m.xPct}%` }}
                                   >
                                     {m.label}
@@ -308,7 +308,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                         );
                       })()}
                     {delDia.length === 0 ? (
-                      <p className="text-xs text-slate-400">Sin turnos</p>
+                      <p className="text-xs text-slate-500">Sin turnos</p>
                     ) : (
                   <div className="flex flex-col gap-1">
                     {delDia.map((t) => {
@@ -327,7 +327,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                               />
                             )}
                           </div>
-                          <span className="w-24 shrink-0 text-right text-xs text-slate-400">
+                          <span className="w-24 shrink-0 text-right text-xs text-slate-500">
                             {t.horaInicio}–{t.horaFin}
                           </span>
                         </div>

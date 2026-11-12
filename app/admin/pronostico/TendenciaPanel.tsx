@@ -57,7 +57,7 @@ export default function TendenciaPanel({
           <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Semanas completas y la misma regla de proyección para cada sucursal.</p>
         </div>
         <div className="text-right">
-          <p className="text-xs text-slate-400 dark:text-[#74817b]">Cadena · próximos 30 días</p>
+          <p className="text-xs text-slate-500 dark:text-[#7a8882]">Cadena · próximos 30 días</p>
           <p className="font-semibold tabular-nums text-emerald-700 dark:text-[#4ee6b0]">{plata(proyeccionCadena)}</p>
         </div>
       </div>
@@ -90,7 +90,7 @@ export default function TendenciaPanel({
                 </span>
                 <span>
                   <span className="block text-xs text-slate-500 dark:text-[#94a19c]">vs. 28 anteriores</span>
-                  <span className={`mt-0.5 block font-semibold tabular-nums ${tendencia.variacion4v4 == null ? "text-slate-400" : tendencia.variacion4v4 >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>{pct(tendencia.variacion4v4)}</span>
+                  <span className={`mt-0.5 block font-semibold tabular-nums ${tendencia.variacion4v4 == null ? "text-slate-500" : tendencia.variacion4v4 >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>{pct(tendencia.variacion4v4)}</span>
                 </span>
                 <span>
                   <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Ritmo semanal</span>
@@ -129,7 +129,7 @@ export default function TendenciaPanel({
                     </button>
                   </td>
                   <td className="px-3 py-3 text-right font-semibold tabular-nums">{plata(tendencia.ventasUltimas4)}</td>
-                  <td className={`px-3 py-3 text-right font-semibold tabular-nums ${tendencia.variacion4v4 == null ? "text-slate-400" : tendencia.variacion4v4 >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
+                  <td className={`px-3 py-3 text-right font-semibold tabular-nums ${tendencia.variacion4v4 == null ? "text-slate-500" : tendencia.variacion4v4 >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
                     {pct(tendencia.variacion4v4)}
                   </td>
                   <td className={`px-3 py-3 text-right font-semibold tabular-nums ${sube ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>

@@ -230,7 +230,7 @@ function CompraDetalle({
             </Badge>
             {!compra.verificado && <Badge tone="amber">Revisar</Badge>}
           </span>
-          <span className="mt-0.5 block truncate text-xs text-slate-400 dark:text-[#74817b]">
+          <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-[#7a8882]">
             {compra.items.length} {compra.items.length === 1 ? "línea" : "líneas"}
             {observacion && ` · ${observacion}`}
           </span>
@@ -238,7 +238,7 @@ function CompraDetalle({
         <span className="shrink-0 text-right">
           <span className="block font-semibold tabular-nums">{plata(compra.subtotal)}</span>
           {compra.ajustePct != null && (
-            <span className="hidden text-xs text-slate-400 sm:block dark:text-[#74817b]">
+            <span className="hidden text-xs text-slate-500 sm:block dark:text-[#7a8882]">
               lista {plata(compra.sumaLineas)} +{compra.ajustePct}%
             </span>
           )}
@@ -273,13 +273,13 @@ function CompraDetalle({
               <tbody>
                 {compra.items.map((item) => (
                   <tr key={`${item.codigo}-${item.detalle}`} className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]">
-                    <td className="py-2 pr-3 tabular-nums text-slate-400 dark:text-[#74817b]">{item.codigo}</td>
+                    <td className="py-2 pr-3 tabular-nums text-slate-500 dark:text-[#7a8882]">{item.codigo}</td>
                     <td className="py-2 pr-3">{item.detalle}</td>
                     <td className="py-2 pr-3">
                       <SectorChip producto={item.detalle} sector={item.sector} onCambio={alCambiarSector} />
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">
-                      {numero(item.cantidad, 2)} <span className="text-xs text-slate-400">{item.unidad.slice(0, 3).toLowerCase()}</span>
+                      {numero(item.cantidad, 2)} <span className="text-xs text-slate-500">{item.unidad.slice(0, 3).toLowerCase()}</span>
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">{plata(item.precioUnitario)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{plata(item.total)}</td>
@@ -307,7 +307,7 @@ function CompraDetalle({
             ))}
           </div>
 
-          {compra.origen && <p className="mt-3 text-xs text-slate-400 dark:text-[#74817b]">Origen: {compra.origen}</p>}
+          {compra.origen && <p className="mt-3 text-xs text-slate-500 dark:text-[#7a8882]">Origen: {compra.origen}</p>}
         </div>
       )}
     </div>
@@ -829,7 +829,7 @@ export default function ComprasClient() {
                     <div key={formato.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 px-4 py-3 text-sm">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{formato.etiqueta}</p>
-                        <p className="text-xs text-slate-400 dark:text-[#74817b]">{formato.gramosPorUnidad} g por unidad</p>
+                        <p className="text-xs text-slate-500 dark:text-[#7a8882]">{formato.gramosPorUnidad} g por unidad</p>
                       </div>
                       <span className="text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{numero(formato.unidades, 0)} u.</span>
                       <span className="w-20 text-right font-semibold tabular-nums">{kilos(formato.kilos)}</span>
@@ -922,7 +922,7 @@ export default function ComprasClient() {
               </div>
               <label className="relative block w-full sm:w-72">
                 <span className="sr-only">Buscar remito o producto</span>
-                <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
                 <Input
                   value={busqueda}
                   onChange={(evento) => setBusqueda(evento.target.value)}
@@ -1053,14 +1053,14 @@ export default function ComprasClient() {
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
               <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
-                <p className="text-xs font-semibold uppercase text-slate-400 dark:text-[#5d6d67]">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
                   Vendido suelto
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesSueltas)}</p>
                 <p className="text-xs text-slate-500 dark:text-[#94a19c]">cortados, lattes, americanos</p>
               </div>
               <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
-                <p className="text-xs font-semibold uppercase text-slate-400 dark:text-[#5d6d67]">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
                   Dentro de una promo
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesEnPromo)}</p>
@@ -1069,10 +1069,28 @@ export default function ComprasClient() {
             </div>
 
             {cafeActual.detalle.length > 0 && (
-              <div className="mt-4 overflow-x-auto">
+              <>
+              <ul className="mt-4 divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+                {cafeActual.detalle.map((fila) => (
+                  <li key={fila.producto} className="flex items-start justify-between gap-3 py-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{fila.producto}</p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                        <Badge tone={fila.origen === "promo" ? "amber" : "slate"}>
+                          {fila.origen === "promo" ? "Promo" : "Suelto"}
+                        </Badge>
+                        {numero(fila.unidades)} un. × {fila.gramosPorUnidad} g
+                      </p>
+                    </div>
+                    <p className="shrink-0 font-semibold tabular-nums">{kilos(fila.kilos)}</p>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[30rem] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
                       <th className="w-2/5 py-2 pr-3 font-semibold">Producto</th>
                       <th className="py-2 pr-3 font-semibold">Origen</th>
                       <th className="py-2 pr-3 text-right font-semibold">Unidades</th>
@@ -1102,6 +1120,7 @@ export default function ComprasClient() {
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </Panel>
 

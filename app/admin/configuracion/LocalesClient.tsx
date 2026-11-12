@@ -115,7 +115,7 @@ export default function LocalesClient() {
                       })()}
                     </div>
                   </div>
-                  <ChevronRight size={18} className="shrink-0 text-slate-400" />
+                  <ChevronRight size={18} className="shrink-0 text-slate-500" />
                 </Card>
               </Link>
             ))}

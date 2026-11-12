@@ -2,8 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { AlertTriangle, CheckCircle2, Trash2, Upload } from "lucide-react";
-import { Badge, Button, EmptyState, Panel, SelectorSegmentado } from "@/components/ui";
-import { plata, fechaCorta, porcentaje as pct } from "@/lib/formato";
+import { Badge, Button, EmptyState, Panel, SelectorSegmentado, useConfirm } from "@/components/ui";
+import { plata, fechaCorta, fechaLarga, porcentaje as pct } from "@/lib/formato";
 
 /**
  * Conciliación bancaria e impuestos del período.
@@ -206,6 +206,21 @@ function DetalleLocal({
     }
   }
 
+  // Borrar un movimiento cambia la conciliación: no se hace de un toque.
+  const { confirm, dialog } = useConfirm();
+  function pedirBorrar(m: Movimiento) {
+    confirm({
+      title: "Borrar este movimiento",
+      message: `Se borra «${m.descripcion}» del ${fechaLarga(m.fecha)} (${plata(m.credito > 0 ? m.credito : m.debito)}) del extracto cargado. Si fue un error de carga, volver a subir el archivo lo recupera.`,
+      confirmLabel: "Borrar movimiento",
+      tone: "danger",
+      onConfirm: async () => {
+        await fetch(`/api/movimientos-bancarios/${m.id}`, { method: "DELETE" });
+        onCambio();
+      },
+    });
+  }
+
   const c = cuenta.conciliacion;
   const movimientosVisibles = [...cuenta.movimientos]
     .reverse()
@@ -274,10 +289,72 @@ function DetalleLocal({
                 una diferencia chica es esperable. Comparación por período, no remito por remito.
               </p>
             </div>
-            <div className="overflow-x-auto">
+            {/* Celular: seis columnas no entran. Cada medio es un bloque con
+                sus cinco cifras en el orden de la cuenta, y la diferencia al final. */}
+            <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+              {[
+                ...c.filas.map((f) => ({
+                  clave: f.medio,
+                  titulo: f.medio,
+                  fudoBruto: f.fudoBruto,
+                  comision: f.comisionEsperada,
+                  neto: f.netoEsperado,
+                  banco: f.banco,
+                  diferencia: f.diferencia,
+                  pct: f.diferenciaPct,
+                })),
+                {
+                  clave: "total",
+                  titulo: "Total",
+                  fudoBruto: c.totalFudoBruto,
+                  comision: 0,
+                  neto: c.totalNetoEsperado,
+                  banco: c.totalBanco,
+                  diferencia: c.totalDiferencia,
+                  pct: null as number | null,
+                },
+              ].map((b) => (
+                <li key={b.clave} className={`px-4 py-3 ${b.clave === "total" ? "bg-slate-50 dark:bg-[#0d1614]" : ""}`}>
+                  <p className="font-semibold">{b.titulo}</p>
+                  <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
+                    <dt className="text-slate-500 dark:text-[#94a19c]">Fudo (bruto)</dt>
+                    <dd className="text-right tabular-nums">{plata(b.fudoBruto)}</dd>
+                    {b.comision > 0 && (
+                      <>
+                        <dt className="text-slate-500 dark:text-[#94a19c]">Comisión esperada</dt>
+                        <dd className="text-right tabular-nums text-slate-500 dark:text-[#94a19c]">− {plata(b.comision)}</dd>
+                      </>
+                    )}
+                    <dt className="text-slate-500 dark:text-[#94a19c]">Neto esperado</dt>
+                    <dd className="text-right tabular-nums">{plata(b.neto)}</dd>
+                    <dt className="text-slate-500 dark:text-[#94a19c]">Banco</dt>
+                    <dd className="text-right tabular-nums">{plata(b.banco)}</dd>
+                    <dt className="font-semibold">Diferencia</dt>
+                    <dd
+                      className={`text-right font-semibold tabular-nums ${
+                        Math.abs(b.diferencia) < 1
+                          ? "text-slate-500"
+                          : b.diferencia > 0
+                            ? "text-emerald-700 dark:text-[#4ee6b0]"
+                            : "text-rose-600 dark:text-rose-400"
+                      }`}
+                    >
+                      {plata(b.diferencia)}
+                      {b.pct != null && (
+                        <span className="ml-1 font-normal text-slate-500 dark:text-[#94a19c]">
+                          ({pct(b.pct, { signo: true })})
+                        </span>
+                      )}
+                    </dd>
+                  </dl>
+                </li>
+              ))}
+            </ul>
+
+            <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[40rem] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
                     <th className="px-4 py-2 font-semibold">Medio</th>
                     <th className="px-3 py-2 text-right font-semibold">Fudo (bruto)</th>
                     <th className="px-3 py-2 text-right font-semibold">Comisión esperada</th>
@@ -299,7 +376,7 @@ function DetalleLocal({
                       <td
                         className={`px-4 py-2.5 text-right font-semibold tabular-nums ${
                           Math.abs(f.diferencia) < 1
-                            ? "text-slate-400"
+                            ? "text-slate-500"
                             : f.diferencia > 0
                               ? "text-emerald-700 dark:text-[#4ee6b0]"
                               : "text-rose-600 dark:text-rose-400"
@@ -307,7 +384,7 @@ function DetalleLocal({
                       >
                         {plata(f.diferencia)}
                         {f.diferenciaPct != null && (
-                          <span className="ml-1 font-normal text-slate-400">
+                          <span className="ml-1 font-normal text-slate-500">
                             ({pct(f.diferenciaPct, { signo: true })})
                           </span>
                         )}
@@ -323,7 +400,7 @@ function DetalleLocal({
                     <td
                       className={`px-4 py-2.5 text-right tabular-nums ${
                         Math.abs(c.totalDiferencia) < 1
-                          ? "text-slate-400"
+                          ? "text-slate-500"
                           : c.totalDiferencia > 0
                             ? "text-emerald-700 dark:text-[#4ee6b0]"
                             : "text-rose-600 dark:text-rose-400"
@@ -356,7 +433,7 @@ function DetalleLocal({
                 5% sobre toda la venta neta, efectivo incluido: no se retiene solo, se declara.
               </p>
               <p className="mt-3 text-2xl font-bold tabular-nums">{plata(cuenta.iibb.sobreVentaTotal)}</p>
-              <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">
+              <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
                 Retenido aproximado en lo no efectivo: {plata(cuenta.iibb.retenidoAproximado)}
               </p>
             </Panel>
@@ -366,7 +443,7 @@ function DetalleLocal({
                 Débito fiscal sobre toda la venta; el crédito de compras es cero sin Factura A.
               </p>
               <p className="mt-3 text-2xl font-bold tabular-nums">{plata(cuenta.iva.aPagar)}</p>
-              <p className="mt-1 text-xs text-slate-400 dark:text-[#74817b]">
+              <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
                 {plata(cuenta.iva.debitoFiscal)} de débito − {plata(cuenta.iva.creditoFiscal)} de crédito
               </p>
             </Panel>
@@ -382,10 +459,44 @@ function DetalleLocal({
             {movimientosVisibles.length === 0 ? (
               <EmptyState>Ningún movimiento coincide con este filtro.</EmptyState>
             ) : (
-              <div className="overflow-x-auto">
+              <>
+              <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+                {movimientosVisibles.map((m) => (
+                  <li key={m.id} className="flex items-start justify-between gap-3 px-4 py-3">
+                    <div className="min-w-0">
+                      <p className="font-medium">{m.descripcion}</p>
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                        {fechaLarga(m.fecha)}
+                        <Badge tone={m.categoria === "OTRO" ? "slate" : "emerald"}>{ETIQUETA_CATEGORIA[m.categoria]}</Badge>
+                      </p>
+                      {m.referencia && (
+                        <p className="mt-0.5 break-words text-xs text-slate-500 dark:text-[#94a19c]">{m.referencia}</p>
+                      )}
+                    </div>
+                    <p
+                      className={`shrink-0 text-right font-semibold tabular-nums ${
+                        m.credito > 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : ""
+                      }`}
+                    >
+                      {m.credito > 0 ? plata(m.credito) : plata(-m.debito)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => pedirBorrar(m)}
+                      title="Borrar este movimiento"
+                      aria-label="Borrar este movimiento"
+                      className="-mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
+                    >
+                      <Trash2 size={16} aria-hidden />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+
+              <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[36rem] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-400 dark:border-[#26312d] dark:text-[#5d6d67]">
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
                       <th className="px-4 py-2 font-semibold">Fecha</th>
                       <th className="px-3 py-2 font-semibold">Descripción</th>
                       <th className="px-3 py-2 font-semibold">Categoría</th>
@@ -403,7 +514,7 @@ function DetalleLocal({
                         <td className="px-3 py-2">
                           <span className="font-medium">{m.descripcion}</span>
                           {m.referencia && (
-                            <span className="ml-1.5 text-xs text-slate-400 dark:text-[#74817b]">
+                            <span className="ml-1.5 text-xs text-slate-500 dark:text-[#7a8882]">
                               {m.referencia}
                             </span>
                           )}
@@ -420,15 +531,12 @@ function DetalleLocal({
                         <td className="px-4 py-2 text-right">
                           <button
                             type="button"
-                            onClick={async () => {
-                              await fetch(`/api/movimientos-bancarios/${m.id}`, { method: "DELETE" });
-                              onCambio();
-                            }}
+                            onClick={() => pedirBorrar(m)}
                             title="Borrar este movimiento"
                             aria-label="Borrar este movimiento"
-                            className="text-slate-400 transition-colors hover:text-rose-600 dark:hover:text-rose-400"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
                           >
-                            <Trash2 size={14} />
+                            <Trash2 size={14} aria-hidden />
                           </button>
                         </td>
                       </tr>
@@ -436,6 +544,7 @@ function DetalleLocal({
                   </tbody>
                 </table>
               </div>
+              </>
             )}
           </Panel>
         </>
@@ -448,6 +557,7 @@ function DetalleLocal({
           extracto sea del banco correcto para este período.
         </p>
       )}
+      {dialog}
     </div>
   );
 }

@@ -38,7 +38,7 @@ export function Sidebar({ active, rol, nombre }: { active: NavActivo; rol: Rol; 
       <nav className="flex-1 overflow-x-hidden overflow-y-auto px-3 py-4">
         {grupos.map((grupo) => (
           <div key={grupo} className="mb-2 transition-[margin] duration-200 last:mb-0 group-hover/sidebar:mb-5 group-focus-within/sidebar:mb-5">
-            <p className="max-h-0 overflow-hidden whitespace-nowrap px-2.5 text-xs font-bold uppercase text-slate-400 opacity-0 transition-[max-height,margin,opacity] duration-200 group-hover/sidebar:mb-1.5 group-hover/sidebar:max-h-5 group-hover/sidebar:opacity-100 group-focus-within/sidebar:mb-1.5 group-focus-within/sidebar:max-h-5 group-focus-within/sidebar:opacity-100 dark:text-[#5d6d67]">
+            <p className="max-h-0 overflow-hidden whitespace-nowrap px-2.5 text-xs font-bold uppercase text-slate-500 opacity-0 transition-[max-height,margin,opacity] duration-200 group-hover/sidebar:mb-1.5 group-hover/sidebar:max-h-5 group-hover/sidebar:opacity-100 group-focus-within/sidebar:mb-1.5 group-focus-within/sidebar:max-h-5 group-focus-within/sidebar:opacity-100 dark:text-[#7a8882]">
               {grupo}
             </p>
             <div className="flex flex-col gap-0.5">

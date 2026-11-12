@@ -101,7 +101,7 @@ export default function VentasFudo({ localId }: { localId: string }) {
         solo, elegí a mano qué empleado de Pulso es cada uno: queda guardado para la próxima vez.
       </p>
 
-      {cargando && <p className="text-sm text-slate-400 dark:text-[#74817b]">Consultando Fudo…</p>}
+      {cargando && <p className="text-sm text-slate-500 dark:text-[#7a8882]">Consultando Fudo…</p>}
       <ErrorText>{error}</ErrorText>
 
       {resumen && !cargando && (
@@ -122,7 +122,7 @@ export default function VentasFudo({ localId }: { localId: string }) {
           </div>
 
           {resumen.porMozo.length === 0 ? (
-            <p className="text-center text-sm text-slate-400 dark:text-[#74817b]">
+            <p className="text-center text-sm text-slate-500 dark:text-[#7a8882]">
               Ninguna venta tiene mozo asignado en este período
             </p>
           ) : (

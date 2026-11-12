@@ -94,7 +94,7 @@ function CurvaEstacional({ meses, mesActual }: { meses: Mes[]; mesActual: number
             className={`flex-1 text-center text-[11px] ${
               mes.mes === mesActual
                 ? "font-semibold text-emerald-700 dark:text-[#4ee6b0]"
-                : "text-slate-400 dark:text-[#74817b]"
+                : "text-slate-500 dark:text-[#7a8882]"
             }`}
           >
             {NOMBRE_MES[mes.mes - 1]}
@@ -330,14 +330,14 @@ export default function TemporadaPanel({
                 <p className="mt-1 text-xl font-semibold tabular-nums">
                   {(elegido.backtest.medianaConTemporada * 100).toFixed(1)}%
                 </p>
-                <p className="text-xs text-slate-400 dark:text-[#74817b]">error medio por día</p>
+                <p className="text-xs text-slate-500 dark:text-[#7a8882]">error medio por día</p>
               </div>
               <div className="px-4 py-3">
                 <p className="text-xs text-slate-500 dark:text-[#94a19c]">Repitiendo 28 días · mediana</p>
                 <p className="mt-1 text-xl font-semibold tabular-nums text-slate-500 dark:text-[#94a19c]">
                   {(elegido.backtest.medianaSinTemporada * 100).toFixed(1)}%
                 </p>
-                <p className="text-xs text-slate-400 dark:text-[#74817b]">error medio por día</p>
+                <p className="text-xs text-slate-500 dark:text-[#7a8882]">error medio por día</p>
               </div>
               <div className="px-4 py-3">
                 <p className="text-xs text-slate-500 dark:text-[#94a19c]">Diferencia</p>
@@ -350,7 +350,7 @@ export default function TemporadaPanel({
                 >
                   {pct(elegido.backtest.medianaMejora)}
                 </p>
-                <p className="text-xs text-slate-400 dark:text-[#74817b]">
+                <p className="text-xs text-slate-500 dark:text-[#7a8882]">
                   gana en {elegido.backtest.ventanasQueMejoran} de {elegido.backtest.ventanas.length} ·
                   peor caso {pct(elegido.backtest.peorMejora)}
                 </p>

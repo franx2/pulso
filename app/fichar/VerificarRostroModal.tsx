@@ -16,7 +16,7 @@ type Estado = "abriendo" | "detectando" | "ok" | "sin_rostro" | "varios_rostros"
 const MENSAJE: Record<Estado, string> = {
   abriendo: "Abriendo la cámara…",
   detectando: "Mirá a la cámara y quedate quieto…",
-  ok: "¡Listo, sos vos!",
+  ok: "Listo, tomamos tu foto.",
   sin_rostro: "No te vimos bien la cara.",
   varios_rostros: "Hay más de una persona en cuadro.",
   sin_camara: "No pudimos usar la cámara. Fichamos sin verificar.",
