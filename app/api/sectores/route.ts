@@ -54,6 +54,7 @@ export async function GET(request: Request) {
       where: {
         compra: {
           tipo: "MERCADERIA",
+          reemplazadaPorId: null,
           fecha: { gte: fechaSql(desde), lte: fechaSql(hasta) },
           ...(localId ? { localId } : { localId: { not: null } }),
         },

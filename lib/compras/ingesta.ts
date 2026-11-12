@@ -73,21 +73,40 @@ export function asignarLocal(remito: RemitoParseado, locales: LocalCompras[]): L
  * 16-5084), que es exacto: ese día puede haber dos remitos. Si la factura no
  * lo trae, por la fecha del remito en el mismo local.
  */
-async function buscarRemitoFacturado(factura: FacturaParseada, localId: string): Promise<string | null> {
+async function buscarRemitoFacturado(
+  factura: FacturaParseada,
+  localId: string
+): Promise<{ id: string; numero: string } | null> {
   const ppto = factura.observaciones?.match(/PPTO\s*(\d+)/i)?.[1];
   if (ppto) {
     const porNumero = await db.compra.findFirst({
       where: { localId, numero: `${factura.puntoVenta}-${Number(ppto)}`, ivaCredito: null },
-      select: { numero: true },
+      select: { id: true, numero: true },
     });
-    if (porNumero) return porNumero.numero;
+    if (porNumero) return porNumero;
   }
   if (!factura.remitoReferido) return null;
-  const porFecha = await db.compra.findFirst({
-    where: { localId, fecha: fechaSql(factura.remitoReferido), ivaCredito: null },
-    select: { numero: true },
+  // ponytail: por fecha toma un remito de ese día; si hubiera dos y la
+  // factura no trae PPTO, reemplaza uno solo. Hasta ahora las que vienen sin
+  // PPTO son de días con un único remito.
+  return db.compra.findFirst({
+    where: { localId, fecha: fechaSql(factura.remitoReferido), ivaCredito: null, reemplazadaPorId: null },
+    select: { id: true, numero: true },
   });
-  return porFecha?.numero ?? null;
+}
+
+/**
+ * Al revés: un remito que llega cuando su factura ya está cargada (la factura
+ * lo nombra con "PPTO 5084"). Nace reemplazado, para no sumar dos veces.
+ */
+async function facturaQueLoReemplaza(remito: RemitoParseado, localId: string): Promise<string | null> {
+  const candidatas = await db.compra.findMany({
+    where: { localId, ivaCredito: { not: null }, observaciones: { contains: `PPTO ${remito.numeroComprobante}` } },
+    select: { id: true, observaciones: true },
+  });
+  // `contains` dejaría pasar "PPTO 5084" buscando el 508: se confirma entero.
+  const exacta = new RegExp(String.raw`PPTO\s*${remito.numeroComprobante}\b`, "i");
+  return candidatas.find((c) => exacta.test(c.observaciones ?? ""))?.id ?? null;
 }
 
 export type ResultadoIngesta = {
@@ -149,24 +168,6 @@ export async function ingerirRemito(
   const tipo = clasificarRemito(remito);
   const problemas = [...verificacion.problemas];
 
-  // La factura de un remito que ya se cargó es la MISMA compra: guardarla
-  // duplicaría el costo y la deuda, porque ninguna suma mira `verificado`.
-  // Pasa con todo lo de antes de octubre: hasta ahí llegaban los dos
-  // documentos. No se guarda; el remito sigue siendo la compra.
-  if (factura && local) {
-    const remitoPrevio = await buscarRemitoFacturado(factura, local.id);
-    if (remitoPrevio) {
-      return {
-        numero: remito.numero,
-        estado: "duplicado",
-        local: local.nombre,
-        fecha: remito.fecha,
-        total: remito.subtotal,
-        tipo,
-        problemas: [`Factura del remito ${remitoPrevio}, que ya está cargado: no se suma de nuevo.`],
-      };
-    }
-  }
   if (!local) {
     problemas.push(
       `No pude asignar el local: el remito viene a nombre de "${remito.cliente}"` +
@@ -191,12 +192,19 @@ export async function ingerirRemito(
     };
   }
 
+  // La factura de un remito ya cargado es la MISMA compra, y la factura es la
+  // deuda real (decisión del 12/11/2026): se guarda la factura y el remito
+  // pasa a "reemplazado", que ninguna suma cuenta. Pasa con todo lo de antes
+  // de octubre, cuando llegaban los dos documentos.
+  const remitoFacturado = factura && local ? await buscarRemitoFacturado(factura, local.id) : null;
+  const reemplazadaPorId = !factura && local ? await facturaQueLoReemplaza(remito, local.id) : null;
+
   // En la factura, `total` es el neto de la línea y `totalConAjuste` lo que se
   // paga por ella, con su IVA: el mismo sentido que en el remito.
   const lineas = factura
     ? factura.lineas.map((l) => ({ ...l, costoLista: l.total, costoConAjuste: l.totalConIva }))
     : costoPorLinea(remito);
-  await db.compra.create({
+  const creada = await db.compra.create({
     data: {
       localId: local?.id ?? null,
       numero: remito.numero,
@@ -212,6 +220,7 @@ export async function ingerirRemito(
       total: remito.total,
       tipo,
       ivaCredito: factura ? factura.iva : null,
+      reemplazadaPorId,
       verificado: problemas.length === 0 && local != null,
       problemas,
       origen: contexto.origen ?? null,
@@ -229,7 +238,12 @@ export async function ingerirRemito(
         })),
       },
     },
+    select: { id: true },
   });
+  if (remitoFacturado) {
+    await db.compra.update({ where: { id: remitoFacturado.id }, data: { reemplazadaPorId: creada.id } });
+    problemas.push(`Reemplaza al remito ${remitoFacturado.numero}, que deja de sumar.`);
+  }
 
   return {
     numero: remito.numero,

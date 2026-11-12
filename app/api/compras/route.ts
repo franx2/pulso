@@ -33,7 +33,8 @@ export async function GET(request: Request) {
 
   const [compras, locales, ventasHelado, diasConVentas, overridesFilas, ventasCafe] = await Promise.all([
     db.compra.findMany({
-      where: { fecha: { gte: fechaSql(desde) } },
+      // Un remito que ya tiene su factura no se muestra ni se suma: la compra es la factura.
+      where: { fecha: { gte: fechaSql(desde) }, reemplazadaPorId: null },
       orderBy: [{ fecha: "desc" }, { numero: "desc" }],
       include: {
         local: { select: { nombre: true } },

@@ -59,7 +59,7 @@ export async function GET(request: Request) {
     }),
     db.compraItem.groupBy({
       by: ["detalle"],
-      where: { compra: { tipo: "MERCADERIA" } },
+      where: { compra: { tipo: "MERCADERIA", reemplazadaPorId: null } },
       _sum: { totalConAjuste: true },
     }),
     db.sectorProducto.findMany({ select: { producto: true, sector: true } }),

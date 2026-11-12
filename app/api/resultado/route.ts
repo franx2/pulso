@@ -50,6 +50,7 @@ export async function GET(request: Request) {
       where: {
         fecha: { gte: desdeSql, lte: hastaSql },
         ...(localId ? { localId } : { localId: { not: null } }),
+        reemplazadaPorId: null,
       },
       select: { localId: true, tipo: true, subtotal: true, ivaCredito: true },
     }),

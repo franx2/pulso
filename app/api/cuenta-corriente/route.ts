@@ -25,7 +25,8 @@ export async function GET() {
     // Sólo mercadería y servicio con local asignado: un remito sin asignar
     // todavía no es deuda de nadie en particular.
     db.compra.findMany({
-      where: { localId: { not: null } },
+      // La deuda es la factura; el remito que ya la tiene no suma.
+      where: { localId: { not: null }, reemplazadaPorId: null },
       select: { id: true, localId: true, fecha: true, numero: true, total: true, tipo: true },
       orderBy: { fecha: "asc" },
     }),
