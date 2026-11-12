@@ -12,13 +12,36 @@ export async function GET() {
   const session = await requireEncargadoApi();
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
 
+  // Lista blanca, nunca la fila entera: la fila trae el hash de la contraseña,
+  // la biometría del rostro y, vía `local`, las credenciales de Fudo. El
+  // encargado sólo ve lo que necesita para armar turnos y reportes; el precio
+  // por hora y el token de invitación (con el que cualquiera registra una
+  // passkey a nombre de esa persona, admins incluidos) son sólo del admin.
+  const esAdmin = session.rol === "ADMIN";
   const empleados = await db.empleado.findMany({
-    include: {
-      local: true,
-      categoria: { select: { id: true, nombre: true } },
-      asignaciones: { include: { local: { select: { id: true, nombre: true } } } },
-      credenciales: { select: { id: true } },
-      invitaciones: { where: { usado: false }, orderBy: { createdAt: "desc" }, take: 1 },
+    select: {
+      id: true,
+      nombre: true,
+      localId: true,
+      activo: true,
+      local: { select: { id: true, nombre: true } },
+      asignaciones: { select: { local: { select: { id: true, nombre: true } } } },
+      ...(esAdmin
+        ? {
+            usuario: true,
+            email: true,
+            rol: true,
+            precioHora: true,
+            categoria: { select: { id: true, nombre: true } },
+            credenciales: { select: { id: true } },
+            invitaciones: {
+              where: { usado: false, expiraEn: { gt: new Date() } },
+              orderBy: { createdAt: "desc" },
+              take: 1,
+              select: { token: true },
+            },
+          }
+        : {}),
     },
     orderBy: { createdAt: "desc" },
   });
@@ -74,6 +97,7 @@ export async function POST(request: Request) {
             .map((id) => ({ localId: id })),
         },
       },
+      select: { id: true, usuario: true, nombre: true, rol: true, localId: true },
     });
   } catch {
     return NextResponse.json({ error: "Ese usuario ya existe" }, { status: 409 });

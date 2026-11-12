@@ -73,6 +73,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       ...(body.fudoUsuarioId !== undefined ? { fudoUsuarioId: body.fudoUsuarioId || null } : {}),
       ...(body.fudoCajaId !== undefined ? { fudoCajaId: body.fudoCajaId || null } : {}),
     },
+    // Nunca la fila entera: trae el hash de la contraseña y la biometría.
+    select: { id: true, usuario: true, nombre: true, rol: true, activo: true, localId: true },
   });
 
   if (body.localesExtra) {
