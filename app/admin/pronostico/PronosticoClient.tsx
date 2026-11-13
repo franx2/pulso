@@ -4,8 +4,6 @@ import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import {
   AlertTriangle,
-  BarChart3,
-  CalendarClock,
   CloudRain,
   Info,
   SlidersHorizontal,
@@ -14,6 +12,7 @@ import {
 } from "lucide-react";
 import { ForecastChart } from "@/components/AnalyticsCharts";
 import { Badge, Button, EmptyState, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
 import TemporadaPanel from "./TemporadaPanel";
 import TendenciaPanel from "./TendenciaPanel";
 import { fechaCorta, numero, plata, plataCompacta } from "@/lib/formato";
@@ -249,32 +248,26 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
       </PageTitle>
 
       {datos && datos.locales.length > 0 && (
-        <Panel className="md:sticky md:top-[4.75rem] md:z-[9]">
-          <div className="flex flex-col gap-3 p-3.5 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex min-w-0 items-center gap-2">
-              <BarChart3 size={16} className="shrink-0 text-slate-500" aria-hidden />
-              <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Local</span>
-              <div className="scrollbar-hidden min-w-0 overflow-x-auto">
-                <SelectorSegmentado
-                  label="Local del pronóstico"
-                  valor={seleccionado}
-                  onChange={setLocalId}
-                  opciones={datos.locales.map((local) => ({ clave: local.id, label: local.nombre }))}
-                />
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              <CalendarClock size={16} className="shrink-0 text-slate-500" aria-hidden />
-              <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Horizonte</span>
+        <BarraContexto
+          className="md:sticky md:top-[4.75rem] md:z-[9]"
+          campos={[
+            {
+              etiqueta: "Local",
+              contenido: <SelectorLocal locales={datos.locales} valor={seleccionado} onChange={setLocalId} todos={null} />,
+            },
+          ]}
+          derecha={{
+            etiqueta: "Horizonte",
+            contenido: (
               <SelectorSegmentado
                 opciones={HORIZONTES.map((dias) => ({ clave: dias, label: `${dias} días` }))}
                 valor={horizonte}
                 onChange={setHorizonte}
                 label="Horizonte del pronóstico"
               />
-            </div>
-          </div>
-        </Panel>
+            ),
+          }}
+        />
       )}
 
       <div className="scrollbar-hidden overflow-x-auto"><SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Vista del pronóstico" /></div>

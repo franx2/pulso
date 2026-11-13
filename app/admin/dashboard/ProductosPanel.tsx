@@ -136,7 +136,7 @@ export default function ProductosPanel({
               quedó desactualizada en algún local, o se está cobrando distinto.
             </p>
             {datos.preciosDispares.map((p) => (
-              <div key={p.nombre} className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+              <div key={p.nombre} className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="font-semibold">{p.nombre}</span>
                   <Badge tone={p.difPct >= 30 ? "rose" : "amber"}>

@@ -38,7 +38,10 @@ export function PageShell({
               // o enfocarlo; sin este margen creciendo junto con él, el flyout
               // tapaba 168px de contenido y cortaba el título de la pantalla a
               // la mitad ("Compras y consumo" se leía "s y consumo").
-              "pt-5 sm:pt-6 md:ml-18 md:w-auto md:max-w-none md:px-8 md:pt-0 md:transition-[margin-left] md:duration-200 md:ease-out md:peer-hover/sidebar:ml-60 md:peer-focus-within/sidebar:ml-60"
+              // `md:mr-0`: con margen derecho automático, en el body flex el
+              // main se achicaba al ancho de su contenido y Turnos o Equipo
+              // quedaban más angostas que Compras, que estira con sus tablas.
+              "pt-5 sm:pt-6 md:ml-18 md:mr-0 md:w-auto md:max-w-none md:px-8 md:pt-0 md:transition-[margin-left] md:duration-200 md:ease-out md:peer-hover/sidebar:ml-60 md:peer-focus-within/sidebar:ml-60"
             : "max-w-3xl pt-5 sm:pt-6"
         } ${nav ? "pb-28 md:pb-8" : "pb-8"}`}
       >
@@ -46,11 +49,12 @@ export function PageShell({
           className={
             width === "narrow"
               ? "mx-auto w-full max-w-lg"
-              : width === "full"
+              : // Toda pantalla de la consola tiene el mismo ancho: antes Reportes,
+                // Equipo o Turnos se veían más angostas que Compras o Comando y
+                // el contenido "saltaba" al cambiar de pestaña.
+                width === "full" || conSidebar
                 ? "mx-auto w-full max-w-[90rem]"
-                : conSidebar
-                  ? "mx-auto w-full max-w-6xl"
-                  : ""
+                : ""
           }
         >
           {children}

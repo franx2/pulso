@@ -2,10 +2,11 @@
 
 import { Fragment, useEffect, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
 import ClasificadorSectores from "@/components/ClasificadorSectores";
-import { Select } from "@/components/ui";
+import { PageTitle } from "@/components/ui";
 import { AlertTriangle, ChevronDown, ChevronRight } from "lucide-react";
-import { plata } from "@/lib/formato";
+import { fechaLarga, plata } from "@/lib/formato";
 
 type SectorClave = "HELADOS" | "CAFETERIA" | "CHOCOLATERIA" | "PROMOCION" | "SIN_CLASIFICAR";
 type ResumenSector = {
@@ -91,20 +92,21 @@ export default function SectoresClient() {
 
   return (
     <div className="space-y-5">
-      <div className="flex flex-wrap items-center gap-2">
-        <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} />
-        <Select
-          value={localId}
-          onChange={(e) => setLocalId(e.target.value)}
-          aria-label="Local"
-          className="w-auto py-1.5 text-sm"
-        >
-          <option value="">Toda la cadena</option>
-          {datos.locales.map((l) => (
-            <option key={l.id} value={l.id}>{l.nombre}</option>
-          ))}
-        </Select>
-      </div>
+      <PageTitle subtitle="Venta, compra y margen de helados, cafetería y chocolatería">Sectores</PageTitle>
+
+      <BarraContexto
+        campos={[
+          {
+            etiqueta: "Local",
+            contenido: <SelectorLocal locales={datos.locales} valor={localId} onChange={setLocalId} />,
+          },
+        ]}
+        derecha={{ etiqueta: "Período", contenido: <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} /> }}
+        pie={{
+          alcance: datos.locales.find((l) => l.id === localId)?.nombre ?? "Toda la cadena",
+          detalle: `${fechaLarga(datos.desde)} a ${fechaLarga(datos.hasta)}`,
+        }}
+      />
 
       <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
         <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">

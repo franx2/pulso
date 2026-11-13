@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Wallet } from "lucide-react";
-import { Badge, Card, EmptyState, Label, PageTitle, Select, Spinner } from "@/components/ui";
+import { Badge, Card, EmptyState, PageTitle, Spinner } from "@/components/ui";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
+import { fechaLarga } from "@/lib/formato";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { rangoDias } from "@/lib/periodo";
 
@@ -55,43 +57,39 @@ export default function ArqueosClient() {
   }, [localId, desde, hasta]);
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageTitle subtitle="Efectivo esperado (según Fudo) vs. contado al fichar salida">
         Arqueos de caja
       </PageTitle>
 
-      <Card className="flex flex-col gap-3">
-        <div>
-          <Label>Período</Label>
-          <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} />
-        </div>
-        {locales.length > 1 && (
-          <div>
-            <Label>Sucursal</Label>
-            <Select value={localId} onChange={(e) => setLocalId(e.target.value)}>
-              <option value="">Todas</option>
-              {locales.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.nombre}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
-      </Card>
+      <BarraContexto
+        campos={[
+          {
+            etiqueta: "Sucursal",
+            contenido: locales.length > 1 && (
+              <SelectorLocal locales={locales} valor={localId} onChange={setLocalId} todos="Todas" />
+            ),
+          },
+        ]}
+        derecha={{ etiqueta: "Período", contenido: <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} /> }}
+        pie={{
+          alcance: locales.find((l) => l.id === localId)?.nombre ?? "Todas las sucursales",
+          detalle: `${fechaLarga(desde)} a ${fechaLarga(hasta)}`,
+        }}
+      />
 
       {cargando ? (
         <Spinner />
       ) : arqueos.length === 0 ? (
         <EmptyState>Sin arqueos en este período. Sólo se generan al fichar salida en un local con Fudo configurado.</EmptyState>
       ) : (
-        <Card className="flex flex-col gap-2">
+        <Card className="divide-y divide-slate-100 p-0 dark:divide-[#1c2521]">
           {arqueos.map((a) => {
             const diferencia = a.efectivoContado != null ? a.efectivoContado - a.efectivoEsperado : null;
             return (
               <div
                 key={a.id}
-                className="flex flex-col gap-1 rounded-xl border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
+                className="flex flex-col gap-1 px-4 py-3 text-sm"
               >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">{a.empleado}</span>

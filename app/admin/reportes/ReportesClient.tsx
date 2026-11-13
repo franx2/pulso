@@ -2,7 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { Download, FileSpreadsheet, Printer } from "lucide-react";
-import { Badge, Button, Card, EmptyState, Label, PageTitle, Select, Spinner } from "@/components/ui";
+import { Badge, Card, EmptyState, PageTitle, Select, Spinner } from "@/components/ui";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
+import { fechaLarga } from "@/lib/formato";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { rangoDias } from "@/lib/periodo";
 import CostoLaboral from "./CostoLaboral";
@@ -23,6 +25,9 @@ type Fila = {
   diasSinFichar: number;
   montoAPagar: number | null;
 };
+
+const accion =
+  "inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#e0e7e3] dark:hover:bg-[#172724] dark:focus-visible:ring-[#37e6b0]";
 
 export default function ReportesClient() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
@@ -77,64 +82,58 @@ export default function ReportesClient() {
   const hayMonto = filas.some((f) => f.montoAPagar != null);
 
   return (
-    <div className="flex flex-col gap-6">
-      <PageTitle subtitle="Horas trabajadas en el período elegido">Reportes</PageTitle>
-
-      <Card className="flex flex-col gap-3">
-        <div>
-          <Label>Período</Label>
-          <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} />
-        </div>
-        {locales.length > 1 && (
-          <div>
-            <Label>Sucursal</Label>
-            <Select value={localId} onChange={(e) => setLocalId(e.target.value)}>
-              <option value="">Todas</option>
-              {locales.map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.nombre}
-                </option>
-              ))}
-            </Select>
-          </div>
-        )}
-        <div>
-          <Label>Empleado</Label>
-          <Select value={empleadoId} onChange={(e) => setEmpleadoId(e.target.value)}>
-            <option value="">Todos</option>
-            {empleados.map((e) => (
-              <option key={e.id} value={e.id}>
-                {e.nombre}
-              </option>
-            ))}
-          </Select>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <a href={url({ formato: "xlsx" })} className="flex-1">
-            <Button variant="ghost" type="button" className="w-full">
-              <FileSpreadsheet size={16} />
+    <div className="flex flex-col gap-5">
+      <PageTitle
+        subtitle="Horas trabajadas y a pagar en el período elegido"
+        actions={
+          <div className="flex items-center gap-2">
+            <a href={url({ formato: "xlsx" })} className={accion}>
+              <FileSpreadsheet size={16} aria-hidden />
               Excel
-            </Button>
-          </a>
-          <a
-            href={url({}, "/admin/reportes/imprimir")}
-            target="_blank"
-            rel="noreferrer"
-            className="flex-1"
-          >
-            <Button variant="ghost" type="button" className="w-full">
-              <Printer size={16} />
+            </a>
+            <a href={url({}, "/admin/reportes/imprimir")} target="_blank" rel="noreferrer" className={accion}>
+              <Printer size={16} aria-hidden />
               PDF
-            </Button>
-          </a>
-          <a href={url({ formato: "csv" })} className="flex-1">
-            <Button variant="ghost" type="button" className="w-full">
-              <Download size={16} />
+            </a>
+            <a href={url({ formato: "csv" })} className={accion}>
+              <Download size={16} aria-hidden />
               CSV
-            </Button>
-          </a>
-        </div>
-      </Card>
+            </a>
+          </div>
+        }
+      >
+        Reportes
+      </PageTitle>
+
+      <BarraContexto
+        campos={[
+          {
+            etiqueta: "Sucursal",
+            contenido: locales.length > 1 && (
+              <SelectorLocal locales={locales} valor={localId} onChange={setLocalId} todos="Todas" />
+            ),
+          },
+          {
+            etiqueta: "Empleado",
+            className: "sm:w-64",
+            contenido: (
+              <Select value={empleadoId} onChange={(e) => setEmpleadoId(e.target.value)} aria-label="Empleado">
+                <option value="">Todos</option>
+                {empleados.map((e) => (
+                  <option key={e.id} value={e.id}>
+                    {e.nombre}
+                  </option>
+                ))}
+              </Select>
+            ),
+          },
+        ]}
+        derecha={{ etiqueta: "Período", contenido: <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} /> }}
+        pie={{
+          alcance: locales.find((l) => l.id === localId)?.nombre ?? "Todas las sucursales",
+          detalle: `${fechaLarga(desde)} a ${fechaLarga(hasta)}${cargando ? " · actualizando" : ""}`,
+        }}
+      />
 
       {!cargando && hayMonto && (
         <CostoLaboral
@@ -150,7 +149,7 @@ export default function ReportesClient() {
       {cargando ? (
         <Spinner />
       ) : filas.length === 0 ? (
-        <EmptyState>Sin fichajes en el rango seleccionado</EmptyState>
+        <EmptyState>Sin fichajes en este período.</EmptyState>
       ) : (
         <Card className="flex flex-col gap-3">
           {filas.map((f) => (

@@ -6,9 +6,6 @@ import {
   AlertTriangle,
   ArrowRight,
   BrainCircuit,
-  Building2,
-  CalendarDays,
-  CalendarRange,
   CheckCircle2,
   ChevronLeft,
   ChevronRight,
@@ -16,6 +13,7 @@ import {
 } from "lucide-react";
 import { ComparisonChart, type ComparisonPoint } from "@/components/AnalyticsCharts";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
 import { Badge, Button, EmptyState, Input, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
 import ProductosPanel from "./ProductosPanel";
 import { fechaCompleta, fechaLarga, numeroCompacto, plata, plataCompacta, numero } from "@/lib/formato";
@@ -629,27 +627,26 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
         Centro de comando
       </PageTitle>
 
-      <Panel className="md:sticky md:top-[4.75rem] md:z-[9]">
-        <div className="flex flex-col gap-3 p-3.5">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <div className="flex min-w-0 items-center gap-2">
-              <Building2 size={16} className="shrink-0 text-slate-500" aria-hidden />
-              <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Local</span>
-              <div className="scrollbar-hidden min-w-0 overflow-x-auto">
-                <SelectorSegmentado
-                  label="Alcance del tablero"
-                  valor={alcance}
-                  onChange={setAlcance}
-                  opciones={[
-                    { clave: "", label: "Cadena" },
-                    ...locales.map((local) => ({ clave: local.localId, label: local.nombre })),
-                  ]}
-                />
-              </div>
-            </div>
-            {modoDetalleDiario ? (
+      <BarraContexto
+        className="md:sticky md:top-[4.75rem] md:z-[9]"
+        campos={[
+          {
+            etiqueta: "Local",
+            contenido: (
+              <SelectorLocal
+                locales={locales.map((local) => ({ id: local.localId, nombre: local.nombre }))}
+                valor={alcance}
+                onChange={setAlcance}
+              />
+            ),
+          },
+        ]}
+        derecha={
+          modoDetalleDiario
+            ? {
+                etiqueta: "Día",
+                contenido: (
               <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
-                <CalendarDays size={16} className="shrink-0 text-slate-500" aria-hidden />
                 <div className="flex min-w-max items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]">
                   <button
                     type="button"
@@ -692,34 +689,24 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="flex min-w-0 items-center gap-2">
-                <CalendarRange size={16} className="hidden shrink-0 text-slate-500 sm:block" aria-hidden />
-                <span className="hidden shrink-0 text-xs font-semibold text-slate-500 sm:inline dark:text-[#94a19c]">Período</span>
-                <PeriodoSelector valor={periodo} onChange={setPeriodo} hoy={hoy} rango={datos?.rango} />
-              </div>
-            )}
-          </div>
-
-          {modoDetalleDiario ? (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs dark:border-[#1c2521]">
-              <p className="text-slate-500 dark:text-[#94a19c]">
-                <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fmtFechaLarga(fechaLocal)}
-              </p>
-              <p className="text-slate-500 dark:text-[#7a8882]">Referencia: día anterior · {fechaLarga(referenciaDia)}</p>
-            </div>
-          ) : datos && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs dark:border-[#1c2521]">
-              <p className="text-slate-500 dark:text-[#94a19c]">
-                <strong className="font-semibold text-slate-700 dark:text-[#c1cbc6]">{etiquetaAlcance}</strong> · {fechaLarga(datos.rango.desde)} a {fechaLarga(datos.rango.hasta)}
-              </p>
-              <p className="text-slate-500 dark:text-[#7a8882]">
-                Referencia: {fechaLarga(datos.rangoPrevio.desde)} a {fechaLarga(datos.rangoPrevio.hasta)} · {diasCompletos}/{datos.dias} días completos
-              </p>
-            </div>
-          )}
-        </div>
-      </Panel>
+                ),
+              }
+            : { etiqueta: "Período", contenido: <PeriodoSelector valor={periodo} onChange={setPeriodo} hoy={hoy} rango={datos?.rango} /> }
+        }
+        pie={
+          modoDetalleDiario
+            ? {
+                alcance: <>{etiquetaAlcance} · {fmtFechaLarga(fechaLocal)}</>,
+                detalle: `Referencia: día anterior · ${fechaLarga(referenciaDia)}`,
+              }
+            : datos
+              ? {
+                  alcance: <>{etiquetaAlcance} · {fechaLarga(datos.rango.desde)} a {fechaLarga(datos.rango.hasta)}</>,
+                  detalle: `Referencia: ${fechaLarga(datos.rangoPrevio.desde)} a ${fechaLarga(datos.rangoPrevio.hasta)} · ${diasCompletos}/${datos.dias} días completos`,
+                }
+              : undefined
+        }
+      />
 
       <div className="scrollbar-hidden overflow-x-auto">
         <SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Vista del centro de comando" />

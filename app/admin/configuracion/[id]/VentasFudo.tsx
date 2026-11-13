@@ -107,15 +107,15 @@ export default function VentasFudo({ localId }: { localId: string }) {
       {resumen && !cargando && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
               <p className="text-lg font-bold">{resumen.cantidadVentas}</p>
               <p className="text-xs text-slate-500 dark:text-[#94a19c]">Ventas</p>
             </div>
-            <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
               <p className="text-lg font-bold">${resumen.totalVentas.toFixed(2)}</p>
               <p className="text-xs text-slate-500 dark:text-[#94a19c]">Total</p>
             </div>
-            <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
               <p className="text-lg font-bold">{resumen.personasAtendidas}</p>
               <p className="text-xs text-slate-500 dark:text-[#94a19c]">Personas atendidas</p>
             </div>
@@ -130,7 +130,7 @@ export default function VentasFudo({ localId }: { localId: string }) {
               {resumen.porMozo.map((m) => (
                 <li
                   key={m.fudoUsuarioId}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
                 >
                   <span className="flex items-center gap-2">
                     <Users size={14} />

@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
-import { Badge, EmptyState, Metrica, PageTitle, Panel, Select, SelectorSegmentado } from "@/components/ui";
-import { plata, porcentaje as pct } from "@/lib/formato";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
+import { Badge, EmptyState, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
+import { fechaLarga, plata, porcentaje as pct } from "@/lib/formato";
 import BancoPanel from "./BancoPanel";
 
 type Vista = "resumen" | "banco";
@@ -101,30 +102,19 @@ export default function ResultadoClient() {
         Resultado operativo
       </PageTitle>
 
-      <Panel className="p-3.5">
-        <div className="flex flex-wrap items-center gap-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Local</span>
-            <Select
-              value={localId}
-              onChange={(e) => setLocalId(e.target.value)}
-              aria-label="Local"
-              className="w-auto py-1.5 text-sm"
-            >
-              <option value="">Toda la cadena</option>
-              {(datos?.locales ?? []).map((l) => (
-                <option key={l.id} value={l.id}>
-                  {l.nombre}
-                </option>
-              ))}
-            </Select>
-          </div>
-          <div className="flex min-w-0 items-center gap-2">
-            <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Período</span>
-            <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} />
-          </div>
-        </div>
-      </Panel>
+      <BarraContexto
+        campos={[
+          {
+            etiqueta: "Local",
+            contenido: <SelectorLocal locales={datos?.locales ?? []} valor={localId} onChange={setLocalId} />,
+          },
+        ]}
+        derecha={{ etiqueta: "Período", contenido: <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} /> }}
+        pie={{
+          alcance: (datos?.locales ?? []).find((l) => l.id === localId)?.nombre ?? "Toda la cadena",
+          detalle: datos ? `${fechaLarga(datos.desde)} a ${fechaLarga(datos.hasta)}` : undefined,
+        }}
+      />
 
       <div className="scrollbar-hidden overflow-x-auto">
         <SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Vista de resultado" />

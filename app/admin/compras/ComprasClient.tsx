@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
 import ClasificadorSectores, { SectorChip } from "@/components/ClasificadorSectores";
 import CuentaCorrientePanel from "./CuentaCorrientePanel";
 import {
@@ -13,9 +14,8 @@ import {
   RefreshCw,
   Scale,
   Search,
-  Store,
 } from "lucide-react";
-import { Badge, Button, EmptyState, Input, Metrica, PageTitle, Panel, Select, SelectorSegmentado } from "@/components/ui";
+import { Badge, Button, EmptyState, Input, Metrica, PageTitle, Panel, Select } from "@/components/ui";
 import { fechaCorta, fechaLarga, kilos, mesLargo, numero, plata } from "@/lib/formato";
 
 type Item = {
@@ -461,51 +461,19 @@ export default function ComprasClient() {
         Compras y consumo
       </PageTitle>
 
-      <Panel className="p-4">
-        <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-end">
-          <div className="min-w-0">
-            <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Local</p>
-            <Select
-              aria-label="Elegir local"
-              value={localId}
-              onChange={(evento) => setLocalId(evento.target.value)}
-              className="md:hidden"
-            >
-              <option value="">Cadena</option>
-              {datos.locales.map((local) => (
-                <option key={local.id} value={local.id}>
-                  {local.nombre}
-                </option>
-              ))}
-            </Select>
-            <div className="scrollbar-hide hidden overflow-x-auto pb-1 md:block">
-              <SelectorSegmentado
-                label="Elegir local"
-                valor={localId}
-                onChange={setLocalId}
-                opciones={[
-                  { clave: "", label: "Cadena" },
-                  ...datos.locales.map((local) => ({ clave: local.id, label: local.nombre })),
-                ]}
-              />
-            </div>
-          </div>
-          <div>
-            <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Período</p>
-            <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} />
-          </div>
-        </div>
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
-          <span className="inline-flex items-center gap-1.5 font-medium text-slate-700 dark:text-[#dbe5e0]">
-            <Store size={14} aria-hidden />
-            {nombreLocal}
-          </span>
-          <span className="tabular-nums">
-            {fechaLarga(datos.desde)} a {fechaLarga(datos.hasta)}
-            {cargando && " · actualizando"}
-          </span>
-        </div>
-      </Panel>
+      <BarraContexto
+        campos={[
+          {
+            etiqueta: "Local",
+            contenido: <SelectorLocal locales={datos.locales} valor={localId} onChange={setLocalId} />,
+          },
+        ]}
+        derecha={{ etiqueta: "Período", contenido: <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} /> }}
+        pie={{
+          alcance: nombreLocal,
+          detalle: `${fechaLarga(datos.desde)} a ${fechaLarga(datos.hasta)}${cargando ? " · actualizando" : ""}`,
+        }}
+      />
 
       {!localId && sinAsignar.length > 0 && (
         <section className="rounded-lg border border-amber-300 bg-amber-50/60 dark:border-amber-500/40 dark:bg-amber-500/10">
@@ -1052,14 +1020,14 @@ export default function ComprasClient() {
               composición declarada dice que la lleva.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+              <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
                   Vendido suelto
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesSueltas)}</p>
                 <p className="text-xs text-slate-500 dark:text-[#94a19c]">cortados, lattes, americanos</p>
               </div>
-              <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+              <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
                   Dentro de una promo
                 </p>

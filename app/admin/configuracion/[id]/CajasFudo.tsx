@@ -76,7 +76,7 @@ export default function CajasFudo({ localId }: { localId: string }) {
           {cajas.map((c) => (
             <li
               key={c.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
             >
               <span className="flex items-center gap-2">
                 <Wallet size={14} />

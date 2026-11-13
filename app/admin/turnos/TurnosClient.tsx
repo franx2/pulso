@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, CalendarPlus, List, Trash2, X } from "lucide-react";
+import { CalendarPlus, Trash2, X } from "lucide-react";
 import {
   Button,
   Card,
@@ -15,6 +15,7 @@ import {
   Select,
   SectionTitle,
   useConfirm,
+  SelectorSegmentado,
 } from "@/components/ui";
 import { formatearFechaSql } from "@/lib/fechas";
 import SemanaGantt from "./SemanaGantt";
@@ -237,34 +238,19 @@ export default function TurnosClient() {
   const NOMBRE_DIA_CORTO = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageTitle subtitle="Planificá quién trabaja cada día">Turnos</PageTitle>
 
-      <div className="flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-[#18201d]">
-        <button
-          type="button"
-          onClick={() => setVista("lista")}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-medium transition ${
-            vista === "lista"
-              ? "bg-white shadow-sm dark:bg-[#131816]"
-              : "text-slate-500 dark:text-[#94a19c]"
-          }`}
-        >
-          <List size={15} />
-          Lista
-        </button>
-        <button
-          type="button"
-          onClick={() => setVista("semana")}
-          className={`flex flex-1 items-center justify-center gap-1.5 rounded-lg py-1.5 text-sm font-medium transition ${
-            vista === "semana"
-              ? "bg-white shadow-sm dark:bg-[#131816]"
-              : "text-slate-500 dark:text-[#94a19c]"
-          }`}
-        >
-          <CalendarDays size={15} />
-          Semana
-        </button>
+      <div className="scrollbar-hidden overflow-x-auto">
+        <SelectorSegmentado
+          label="Vista de turnos"
+          valor={vista}
+          onChange={setVista}
+          opciones={[
+            { clave: "lista", label: "Lista" },
+            { clave: "semana", label: "Semana" },
+          ]}
+        />
       </div>
 
       {vista === "semana" ? (
@@ -273,27 +259,16 @@ export default function TurnosClient() {
         <>
           <Card>
         <SectionTitle>Nuevo turno</SectionTitle>
-        <div className="mb-3 flex gap-2 rounded-xl bg-slate-100 p-1 dark:bg-[#18201d]">
-          <button
-            type="button"
-            onClick={() => setModo("grupo")}
-            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${
-              modo === "grupo" ? "bg-white shadow-sm dark:bg-[#131816]" : "text-slate-500 dark:text-[#94a19c]"
-            }`}
-          >
-            Varios empleados, una o más fechas
-          </button>
-          <button
-            type="button"
-            onClick={() => setModo("individual")}
-            className={`flex-1 rounded-lg py-1.5 text-sm font-medium transition ${
-              modo === "individual"
-                ? "bg-white shadow-sm dark:bg-[#131816]"
-                : "text-slate-500 dark:text-[#94a19c]"
-            }`}
-          >
-            Un empleado, la semana
-          </button>
+        <div className="mb-3 overflow-x-auto">
+          <SelectorSegmentado
+            label="Cómo cargar el turno"
+            valor={modo}
+            onChange={setModo}
+            opciones={[
+              { clave: "grupo", label: "Varios empleados, una o más fechas" },
+              { clave: "individual", label: "Un empleado, la semana" },
+            ]}
+          />
         </div>
 
         {modo === "individual" ? (

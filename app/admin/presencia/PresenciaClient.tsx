@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
 import { fechaCorta } from "@/lib/formato";
 import {
   AlertTriangle,
@@ -24,7 +25,6 @@ import {
   ErrorText,
   Modal,
   PageTitle,
-  Select,
   SectionTitle,
   Spinner,
   Textarea,
@@ -232,7 +232,7 @@ export default function PresenciaClient() {
   const pendientes = alertas.length + correcciones.length + ausencias.length + rostros.length;
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageTitle
         subtitle={
           actualizado
@@ -250,17 +250,19 @@ export default function PresenciaClient() {
       </PageTitle>
       <ErrorText>{errorAccion}</ErrorText>
 
+      {locales.length > 1 && (
+        <BarraContexto
+          campos={[
+            {
+              etiqueta: "Sucursal",
+              contenido: <SelectorLocal locales={locales} valor={localId} onChange={setLocalId} todos="Todas" />,
+            },
+          ]}
+          pie={{ alcance: locales.find((l) => l.id === localId)?.nombre ?? "Todas las sucursales", detalle: "Hoy, en tiempo real" }}
+        />
+      )}
+
       <div className="flex flex-wrap items-center gap-2">
-        {locales.length > 1 && (
-          <Select value={localId} onChange={(e) => setLocalId(e.target.value)} className="w-auto! max-w-xs py-1.5 text-sm">
-            <option value="">Todas las sucursales</option>
-            {locales.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.nombre}
-              </option>
-            ))}
-          </Select>
-        )}
         <StatPill label="Trabajando" valor={conteo("TRABAJANDO")} tono="emerald" />
         <StatPill label="En descanso" valor={conteo("EN_DESCANSO")} tono="amber" />
         <StatPill label="Sin fichar" valor={conteo("FALTA")} tono="red" />

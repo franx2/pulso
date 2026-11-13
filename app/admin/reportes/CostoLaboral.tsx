@@ -101,15 +101,15 @@ export default function CostoLaboral({
       {ventas != null && !cargando && (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
               <p className="text-lg font-bold">${ventas.toFixed(2)}</p>
               <p className="text-xs text-slate-500 dark:text-[#94a19c]">Ventas</p>
             </div>
-            <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
               <p className="text-lg font-bold">${costoLaboral.toFixed(2)}</p>
               <p className="text-xs text-slate-500 dark:text-[#94a19c]">Costo laboral</p>
             </div>
-            <div className="rounded-xl border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
               <p className="text-lg font-bold">{porcentaje != null ? `${porcentaje.toFixed(1)}%` : "—"}</p>
               <p className="text-xs text-slate-500 dark:text-[#94a19c]">Sobre ventas</p>
             </div>
