@@ -53,7 +53,7 @@ export const INSUMOS: Insumo[] = [
   ins("chipa", "Chipá prensado", /^CHIPA PRENSADO X 20/, 20, "u"),
   ins("croissant", "Croissant", /^CROISSANT X UNIDAD/, 1, "u"),
   ins("panTostado", "Pan de tostado", /^PAN TOSTADO X LOTE 40/, 40, "u"),
-  // ponytail: 10 rodajas por pan, a ojo; si no, se pesa una horma y se corrige acá.
+  // 10 rodajas por pan: confirmado por el dueño el 13/11/2026.
   ins("rodaja", "Rodaja de pan de campo", /^PAN DE MASA MADRE CAMPO/, 10, "u"),
   ins("panSemillas", "Pan de semillas", /^PAN DE MASA MADRE CON SEMILLAS/, 1, "u"),
   ins("panNueces", "Pan de nueces y pasas", /^PAN DE MASA MADRE NUECES/, 1, "u"),
@@ -70,7 +70,7 @@ export const INSUMOS: Insumo[] = [
   ins("waffle", "Waffle", /^WAFLES X 2/, 2, "u"),
   ins("yogur", "Yogur griego", /^YOGURT NATURAL GRIEGO/, 1000, "g"),
   ins("muesli", "Muesli", /^MUESL/, 1000, "g"),
-  // ponytail: cajón de 18 kg, el estándar del mercado; el remito no dice el peso.
+  // Cajón de 18 kg (el remito no dice el peso): confirmado por el dueño el 13/11/2026.
   ins("naranja", "Naranja", /^CAJON DE NARANJA/, 18000, "g"),
   ins("limon", "Limón", /^LIMON \(FRUTA\)/, 1000, "g"),
   ins("almibar", "Almíbar", /^ALMIBAR/, 1000, "ml"),
@@ -145,15 +145,18 @@ export const RECETAS: Receta[] = [
   rec("pLaminado", "Promo laminado", /PROMO LAMIN/, [r("infusionPromo"), i("croissant", 1), i("nutella", 20)]),
   rec("pClasica", "Promo clásica", /PROMO CL[AÁ]SICA/, [r("infusionPromo"), i("medialuna", 2)], "La mayoría elige 2 medialunas"),
   rec("pDulceAntojo", "Promo dulce antojo", /DULCE ANTOJO/, [r("infusionPromo"), i("monoporcion", 1)], "Con monoporción, la opción más elegida"),
-  rec("pManana", "Promo mañana", /PROMO MA[NÑ]ANA/, [r("infusionPromo"), i("medialuna", 1)], "Composición no cargada: café + 1 medialuna"),
-  rec("pAmigos", "Desayuno amigos", /DESAYUNO AMIGOS/, [r("infusionPromo"), i("medialuna", 2)], "Composición no cargada: como la clásica"),
-  rec("pTalleres", "Promo talleres", /PROMO TALLERES/, [r("infusionPromo")], "Composición no cargada: sólo la infusión"),
+  rec("pManana", "Promo mañana", /PROMO MA[NÑ]ANA/, [r("infusionPromo"), i("medialuna", 1)]),
+  rec("pAmigos", "Desayuno amigos", /DESAYUNO AMIGOS/, [r("infusionPromo"), i("medialuna", 2)]),
+  rec("pTalleres", "Promo talleres", /PROMO TALLERES/, [r("infusionPromo")]),
 
   // La infusión que llevan TODAS las promos: 14 g de café y 150 ml de leche.
   // Las cantidades las fijó el dueño.
   rec("infusionPromo", "Infusión de promo", /$^/, infusion(GRAMOS_POR_INFUSION, 150)),
 
   // Cafetería. 14 g por taza, el promedio que cerró el control de café al 99%.
+  // La leche de cada bebida y las porciones de jamón y queso las confirmó el
+  // dueño el 13/11/2026, igual que las promos Mañana (café + 1 medialuna),
+  // Desayuno amigos (como la clásica) y Talleres (sólo la infusión).
   rec("espressoDoble", "Espresso doble", /ESPRESSO DOBLE|DOPPIO/, infusion(GRAMOS_DOBLE)),
   rec("espresso", "Espresso", /^ESPRESSO|^GOTEADO|^REFIL/, infusion(GRAMOS_POR_INFUSION)),
   rec("americano", "Americano", /^AMERICANO/, infusion(GRAMOS_POR_INFUSION)),
