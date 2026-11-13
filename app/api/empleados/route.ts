@@ -34,6 +34,9 @@ export async function GET() {
             precioHora: true,
             categoria: { select: { id: true, nombre: true } },
             credenciales: { select: { id: true } },
+            // Sólo para saber si tiene: el hash se descarta abajo.
+            passwordHash: true,
+            fichajes: { orderBy: { timestamp: "desc" }, take: 1, select: { timestamp: true, tipo: true } },
             invitaciones: {
               where: { usado: false, expiraEn: { gt: new Date() } },
               orderBy: { createdAt: "desc" },
@@ -46,7 +49,13 @@ export async function GET() {
     orderBy: { createdAt: "desc" },
   });
 
-  return NextResponse.json({ empleados });
+  // El hash nunca sale del servidor: la pantalla sólo necesita saber si hay.
+  return NextResponse.json({
+    empleados: empleados.map(({ passwordHash, fichajes, ...e }: typeof empleados[number] & { passwordHash?: string | null; fichajes?: { timestamp: Date; tipo: string }[] }) => ({
+      ...e,
+      ...(esAdmin ? { tieneContrasena: Boolean(passwordHash), ultimoFichaje: fichajes?.[0] ?? null } : {}),
+    })),
+  });
 }
 
 export async function POST(request: Request) {

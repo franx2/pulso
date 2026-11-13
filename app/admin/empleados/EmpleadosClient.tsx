@@ -1,32 +1,33 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  Banknote,
-  ChevronDown,
-  ChevronRight,
-  KeyRound,
-  Link as LinkIcon,
-  Lock,
-  Pencil,
-  Plus,
-  Store,
-  UserPlus,
-  X,
-} from "lucide-react";
+import { Banknote, Check, KeyRound, Link as LinkIcon, Lock, Pencil, Plus, Search, X } from "lucide-react";
 import {
   Badge,
   Button,
-  Card,
   Checkbox,
   EmptyState,
   ErrorText,
   Input,
   Label,
+  Modal,
   PageTitle,
+  Panel,
   Select,
-  SectionTitle,
+  SelectorSegmentado,
 } from "@/components/ui";
+import { SelectorLocal } from "@/components/BarraContexto";
+import { ITEMS, RANGO } from "@/components/BottomNav";
+import { claveDiaAR, hoyAR } from "@/lib/fechaAR";
+
+/**
+ * Equipo: todas las personas que usan Pulso, en una sola tabla.
+ *
+ * Antes eran grupos por sucursal cerrados de entrada, y para cambiarle el rol
+ * a alguien había que abrir su sucursal, buscarlo y abrir su tarjeta. Ahora
+ * se busca por nombre, se filtra por sucursal o rol, y lo de todos los días
+ * —rol, categoría— se cambia en la misma fila. Lo demás está en "Editar".
+ */
 
 type Rol = "ADMIN" | "ENCARGADO" | "EMPLEADO";
 type Local = { id: string; nombre: string };
@@ -45,111 +46,83 @@ type Empleado = {
   asignaciones: { local: Local }[];
   credenciales: { id: string }[];
   invitaciones: { token: string }[];
+  tieneContrasena: boolean;
+  ultimoFichaje: { timestamp: string; tipo: string } | null;
 };
 
-const ETIQUETA_ROL: Record<Rol, string> = {
-  ADMIN: "Admin",
-  ENCARGADO: "Encargado",
-  EMPLEADO: "Empleado",
+const ETIQUETA_ROL: Record<Rol, string> = { ADMIN: "Admin", ENCARGADO: "Encargado", EMPLEADO: "Empleado" };
+const DESCRIPCION_ROL: Record<Rol, string> = {
+  EMPLEADO: "Ficha entrada y salida, y ve sus horas",
+  ENCARGADO: "Además arma turnos, ve la presencia y aprueba correcciones",
+  ADMIN: "Todo, incluidas las ventas, las compras y la configuración",
 };
+
+type Pestana = "usuarios" | "roles";
+type Edicion = { tipo: "nuevo" } | { tipo: "editar"; empleado: Empleado };
+
+const celda = "px-3 py-2.5 align-middle";
+const selectChico = "w-auto! py-1.5 text-sm";
+
+function cuandoFicho(f: Empleado["ultimoFichaje"]) {
+  if (!f) return "Nunca fichó";
+  const dia = claveDiaAR(f.timestamp);
+  const hora = new Date(f.timestamp).toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit", timeZone: "America/Argentina/Buenos_Aires" });
+  if (dia === hoyAR()) return `Hoy ${hora}`;
+  const [, m, d] = dia.split("-");
+  return `${d}/${m} ${hora}`;
+}
+
+function acceso(e: Empleado): { texto: string; tono: "emerald" | "amber" | "slate" } {
+  if (e.credenciales.length > 0) return { texto: e.tieneContrasena ? "Passkey y contraseña" : "Passkey", tono: "emerald" };
+  if (e.tieneContrasena) return { texto: "Contraseña", tono: "emerald" };
+  if (e.invitaciones[0]) return { texto: "Invitación pendiente", tono: "amber" };
+  return { texto: "Sin acceso", tono: "amber" };
+}
 
 export default function EmpleadosClient() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
-  const [usuario, setUsuario] = useState("");
-  const [nombre, setNombre] = useState("");
-  const [email, setEmail] = useState("");
-  const [rol, setRol] = useState<Rol>("EMPLEADO");
-  const [localId, setLocalId] = useState("");
-  const [localesExtra, setLocalesExtra] = useState<string[]>([]);
-  const [categoriaId, setCategoriaId] = useState("");
   const [categoriasPorLocal, setCategoriasPorLocal] = useState<Record<string, Categoria[]>>({});
+  const [cargado, setCargado] = useState(false);
+  const [pestana, setPestana] = useState<Pestana>("usuarios");
+
+  const [busqueda, setBusqueda] = useState("");
+  const [filtroLocal, setFiltroLocal] = useState("");
+  const [filtroRol, setFiltroRol] = useState<Rol | "">("");
+  const [verInactivos, setVerInactivos] = useState(false);
+
+  const [edicion, setEdicion] = useState<Edicion | null>(null);
   const [error, setError] = useState("");
   const [link, setLink] = useState("");
   const [passwordGenerada, setPasswordGenerada] = useState<{ nombre: string; password: string } | null>(null);
-  const [cargando, setCargando] = useState(false);
-  const [abierto, setAbierto] = useState(false);
-  // Cerrado por local por defecto: con varias sucursales, ver todo el
-  // personal mezclado de entrada es más ruido que ayuda.
-  const [localesAbiertos, setLocalesAbiertos] = useState<Set<string>>(new Set());
 
-  // Carga masiva de precio/hora: modo selección + valor a aplicar.
-  const [editando, setEditando] = useState<string | null>(null);
   const [seleccion, setSeleccion] = useState<Set<string>>(new Set());
   const [precioMasivo, setPrecioMasivo] = useState("");
   const [aplicandoMasivo, setAplicandoMasivo] = useState(false);
 
   async function cargar() {
-    const [resEmpleados, resLocales] = await Promise.all([
-      fetch("/api/empleados"),
-      fetch("/api/locales"),
-    ]);
+    const [resEmpleados, resLocales] = await Promise.all([fetch("/api/empleados"), fetch("/api/locales")]);
     const dataEmpleados = await resEmpleados.json();
-    const dataLocales = await resLocales.json();
-    const listaLocales: Local[] = dataLocales.locales ?? [];
+    const listaLocales: Local[] = (await resLocales.json()).locales ?? [];
     setEmpleados(dataEmpleados.empleados ?? []);
     setLocales(listaLocales);
-    if (!localId && listaLocales[0]) setLocalId(listaLocales[0].id);
-
-    // Las categorías son por local: se traen todas juntas para no pedirlas
-    // de a una por cada tarjeta de empleado.
+    // Las categorías son por local: se traen todas juntas, no una por fila.
     const entradas = await Promise.all(
       listaLocales.map(async (l) => {
-        const r = await fetch(`/api/locales/${l.id}/categorias`);
-        const d = await r.json();
+        const d = await (await fetch(`/api/locales/${l.id}/categorias`)).json();
         return [l.id, d.categorias ?? []] as const;
       })
     );
     setCategoriasPorLocal(Object.fromEntries(entradas));
+    setCargado(true);
   }
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount, no data lib
     cargar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Un grupo por sucursal de origen (el mismo empleado puede tener otras
-  // asignadas además de ésta; se ve en su badge de sucursales).
-  const gruposPorLocal = useMemo(() => {
-    const grupos = new Map<string, Empleado[]>();
-    for (const l of locales) grupos.set(l.id, []);
-    for (const e of empleados) {
-      const lista = grupos.get(e.localId);
-      if (lista) lista.push(e);
-      else grupos.set(e.localId, [e]);
-    }
-    return grupos;
-  }, [locales, empleados]);
-
-  async function crear(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLink("");
-    setCargando(true);
-    const res = await fetch("/api/empleados", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ usuario, nombre, email, rol, localId, localesExtra, categoriaId: categoriaId || null }),
-    });
-    const data = await res.json();
-    setCargando(false);
-    if (!res.ok) {
-      setError(data.error ?? "No se pudo crear el empleado");
-      return;
-    }
-    setLink(`${window.location.origin}/registro/${data.token}`);
-    setUsuario("");
-    setNombre("");
-    setEmail("");
-    setRol("EMPLEADO");
-    setLocalesExtra([]);
-    setCategoriaId("");
-    setAbierto(false);
-    cargar();
-  }
-
-  async function actualizar(id: string, cambios: Record<string, unknown>) {
+  async function actualizar(id: string, cambios: Record<string, unknown>): Promise<boolean> {
     setError("");
     const res = await fetch(`/api/empleados/${id}`, {
       method: "PATCH",
@@ -159,10 +132,11 @@ export default function EmpleadosClient() {
     const data = await res.json();
     if (!res.ok) {
       setError(data.error ?? "No se pudo actualizar");
-      return;
+      return false;
     }
     if (data.token) setLink(`${window.location.origin}/registro/${data.token}`);
-    cargar();
+    await cargar();
+    return true;
   }
 
   async function ponerContrasena(e: Empleado) {
@@ -170,33 +144,9 @@ export default function EmpleadosClient() {
     setPasswordGenerada(null);
     const res = await fetch(`/api/empleados/${e.id}/password`, { method: "POST" });
     const data = await res.json();
-    if (!res.ok) {
-      setError(data.error ?? "No se pudo generar la contraseña");
-      return;
-    }
+    if (!res.ok) return setError(data.error ?? "No se pudo generar la contraseña");
     setPasswordGenerada({ nombre: e.nombre, password: data.password });
-  }
-
-  function toggleLocalAbierto(id: string) {
-    setLocalesAbiertos((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  function toggleExtra(id: string) {
-    setLocalesExtra((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]));
-  }
-
-  function toggleSeleccion(id: string) {
-    setSeleccion((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+    cargar();
   }
 
   async function aplicarPrecioMasivo() {
@@ -211,332 +161,636 @@ export default function EmpleadosClient() {
     });
     const data = await res.json();
     setAplicandoMasivo(false);
-    if (!res.ok) {
-      setError(data.error ?? "No se pudo aplicar el precio");
-      return;
-    }
+    if (!res.ok) return setError(data.error ?? "No se pudo aplicar el precio");
     setSeleccion(new Set());
     setPrecioMasivo("");
     cargar();
   }
 
+  const visibles = useMemo(() => {
+    const q = busqueda
+      .normalize("NFD")
+      .replace(/[̀-ͯ]/g, "")
+      .toLowerCase()
+      .trim();
+    const sin = (s: string | null | undefined) =>
+      (s ?? "")
+        .normalize("NFD")
+        .replace(/[̀-ͯ]/g, "")
+        .toLowerCase();
+    return empleados
+      .filter((e) => verInactivos || e.activo)
+      .filter((e) => !filtroRol || e.rol === filtroRol)
+      .filter((e) => !filtroLocal || e.localId === filtroLocal || e.asignaciones.some((a) => a.local.id === filtroLocal))
+      .filter(
+        (e) =>
+          !q ||
+          [e.nombre, e.usuario, e.email, e.categoria?.nombre, e.local.nombre].some((campo) => sin(campo).includes(q))
+      )
+      .sort((a, b) => Number(b.activo) - Number(a.activo) || a.nombre.localeCompare(b.nombre, "es"));
+  }, [empleados, busqueda, filtroLocal, filtroRol, verInactivos]);
+
+  const inactivos = empleados.filter((e) => !e.activo).length;
+  const todosMarcados = visibles.length > 0 && visibles.every((e) => seleccion.has(e.id));
+
+  function alternarSeleccion(id: string) {
+    setSeleccion((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-5">
       <PageTitle
-        subtitle="Alta de personal, roles y sucursales"
+        subtitle="Usuarios, roles, sucursales y acceso"
         actions={
-          <Button onClick={() => setAbierto((v) => !v)}>
-            {abierto ? <X size={16} /> : <Plus size={16} />}
-            {abierto ? "Cerrar" : "Nuevo"}
+          <Button onClick={() => setEdicion({ tipo: "nuevo" })}>
+            <Plus size={16} aria-hidden />
+            Nuevo usuario
           </Button>
         }
       >
-        Empleados
+        Equipo
       </PageTitle>
 
-      {abierto && (
-        <Card>
-          <SectionTitle>Nuevo empleado</SectionTitle>
-          <form onSubmit={crear} className="flex flex-col gap-3">
-          <div>
-            <Label>Usuario</Label>
-            <Input value={usuario} onChange={(e) => setUsuario(e.target.value)} required />
-          </div>
-          <div>
-            <Label>Nombre</Label>
-            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} required />
-          </div>
-          <div>
-            <Label>Rol</Label>
-            <Select value={rol} onChange={(e) => setRol(e.target.value as Rol)}>
-              <option value="EMPLEADO">Empleado — sólo ficha</option>
-              <option value="ENCARGADO">Encargado — turnos, presencia y aprobaciones</option>
-              <option value="ADMIN">Admin — todo, incluida la configuración</option>
-            </Select>
-          </div>
-          {rol !== "EMPLEADO" && (
-            <div>
-              <Label>Email para avisos</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="encargado@restaurante.com"
-              />
-              <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
-                Le llegan las alertas de tardanzas, faltas y salidas olvidadas.
-              </p>
-            </div>
-          )}
-          {locales.length > 1 && (
-            <>
-              <div>
-                <Label>Sucursal principal</Label>
-                <Select value={localId} onChange={(e) => setLocalId(e.target.value)}>
-                  {locales.map((l) => (
-                    <option key={l.id} value={l.id}>
-                      {l.nombre}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div>
-                <Label>También puede fichar en</Label>
-                <p className="mb-1.5 text-xs text-slate-500 dark:text-[#94a19c]">
-                  El usuario es único en todo el negocio: esta misma cuenta ficha en cualquiera de las
-                  sucursales que marques acá, sin crear un alta por local.
-                </p>
-                <div className="flex flex-col gap-1.5">
-                  {locales
-                    .filter((l) => l.id !== localId)
-                    .map((l) => (
-                      <label key={l.id} className="flex items-center gap-2 text-sm">
-                        <Checkbox
-                          checked={localesExtra.includes(l.id)}
-                          onChange={() => toggleExtra(l.id)}
-                        />
-                        {l.nombre}
-                      </label>
-                    ))}
-                </div>
-              </div>
-            </>
-          )}
-          <div>
-            <Label>Categoría (puesto)</Label>
-            <Select value={categoriaId} onChange={(e) => setCategoriaId(e.target.value)}>
-              <option value="">Sin categoría</option>
-              {(categoriasPorLocal[localId] ?? []).map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.nombre}
-                </option>
-              ))}
-            </Select>
-            <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
-              Se administran desde Ajustes → la sucursal → Categorías de empleado.
-            </p>
-          </div>
-          <Button type="submit" disabled={cargando} className="mt-1">
-            <UserPlus size={16} />
-            {cargando ? "Creando…" : "Crear empleado"}
-          </Button>
-          <ErrorText>{error}</ErrorText>
-          </form>
-        </Card>
-      )}
+      <div className="scrollbar-hidden overflow-x-auto">
+        <SelectorSegmentado
+          label="Sección de Equipo"
+          valor={pestana}
+          onChange={setPestana}
+          opciones={[
+            { clave: "usuarios", label: "Usuarios" },
+            { clave: "roles", label: "Roles y permisos" },
+          ]}
+        />
+      </div>
+
+      <ErrorText>{error}</ErrorText>
 
       {link && (
-        <div className="flex items-start gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-[#2f6b55] dark:bg-[#122620]">
-          <LinkIcon size={16} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" />
+        <Aviso onCerrar={() => setLink("")}>
+          <LinkIcon size={16} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
           <p>
             Compartí este link para que registre su Face ID / huella:{" "}
             <a href={link} className="break-all font-medium underline">
               {link}
             </a>
           </p>
-        </div>
+        </Aviso>
       )}
-
       {passwordGenerada && (
-        <div className="flex items-start justify-between gap-2 rounded-xl border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-[#2f6b55] dark:bg-[#122620]">
+        <Aviso onCerrar={() => setPasswordGenerada(null)}>
+          <Lock size={16} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
           <p>
-            Contraseña de <strong>{passwordGenerada.nombre}</strong>: se muestra una sola vez, pasásela
-            ahora — <span className="font-mono font-bold">{passwordGenerada.password}</span>
+            Contraseña de <strong>{passwordGenerada.nombre}</strong>: se muestra una sola vez, pasásela ahora —{" "}
+            <span className="font-mono font-bold">{passwordGenerada.password}</span>
           </p>
-          <button
-            type="button"
-            onClick={() => setPasswordGenerada(null)}
-            aria-label="Cerrar"
-            className="shrink-0 text-emerald-700 dark:text-[#4ee6b0]"
-          >
-            <X size={16} />
-          </button>
-        </div>
+        </Aviso>
       )}
 
-      {seleccion.size > 0 && (
-        <Card className="flex flex-wrap items-center gap-2 border-emerald-200 bg-emerald-50 dark:border-[#2f6b55] dark:bg-[#122620]">
-          <Banknote size={16} className="shrink-0 text-emerald-700 dark:text-[#4ee6b0]" />
-          <span className="text-sm font-semibold">
-            {seleccion.size} {seleccion.size === 1 ? "empleado" : "empleados"} seleccionados
-          </span>
-          <Input
-            type="number"
-            min="0"
-            step="0.01"
-            placeholder="Precio/hora"
-            value={precioMasivo}
-            onChange={(e) => setPrecioMasivo(e.target.value)}
-            className="w-auto! py-1.5 text-sm"
-          />
-          <Button onClick={aplicarPrecioMasivo} disabled={aplicandoMasivo || !precioMasivo} className="py-1.5 text-sm">
-            {aplicandoMasivo ? "Aplicando…" : "Aplicar a seleccionados"}
-          </Button>
-          <Button variant="ghost" onClick={() => setSeleccion(new Set())} className="py-1.5 text-sm">
-            Cancelar
-          </Button>
-        </Card>
-      )}
-
-      {empleados.length === 0 ? (
-        <EmptyState>Todavía no hay empleados cargados</EmptyState>
+      {pestana === "roles" ? (
+        <RolesYPermisos empleados={empleados} />
       ) : (
-        locales.map((local) => {
-          const delLocal = gruposPorLocal.get(local.id) ?? [];
-          if (delLocal.length === 0) return null;
-          const abierto = localesAbiertos.has(local.id);
-          return (
-            <div key={local.id}>
-              <button
-                type="button"
-                onClick={() => toggleLocalAbierto(local.id)}
-                className="flex w-full items-center gap-1.5 py-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412]"
-              >
-                {abierto ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-                <SectionTitle>
-                  <span className="inline-flex items-center gap-1.5">
-                    <Store size={14} />
-                    {local.nombre} ({delLocal.length})
-                  </span>
-                </SectionTitle>
-              </button>
-              {abierto && (
-              <div className="flex flex-col gap-2 md:gap-1.5">
-                {delLocal.map((e) => (
-                  <Card key={e.id} className="flex flex-col gap-3 md:p-3">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-2.5">
-                        <Checkbox
-                          checked={seleccion.has(e.id)}
-                          onChange={() => toggleSeleccion(e.id)}
-                          className="mt-1"
-                        />
-                        <div className="min-w-0">
-                          <p className="truncate font-semibold">{e.nombre}</p>
-                          <p className="truncate text-sm text-slate-500 dark:text-[#94a19c]">@{e.usuario}</p>
-                        </div>
-                      </div>
-                      <div className="flex shrink-0 items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          aria-expanded={editando === e.id}
-                          onClick={() => setEditando(editando === e.id ? null : e.id)}
-                        >
-                          <Pencil size={14} />
-                          {editando === e.id ? "Listo" : "Editar"}
-                        </Button>
-                        <Button variant="ghost" onClick={() => actualizar(e.id, { activo: !e.activo })}>
-                          {e.activo ? "Desactivar" : "Activar"}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-1.5">
-                      {/* El rol sólo se muestra cuando NO es el corriente: una fila de
-                          chips donde todos dicen "Empleado" no informa nada. */}
-                      {e.rol !== "EMPLEADO" && <Badge tone="amber">{ETIQUETA_ROL[e.rol]}</Badge>}
-                      {e.categoria && <Badge tone="slate">{e.categoria.nombre}</Badge>}
-                      <Badge tone={e.credenciales.length > 0 ? "emerald" : "amber"}>
-                        {e.credenciales.length > 0
-                          ? "Passkey registrada"
-                          : e.invitaciones[0]
-                            ? "Invitación pendiente"
-                            : "Sin invitación"}
-                      </Badge>
-                      {!e.activo && <Badge tone="slate">Inactivo</Badge>}
-                      {e.asignaciones.length > 0 && (
-                        <Badge tone="slate">
-                          <span className="inline-flex items-center gap-1">
-                            <Store size={11} />
-                            también en {e.asignaciones.map((a) => a.local.nombre).join(" · ")}
-                          </span>
-                        </Badge>
-                      )}
-                    </div>
-
-                    {editando === e.id && (
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Select
-                        value={e.rol}
-                        onChange={(ev) => actualizar(e.id, { rol: ev.target.value })}
-                        className="w-auto! py-1.5 text-sm"
-                      >
-                        <option value="EMPLEADO">Empleado</option>
-                        <option value="ENCARGADO">Encargado</option>
-                        <option value="ADMIN">Admin</option>
-                      </Select>
-                      <Select
-                        value={e.categoria?.id ?? ""}
-                        onChange={(ev) => actualizar(e.id, { categoriaId: ev.target.value || null })}
-                        className="w-auto! py-1.5 text-sm"
-                      >
-                        <option value="">Sin categoría</option>
-                        {(categoriasPorLocal[e.localId] ?? []).map((c) => (
-                          <option key={c.id} value={c.id}>
-                            {c.nombre}
-                          </option>
-                        ))}
-                      </Select>
-                      <Button
-                        variant="ghost"
-                        className="py-1.5 text-xs"
-                        onClick={() => actualizar(e.id, { reinvitar: true })}
-                      >
-                        <KeyRound size={14} />
-                        Regenerar passkey
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        className="py-1.5 text-xs"
-                        onClick={() => ponerContrasena(e)}
-                      >
-                        <Lock size={14} />
-                        Poner contraseña
-                      </Button>
-                    </div>
-                    )}
-
-                    {editando === e.id && (
-                    <div className="flex flex-wrap items-end gap-3">
-                      <div>
-                        <Label>Precio/hora</Label>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          defaultValue={e.precioHora ?? ""}
-                          placeholder="Sin definir"
-                          className="w-auto! py-1.5 text-sm"
-                          onBlur={(ev) => {
-                            const valor = ev.target.value === "" ? null : Number(ev.target.value);
-                            if (valor !== e.precioHora) actualizar(e.id, { precioHora: valor });
-                          }}
-                        />
-                      </div>
-                      {e.rol !== "EMPLEADO" && (
-                        <div className="min-w-[14rem] flex-1">
-                          <Label>Email para avisos</Label>
-                          <Input
-                            type="email"
-                            defaultValue={e.email ?? ""}
-                            placeholder="Sin email: no recibe alertas"
-                            className="py-1.5 text-sm"
-                            onBlur={(ev) => {
-                              if (ev.target.value !== (e.email ?? "")) actualizar(e.id, { email: ev.target.value });
-                            }}
-                          />
-                        </div>
-                      )}
-                    </div>
-                    )}
-                  </Card>
-                ))}
+        <>
+          <Panel className="p-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+              <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
+                <div className="sm:w-72">
+                  <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Buscar</p>
+                  <label className="relative block">
+                    <span className="sr-only">Buscar por nombre, usuario, email o categoría</span>
+                    <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Input
+                      value={busqueda}
+                      onChange={(e) => setBusqueda(e.target.value)}
+                      placeholder="Nombre, usuario o email"
+                      className="pl-9"
+                    />
+                  </label>
+                </div>
+                {locales.length > 1 && (
+                  <div className="min-w-0">
+                    <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Sucursal</p>
+                    <SelectorLocal locales={locales} valor={filtroLocal} onChange={setFiltroLocal} todos="Todas" />
+                  </div>
+                )}
               </div>
+              <div className="min-w-0">
+                <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Rol</p>
+                <SelectorSegmentado
+                  label="Filtrar por rol"
+                  valor={filtroRol}
+                  onChange={setFiltroRol}
+                  opciones={[
+                    { clave: "", label: "Todos" },
+                    { clave: "ADMIN", label: "Admin" },
+                    { clave: "ENCARGADO", label: "Encargado" },
+                    { clave: "EMPLEADO", label: "Empleado" },
+                  ]}
+                />
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+              <span className="font-medium text-slate-700 dark:text-[#dbe5e0]">
+                {visibles.length} de {empleados.filter((e) => verInactivos || e.activo).length} usuarios
+              </span>
+              {inactivos > 0 && (
+                <label className="inline-flex items-center gap-2">
+                  <Checkbox checked={verInactivos} onChange={() => setVerInactivos((v) => !v)} />
+                  Mostrar {inactivos === 1 ? "1 inactivo" : `${inactivos} inactivos`}
+                </label>
               )}
             </div>
-          );
-        })
+          </Panel>
+
+          {seleccion.size > 0 && (
+            <Panel className="flex flex-wrap items-center gap-2 border-emerald-200 bg-emerald-50 p-3 dark:border-[#2f6b55] dark:bg-[#122620]">
+              <Banknote size={16} className="shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+              <span className="text-sm font-semibold">
+                {seleccion.size} {seleccion.size === 1 ? "seleccionado" : "seleccionados"}
+              </span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                placeholder="Precio/hora"
+                aria-label="Precio por hora para los seleccionados"
+                value={precioMasivo}
+                onChange={(e) => setPrecioMasivo(e.target.value)}
+                className="w-36! py-1.5 text-sm"
+              />
+              <Button onClick={aplicarPrecioMasivo} disabled={aplicandoMasivo || !precioMasivo} className="py-1.5 text-sm">
+                {aplicandoMasivo ? "Aplicando…" : "Aplicar precio/hora"}
+              </Button>
+              <Button variant="ghost" onClick={() => setSeleccion(new Set())} className="py-1.5 text-sm">
+                Cancelar
+              </Button>
+            </Panel>
+          )}
+
+          {!cargado ? (
+            <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando equipo" />
+          ) : visibles.length === 0 ? (
+            <EmptyState>{empleados.length === 0 ? "Todavía no hay usuarios cargados." : "Nadie coincide con la búsqueda y los filtros."}</EmptyState>
+          ) : (
+            <Panel className="overflow-hidden">
+              {/* Escritorio: una tabla; en el celular cada persona es una fila apilada. */}
+              <div className="hidden overflow-x-auto lg:block">
+                <table className="w-full min-w-[60rem] text-sm">
+                  <thead>
+                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500 dark:border-[#29403b] dark:bg-[#0d1614] dark:text-[#94a19c]">
+                      <th className={`${celda} w-10`}>
+                        <Checkbox
+                          checked={todosMarcados}
+                          onChange={() =>
+                            setSeleccion(todosMarcados ? new Set() : new Set(visibles.map((e) => e.id)))
+                          }
+                          aria-label="Seleccionar todos"
+                        />
+                      </th>
+                      <th className={celda}>Nombre</th>
+                      <th className={celda}>Rol</th>
+                      <th className={celda}>Sucursal</th>
+                      <th className={celda}>Categoría</th>
+                      <th className={`${celda} text-right`}>Precio/hora</th>
+                      <th className={celda}>Acceso</th>
+                      <th className={celda}>Último fichaje</th>
+                      <th className={`${celda} w-px`} />
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                    {visibles.map((e) => {
+                      const a = acceso(e);
+                      return (
+                        <tr key={e.id} className={`hover:bg-slate-50/70 dark:hover:bg-[#13201d] ${e.activo ? "" : "opacity-60"}`}>
+                          <td className={celda}>
+                            <Checkbox checked={seleccion.has(e.id)} onChange={() => alternarSeleccion(e.id)} aria-label={`Seleccionar a ${e.nombre}`} />
+                          </td>
+                          <td className={celda}>
+                            <p className="font-semibold">{e.nombre}</p>
+                            <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+                              @{e.usuario}
+                              {!e.activo && " · inactivo"}
+                            </p>
+                          </td>
+                          <td className={celda}>
+                            <Select
+                              aria-label={`Rol de ${e.nombre}`}
+                              value={e.rol}
+                              onChange={(ev) => actualizar(e.id, { rol: ev.target.value })}
+                              className={selectChico}
+                            >
+                              <option value="EMPLEADO">Empleado</option>
+                              <option value="ENCARGADO">Encargado</option>
+                              <option value="ADMIN">Admin</option>
+                            </Select>
+                          </td>
+                          <td className={celda}>
+                            <p>{e.local.nombre}</p>
+                            {e.asignaciones.length > 0 && (
+                              <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+                                también {e.asignaciones.map((x) => x.local.nombre).join(" · ")}
+                              </p>
+                            )}
+                          </td>
+                          <td className={celda}>
+                            <Select
+                              aria-label={`Categoría de ${e.nombre}`}
+                              value={e.categoria?.id ?? ""}
+                              onChange={(ev) => actualizar(e.id, { categoriaId: ev.target.value || null })}
+                              className={selectChico}
+                            >
+                              <option value="">Sin categoría</option>
+                              {(categoriasPorLocal[e.localId] ?? []).map((c) => (
+                                <option key={c.id} value={c.id}>
+                                  {c.nombre}
+                                </option>
+                              ))}
+                            </Select>
+                          </td>
+                          <td className={`${celda} text-right tabular-nums`}>
+                            {e.precioHora != null ? `$${e.precioHora.toLocaleString("es-AR")}` : <span className="text-slate-400">—</span>}
+                          </td>
+                          <td className={celda}>
+                            <Badge tone={a.tono}>{a.texto}</Badge>
+                          </td>
+                          <td className={`${celda} tabular-nums text-slate-500 dark:text-[#94a19c]`}>{cuandoFicho(e.ultimoFichaje)}</td>
+                          <td className={`${celda} whitespace-nowrap text-right`}>
+                            <Button variant="ghost" className="py-1.5 text-sm" onClick={() => setEdicion({ tipo: "editar", empleado: e })}>
+                              <Pencil size={14} aria-hidden />
+                              Editar
+                            </Button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <ul className="divide-y divide-slate-100 lg:hidden dark:divide-[#1c2521]">
+                {visibles.map((e) => {
+                  const a = acceso(e);
+                  return (
+                    <li key={e.id} className={`flex gap-3 px-4 py-3 ${e.activo ? "" : "opacity-60"}`}>
+                      <Checkbox checked={seleccion.has(e.id)} onChange={() => alternarSeleccion(e.id)} className="mt-1" aria-label={`Seleccionar a ${e.nombre}`} />
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="min-w-0">
+                            <p className="truncate font-semibold">{e.nombre}</p>
+                            <p className="truncate text-xs text-slate-500 dark:text-[#94a19c]">
+                              @{e.usuario} · {e.local.nombre}
+                              {e.categoria && ` · ${e.categoria.nombre}`}
+                            </p>
+                          </div>
+                          <Button variant="ghost" className="shrink-0 py-1.5 text-sm" onClick={() => setEdicion({ tipo: "editar", empleado: e })}>
+                            <Pencil size={14} aria-hidden />
+                            Editar
+                          </Button>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                          <Badge tone={e.rol === "EMPLEADO" ? "slate" : "amber"}>{ETIQUETA_ROL[e.rol]}</Badge>
+                          <Badge tone={a.tono}>{a.texto}</Badge>
+                          {!e.activo && <Badge tone="slate">Inactivo</Badge>}
+                          <span className="tabular-nums">{cuandoFicho(e.ultimoFichaje)}</span>
+                        </div>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </Panel>
+          )}
+        </>
       )}
+
+      {edicion && (
+        <FichaUsuario
+          edicion={edicion}
+          locales={locales}
+          categoriasPorLocal={categoriasPorLocal}
+          onCerrar={() => setEdicion(null)}
+          onCreado={(token) => {
+            setLink(`${window.location.origin}/registro/${token}`);
+            setEdicion(null);
+            cargar();
+          }}
+          onGuardar={async (id, cambios) => {
+            const ok = await actualizar(id, cambios);
+            if (ok) setEdicion(null);
+            return ok;
+          }}
+          onAccion={async (e, accion) => {
+            setEdicion(null);
+            if (accion === "passkey") await actualizar(e.id, { reinvitar: true });
+            else if (accion === "contrasena") await ponerContrasena(e);
+            else await actualizar(e.id, { activo: !e.activo });
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+function Aviso({ children, onCerrar }: { children: React.ReactNode; onCerrar: () => void }) {
+  return (
+    <div className="flex items-start justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-[#2f6b55] dark:bg-[#122620]">
+      <div className="flex min-w-0 items-start gap-2">{children}</div>
+      <button type="button" onClick={onCerrar} aria-label="Cerrar" className="shrink-0 text-emerald-700 dark:text-[#4ee6b0]">
+        <X size={16} />
+      </button>
+    </div>
+  );
+}
+
+/** Alta y edición en el mismo formulario: lo que cambia es qué se manda. */
+function FichaUsuario({
+  edicion,
+  locales,
+  categoriasPorLocal,
+  onCerrar,
+  onCreado,
+  onGuardar,
+  onAccion,
+}: {
+  edicion: Edicion;
+  locales: Local[];
+  categoriasPorLocal: Record<string, Categoria[]>;
+  onCerrar: () => void;
+  onCreado: (token: string) => void;
+  onGuardar: (id: string, cambios: Record<string, unknown>) => Promise<boolean>;
+  onAccion: (e: Empleado, accion: "passkey" | "contrasena" | "activo") => void;
+}) {
+  const e = edicion.tipo === "editar" ? edicion.empleado : null;
+  const [usuario, setUsuario] = useState("");
+  const [nombre, setNombre] = useState(e?.nombre ?? "");
+  const [email, setEmail] = useState(e?.email ?? "");
+  const [rol, setRol] = useState<Rol>(e?.rol ?? "EMPLEADO");
+  const [localId, setLocalId] = useState(e?.localId ?? locales[0]?.id ?? "");
+  const [extras, setExtras] = useState<string[]>(e?.asignaciones.map((a) => a.local.id) ?? []);
+  const [categoriaId, setCategoriaId] = useState(e?.categoria?.id ?? "");
+  const [precioHora, setPrecioHora] = useState(e?.precioHora != null ? String(e.precioHora) : "");
+  const [guardando, setGuardando] = useState(false);
+  const [error, setError] = useState("");
+
+  const categorias = categoriasPorLocal[localId] ?? [];
+
+  async function enviar(ev: React.FormEvent) {
+    ev.preventDefault();
+    setError("");
+    setGuardando(true);
+    const extrasValidos = extras.filter((id) => id !== localId);
+    if (e) {
+      const ok = await onGuardar(e.id, {
+        nombre,
+        rol,
+        email: rol === "EMPLEADO" ? "" : email,
+        localId,
+        localesExtra: extrasValidos,
+        categoriaId: categoriaId || null,
+        precioHora: precioHora === "" ? null : Number(precioHora),
+      });
+      setGuardando(false);
+      if (!ok) setError("No se pudo guardar. Revisá los datos.");
+      return;
+    }
+    const res = await fetch("/api/empleados", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, nombre, email, rol, localId, localesExtra: extrasValidos, categoriaId: categoriaId || null }),
+    });
+    const data = await res.json();
+    setGuardando(false);
+    if (!res.ok) return setError(data.error ?? "No se pudo crear el usuario");
+    onCreado(data.token);
+  }
+
+  return (
+    <Modal title={e ? `Editar a ${e.nombre}` : "Nuevo usuario"} onClose={onCerrar} maxWidth="max-w-lg">
+      <form onSubmit={enviar} className="flex flex-col gap-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          {!e && (
+            <div>
+              <Label>Usuario</Label>
+              <Input value={usuario} onChange={(ev) => setUsuario(ev.target.value)} required autoComplete="off" placeholder="nombre.apellido" />
+            </div>
+          )}
+          <div className={e ? "sm:col-span-2" : ""}>
+            <Label>Nombre</Label>
+            <Input value={nombre} onChange={(ev) => setNombre(ev.target.value)} required />
+          </div>
+        </div>
+
+        <div>
+          <Label>Rol</Label>
+          <div className="flex flex-col gap-1.5">
+            {(["EMPLEADO", "ENCARGADO", "ADMIN"] as Rol[]).map((r) => (
+              <label
+                key={r}
+                className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
+                  rol === r
+                    ? "border-emerald-600 bg-emerald-50/60 dark:border-[#37e6b0] dark:bg-[#122620]"
+                    : "border-slate-200 hover:bg-slate-50 dark:border-[#29403b] dark:hover:bg-[#13201d]"
+                }`}
+              >
+                <input type="radio" name="rol" value={r} checked={rol === r} onChange={() => setRol(r)} className="mt-1 accent-emerald-700" />
+                <span>
+                  <span className="font-semibold">{ETIQUETA_ROL[r]}</span>
+                  <span className="block text-xs text-slate-500 dark:text-[#94a19c]">{DESCRIPCION_ROL[r]}</span>
+                </span>
+              </label>
+            ))}
+          </div>
+        </div>
+
+        {rol !== "EMPLEADO" && (
+          <div>
+            <Label>Email para avisos</Label>
+            <Input type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} placeholder="Sin email: no recibe alertas" />
+            <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">Le llegan las alertas de tardanzas, faltas y salidas olvidadas.</p>
+          </div>
+        )}
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <div>
+            <Label>Sucursal principal</Label>
+            <Select
+              value={localId}
+              onChange={(ev) => {
+                setLocalId(ev.target.value);
+                setCategoriaId("");
+              }}
+            >
+              {locales.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nombre}
+                </option>
+              ))}
+            </Select>
+          </div>
+          <div>
+            <Label>Categoría (puesto)</Label>
+            <Select value={categoriaId} onChange={(ev) => setCategoriaId(ev.target.value)}>
+              <option value="">Sin categoría</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.nombre}
+                </option>
+              ))}
+            </Select>
+          </div>
+        </div>
+
+        {locales.length > 1 && (
+          <div>
+            <Label>También puede fichar en</Label>
+            <div className="flex flex-wrap gap-x-4 gap-y-1.5">
+              {locales
+                .filter((l) => l.id !== localId)
+                .map((l) => (
+                  <label key={l.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={extras.includes(l.id)}
+                      onChange={() => setExtras((prev) => (prev.includes(l.id) ? prev.filter((x) => x !== l.id) : [...prev, l.id]))}
+                    />
+                    {l.nombre}
+                  </label>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {e && (
+          <div className="sm:w-1/2">
+            <Label>Precio/hora</Label>
+            <Input type="number" min="0" step="0.01" value={precioHora} onChange={(ev) => setPrecioHora(ev.target.value)} placeholder="Sin definir" />
+          </div>
+        )}
+
+        {e && (
+          <div className="rounded-lg border border-slate-200 p-3 dark:border-[#29403b]">
+            <p className="text-sm font-semibold">Acceso</p>
+            <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">{acceso(e).texto}. Si cambió de celular o se olvidó cómo entrar:</p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button type="button" variant="ghost" className="py-1.5 text-sm" onClick={() => onAccion(e, "passkey")}>
+                <KeyRound size={14} aria-hidden />
+                Nuevo link de passkey
+              </Button>
+              <Button type="button" variant="ghost" className="py-1.5 text-sm" onClick={() => onAccion(e, "contrasena")}>
+                <Lock size={14} aria-hidden />
+                Generar contraseña
+              </Button>
+            </div>
+          </div>
+        )}
+
+        <ErrorText>{error}</ErrorText>
+
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-[#1c2521]">
+          {e ? (
+            <Button type="button" variant={e.activo ? "danger" : "ghost"} onClick={() => onAccion(e, "activo")}>
+              {e.activo ? "Desactivar usuario" : "Volver a activar"}
+            </Button>
+          ) : (
+            <p className="text-xs text-slate-500 dark:text-[#94a19c]">Al crearlo te damos el link para que registre su passkey.</p>
+          )}
+          <div className="flex gap-2">
+            <Button type="button" variant="ghost" onClick={onCerrar}>
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={guardando}>
+              <Check size={16} aria-hidden />
+              {guardando ? "Guardando…" : e ? "Guardar cambios" : "Crear usuario"}
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+/**
+ * Qué ve cada rol. No se edita: el permiso lo decide el servidor en cada
+ * pantalla según el rol, y una matriz editable que no cambiara eso sería una
+ * sensación falsa de control. Esto muestra la regla tal cual se aplica.
+ */
+function RolesYPermisos({ empleados }: { empleados: Empleado[] }) {
+  const roles: Rol[] = ["EMPLEADO", "ENCARGADO", "ADMIN"];
+  const grupos = [...new Set(ITEMS.map((i) => i.grupo || "Personal"))];
+  const cuantos = (r: Rol) => empleados.filter((e) => e.activo && e.rol === r).length;
+
+  return (
+    <div className="grid gap-5 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] xl:items-start">
+      <Panel>
+        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <h2 className="font-semibold">Roles</h2>
+          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Cada usuario tiene uno; se cambia desde la lista o en Editar.</p>
+        </div>
+        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+          {roles.map((r) => (
+            <li key={r} className="flex items-start justify-between gap-3 px-4 py-3">
+              <div>
+                <p className="font-semibold">{ETIQUETA_ROL[r]}</p>
+                <p className="text-sm text-slate-500 dark:text-[#94a19c]">{DESCRIPCION_ROL[r]}</p>
+              </div>
+              <Badge tone="slate">{cuantos(r)} activos</Badge>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+
+      <Panel className="overflow-hidden">
+        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <h2 className="font-semibold">Qué pantallas ve cada rol</h2>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[28rem] text-sm">
+            <thead>
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500 dark:border-[#29403b] dark:bg-[#0d1614] dark:text-[#94a19c]">
+                <th className="px-4 py-2.5">Pantalla</th>
+                {roles.map((r) => (
+                  <th key={r} className="px-4 py-2.5 text-center">
+                    {ETIQUETA_ROL[r]}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            {grupos.map((grupo) => (
+              <tbody key={grupo} className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <tr className="bg-slate-50/60 dark:bg-[#0d1614]">
+                  <th colSpan={4} className="px-4 py-1.5 text-left text-xs font-semibold text-slate-500 dark:text-[#94a19c]">
+                    {grupo}
+                  </th>
+                </tr>
+                {ITEMS.filter((i) => (i.grupo || "Personal") === grupo).map((item) => (
+                  <tr key={item.key}>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center gap-2">
+                        <item.Icon size={15} className="text-slate-400" aria-hidden />
+                        {item.label}
+                      </span>
+                    </td>
+                    {roles.map((r) => (
+                      <td key={r} className="px-4 py-2.5 text-center">
+                        {RANGO[r] >= RANGO[item.minimo] ? (
+                          <Check size={16} className="mx-auto text-emerald-700 dark:text-[#4ee6b0]" aria-label="Ve" />
+                        ) : (
+                          <span className="text-slate-300 dark:text-[#3d4f4a]" aria-label="No ve">
+                            —
+                          </span>
+                        )}
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            ))}
+          </table>
+        </div>
+      </Panel>
     </div>
   );
 }

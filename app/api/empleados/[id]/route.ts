@@ -14,6 +14,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const { id } = await params;
   const body = await readJsonBody<{
     activo?: boolean;
+    nombre?: string;
+    localId?: string;
     rol?: string;
     email?: string;
     localesExtra?: string[];
@@ -48,6 +50,19 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     }
   }
 
+  if (body.nombre !== undefined && !body.nombre.trim()) {
+    return NextResponse.json({ error: "El nombre no puede quedar vacío" }, { status: 400 });
+  }
+  let localId: string | undefined;
+  if (body.localId !== undefined && body.localId !== objetivo.localId) {
+    const local = await db.local.findUnique({ where: { id: body.localId }, select: { id: true } });
+    if (!local) return NextResponse.json({ error: "Sucursal no encontrada" }, { status: 400 });
+    localId = local.id;
+  }
+  // Cambiar de sucursal principal se lleva la categoría si es de la otra:
+  // las categorías son de cada local.
+  const localFinal = localId ?? objetivo.localId;
+
   // La categoría es propia de cada local: null borra, cualquier otro caso se
   // valida contra el local actual del empleado antes de aceptarla.
   let categoriaId: string | null | undefined;
@@ -56,14 +71,18 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
       categoriaId = null;
     } else {
       const cat = await db.categoria.findUnique({ where: { id: body.categoriaId } });
-      categoriaId = cat && cat.localId === objetivo.localId ? cat.id : null;
+      categoriaId = cat && cat.localId === localFinal ? cat.id : null;
     }
+  } else if (localId && objetivo.categoriaId) {
+    categoriaId = null;
   }
 
   const empleado = await db.empleado.update({
     where: { id },
     data: {
       ...(body.activo !== undefined ? { activo: Boolean(body.activo) } : {}),
+      ...(body.nombre !== undefined ? { nombre: body.nombre.trim() } : {}),
+      ...(localId ? { localId } : {}),
       ...(body.email !== undefined ? { email: body.email.trim() || null } : {}),
       ...(categoriaId !== undefined ? { categoriaId } : {}),
       ...(body.rol !== undefined && (ROLES as readonly string[]).includes(body.rol)
@@ -76,6 +95,9 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // Nunca la fila entera: trae el hash de la contraseña y la biometría.
     select: { id: true, usuario: true, nombre: true, rol: true, activo: true, localId: true },
   });
+
+  // La nueva principal deja de ser "también puede fichar en".
+  if (localId) await db.asignacionLocal.deleteMany({ where: { empleadoId: id, localId } });
 
   if (body.localesExtra) {
     await db.asignacionLocal.deleteMany({ where: { empleadoId: id } });
