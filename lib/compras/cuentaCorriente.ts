@@ -115,7 +115,9 @@ export function calcularCuentaCorriente(params: {
 
   let saldo = 0;
   for (const fila of filas) {
-    saldo += fila.debe - fila.haber;
+    // Redondeo a centavos: sumar decimales en coma flotante dejaba una cuenta
+    // saldada en "-$ 0,00". El `+ 0` convierte el -0 en 0.
+    saldo = Math.round((saldo + fila.debe - fila.haber) * 100) / 100 + 0;
     fila.saldo = saldo;
   }
 

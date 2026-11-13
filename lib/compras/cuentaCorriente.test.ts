@@ -86,6 +86,17 @@ const conPagoViejo = calcularCuentaCorriente({
 assert.strictEqual(conPagoViejo.saldo, 400_000, "sólo resta el pago posterior al corte");
 assert.strictEqual(conPagoViejo.totalPagos, 100_000);
 
+// --- Una cuenta saldada con centavos da 0 exacto, no "-$ 0,00" ---
+
+const saldada = calcularCuentaCorriente({
+  saldoInicial: 100.1,
+  fechaInicial: "2026-11-03",
+  remitos: [{ id: "a", fecha: "2026-11-10", numero: "FA 1", total: 200.2, tipo: "MERCADERIA" }],
+  // 100,1 + 200,2 en coma flotante da 300,29999999999995: sin redondeo quedaba −0,00000000000005.
+  pagos: [{ id: "p1", fecha: "2026-11-12", monto: 300.3, medio: null, nota: null }],
+});
+assert.ok(Object.is(saldada.saldo, 0), `saldo ${saldada.saldo}`);
+
 // --- Un pago no puede volverse deuda por error de signo ---
 
 for (const m of r.movimientos.filter((m) => m.tipo === "PAGO")) {
