@@ -5,6 +5,7 @@ import { rangoDias } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
 import { CONCEPTOS_FIJOS, costoDeVenta, type Comisiones } from "@/lib/compras/impuestos";
 import { calcularResultado } from "@/lib/compras/resultado";
+import { importeAFacturar } from "@/lib/compras/remito";
 
 /** Junta venta, compras, sueldos y gastos de un período: varias consultas. */
 export const maxDuration = 60;
@@ -52,7 +53,7 @@ export async function GET(request: Request) {
         ...(localId ? { localId } : { localId: { not: null } }),
         reemplazadaPorId: null,
       },
-      select: { localId: true, tipo: true, subtotal: true, ivaCredito: true },
+      select: { localId: true, tipo: true, subtotal: true, ajustePct: true, ivaCredito: true },
     }),
     db.empleado.findMany({
       where: { activo: true, ...(localId ? { localId } : {}) },
@@ -94,12 +95,13 @@ export async function GET(request: Request) {
 
     const susCompras = compras.filter((c) => c.localId === local.id);
     // Remitos (sin IVA discriminado) por un lado, facturas A por el otro: las
-    // facturas ya traen su neto y su IVA exactos.
+    // facturas ya traen su neto y su IVA exactos. El remito cuenta por lo que
+    // se va a facturar, que no es su total.
     const remitos = susCompras.filter((c) => c.ivaCredito == null);
     const facturas = susCompras.filter((c) => c.ivaCredito != null);
     const mercaderiaBruta = remitos
       .filter((c) => c.tipo === "MERCADERIA")
-      .reduce((s, c) => s + c.subtotal, 0);
+      .reduce((s, c) => s + importeAFacturar({ tipo: c.tipo, total: c.subtotal, ajustePct: c.ajustePct }), 0);
     const royaltyBruto = remitos
       .filter((c) => c.tipo === "SERVICIO")
       .reduce((s, c) => s + c.subtotal, 0);

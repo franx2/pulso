@@ -15,6 +15,8 @@
  * extracción del texto vive aparte porque depende del entorno.
  */
 
+import { IVA } from "./impuestos";
+
 export type LineaRemito = {
   /** Código del proveedor. Es la clave estable: el nombre cambia de escritura
    * entre remitos ("X KG" y "x kg" el mismo mes) pero el código no. */
@@ -210,6 +212,24 @@ export function verificarRemito(remito: RemitoParseado): Verificacion {
  * es parte del costo de la mercadería o un costo financiero aparte: `lista`
  * es lo que dice la línea y `conAjuste` lo que efectivamente se paga.
  */
+/**
+ * Lo que el proveedor va a facturar por un remito que todavía no tiene su
+ * Factura A: es la deuda real y la base del costo, no el total del remito.
+ *
+ * El remito suma la lista y le agrega el ajuste (10,5%); la factura de esa
+ * misma compra aplica 5% de descuento sobre la lista ("Desc./Rec.") y suma
+ * 21% de IVA. En los 11 pares remito/factura de jul–sep 2026 la factura dio
+ * siempre 4,03% más que el remito.
+ * ponytail: sólo mercadería con ajuste; un remito sin ajuste o el royalty no
+ * tienen pares contra los cuales verificar, y quedan tal cual.
+ */
+export function importeAFacturar(c: { tipo: string; total: number; ajustePct: number | null }): number {
+  if (c.tipo !== "MERCADERIA" || !c.ajustePct) return c.total;
+  const lista = c.total / (1 + c.ajustePct / 100);
+  return Math.round(lista * (1 - DESCUENTO_FACTURA) * (1 + IVA) * 100) / 100;
+}
+const DESCUENTO_FACTURA = 0.05;
+
 export function costoPorLinea(remito: RemitoParseado) {
   const factor = remito.ajustePct != null ? 1 + remito.ajustePct / 100 : 1;
   return remito.lineas.map((linea) => ({

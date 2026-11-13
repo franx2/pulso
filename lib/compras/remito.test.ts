@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { costoPorLinea, parsearRemito, RemitoIlegible, verificarRemito } from "./remito";
+import { costoPorLinea, importeAFacturar, parsearRemito, RemitoIlegible, verificarRemito } from "./remito";
 
 /**
  * Los fixtures son el texto real de cuatro remitos del proveedor (agosto de
@@ -178,5 +178,13 @@ mutilado.sumaLineas = mutilado.lineas.reduce((s, l) => s + l.total, 0);
 const vMutilado = verificarRemito(mutilado);
 assert.ok(!vMutilado.ok, "un remito al que le falta una línea no puede dar OK");
 assert.match(vMutilado.problemas[0], /líneas sin leer/);
+
+// --- Lo que se va a facturar por un remito ---
+// Lista 1.000 → remito 1.105 (+10,5%); factura: 1.000 × 0,95 × 1,21 = 1.149,50.
+assert.strictEqual(importeAFacturar({ tipo: "MERCADERIA", total: 1105, ajustePct: 10.5 }), 1149.5);
+// Sin ajuste o royalty: no hay contra qué verificar, queda el total del remito.
+assert.strictEqual(importeAFacturar({ tipo: "MERCADERIA", total: 1000, ajustePct: 0 }), 1000);
+assert.strictEqual(importeAFacturar({ tipo: "MERCADERIA", total: 1000, ajustePct: null }), 1000);
+assert.strictEqual(importeAFacturar({ tipo: "SERVICIO", total: 1105, ajustePct: 10.5 }), 1105);
 
 console.log("lib/compras/remito.test.ts: todos los checks pasaron");

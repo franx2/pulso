@@ -4,6 +4,7 @@ import { diaDeFechaSql } from "@/lib/fechaAR";
 import { requireAdminApi } from "@/lib/session";
 import { calcularCuentaCorriente } from "@/lib/compras/cuentaCorriente";
 import { convalidarPagos } from "@/lib/compras/convalidacionPagos";
+import { importeAFacturar } from "@/lib/compras/remito";
 
 /**
  * Cuenta corriente con la fábrica, por local.
@@ -27,7 +28,7 @@ export async function GET() {
     db.compra.findMany({
       // La deuda es la factura; el remito que ya la tiene no suma.
       where: { localId: { not: null }, reemplazadaPorId: null },
-      select: { id: true, localId: true, fecha: true, numero: true, total: true, tipo: true },
+      select: { id: true, localId: true, fecha: true, numero: true, total: true, tipo: true, ajustePct: true, ivaCredito: true },
       orderBy: { fecha: "asc" },
     }),
     db.pagoProveedor.findMany({
@@ -53,7 +54,14 @@ export async function GET() {
       fechaInicial: local.saldoInicialProveedorFecha ? diaDeFechaSql(local.saldoInicialProveedorFecha) : null,
       remitos: remitos
         .filter((r) => r.localId === local.id)
-        .map((r) => ({ id: r.id, fecha: diaDeFechaSql(r.fecha), numero: r.numero, total: r.total, tipo: r.tipo })),
+        .map((r) => ({
+          id: r.id,
+          fecha: diaDeFechaSql(r.fecha),
+          numero: r.numero,
+          // Un remito sin factura todavía debe lo que se le va a facturar.
+          total: r.ivaCredito == null ? importeAFacturar(r) : r.total,
+          tipo: r.tipo,
+        })),
       pagos: susPagos,
     });
 
