@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { diaDeFechaSql, fechaSql } from "@/lib/fechaAR";
+import { diaDeFechaSql, fechaSql, sumarDias } from "@/lib/fechaAR";
 import { rangoDias } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
 import { ingresosBrutos, posicionIVA, type Comisiones } from "@/lib/compras/impuestos";
 import { conciliar } from "@/lib/compras/conciliacion";
+import { movimientosRaros } from "@/lib/compras/movimientosRaros";
 
 /**
  * Conciliación bancaria e impuestos del período, por local.
@@ -25,7 +26,7 @@ export async function GET(request: Request) {
   const desdeSql = fechaSql(desde);
   const hastaSql = fechaSql(hasta);
 
-  const [locales, resumenes, movimientos] = await Promise.all([
+  const [locales, resumenes, movimientos, debitosDelAnio] = await Promise.all([
     db.local.findMany({
       where: localId ? { id: localId } : {},
       select: {
@@ -57,6 +58,16 @@ export async function GET(request: Request) {
       },
       orderBy: { fecha: "asc" },
     }),
+    // Para "Para revisar": los débitos del último año, que es contra lo que
+    // se decide si un pago es nuevo o si un cargo fijo subió.
+    db.movimientoBancario.findMany({
+      where: {
+        debito: { gt: 0 },
+        fecha: { gte: fechaSql(sumarDias(desde, -400)), lte: hastaSql },
+        ...(localId ? { localId } : {}),
+      },
+      select: { id: true, localId: true, fecha: true, descripcion: true, referencia: true, debito: true, credito: true },
+    }),
   ]);
 
   const porLocal = locales.map((local) => {
@@ -83,10 +94,19 @@ export async function GET(request: Request) {
       susMovimientos.map((m) => ({ categoria: m.categoria, credito: m.credito }))
     );
 
+    const paraRevisar = movimientosRaros(
+      debitosDelAnio
+        .filter((m) => m.localId === local.id)
+        .map((m) => ({ ...m, fecha: diaDeFechaSql(m.fecha) })),
+      desde,
+      hasta
+    );
+
     return {
       localId: local.id,
       local: local.nombre,
       conciliacion,
+      paraRevisar,
       // Sin Factura A el crédito fiscal de compras es cero, igual que en
       // Resultado: los remitos del proveedor son "Presupuesto X", no dan
       // crédito.
@@ -105,7 +125,12 @@ export async function GET(request: Request) {
     };
   });
 
+  // Qué sucursales tienen extracto cargado, la de más movimientos primero:
+  // la pantalla de Banco arranca en esa en vez de en una cuenta vacía.
+  const conExtracto = await db.movimientoBancario.groupBy({ by: ["localId"], _count: { _all: true } });
+
   return NextResponse.json({
+    localesConExtracto: conExtracto.sort((a, b) => b._count._all - a._count._all).map((x) => x.localId),
     periodo,
     desde,
     hasta,

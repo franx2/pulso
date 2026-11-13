@@ -5,15 +5,9 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
-import { Badge, EmptyState, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
+import { Badge, EmptyState, Metrica, PageTitle, Panel } from "@/components/ui";
 import { fechaLarga, plata, porcentaje as pct } from "@/lib/formato";
-import BancoPanel from "./BancoPanel";
 
-type Vista = "resumen" | "banco";
-const VISTAS: { clave: Vista; label: string }[] = [
-  { clave: "resumen", label: "Resumen" },
-  { clave: "banco", label: "Banco" },
-];
 
 /**
  * Resultado operativo.
@@ -70,7 +64,6 @@ const ARREGLO: Record<string, { texto: string; href: string }> = {
 export default function ResultadoClient() {
   const { valor, setValor, params: periodo, hoy } = usePeriodo();
   const [localId, setLocalId] = useState("");
-  const [vista, setVista] = useState<Vista>("resumen");
   const [datos, setDatos] = useState<Respuesta | null>(null);
   const [error, setError] = useState("");
 
@@ -116,20 +109,15 @@ export default function ResultadoClient() {
         }}
       />
 
-      <div className="scrollbar-hidden overflow-x-auto">
-        <SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Vista de resultado" />
-      </div>
+      <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        El extracto bancario, la conciliación con Fudo y los movimientos para revisar están en{" "}
+        <Link href="/admin/banco" className="font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]">
+          Banco
+        </Link>
+        .
+      </p>
 
-      {vista === "banco" && (
-        <BancoPanel
-          localId={localId}
-          periodo={periodo}
-          onPeriodoDetectado={(mes) => setValor({ ...valor, periodo: "mes-calendario", mes })}
-        />
-      )}
-
-      {vista === "resumen" &&
-        (!datos || !total ? (
+      {        (!datos || !total ? (
         <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Calculando" />
       ) : total.ventaBruta === 0 ? (
         <EmptyState>No hay ventas sincronizadas en este período.</EmptyState>

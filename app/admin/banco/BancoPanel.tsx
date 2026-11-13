@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { AlertTriangle, CheckCircle2, Trash2, Upload } from "lucide-react";
+import { AlertTriangle, CheckCircle2, Info, Trash2, Upload } from "lucide-react";
+import type { Aviso } from "@/lib/compras/movimientosRaros";
 import { Badge, Button, EmptyState, Panel, SelectorSegmentado, useConfirm } from "@/components/ui";
 import { plata, fechaCorta, fechaLarga, porcentaje as pct } from "@/lib/formato";
 
@@ -62,9 +63,11 @@ type CuentaLocal = {
   iibb: CargaIIBB;
   iva: PosicionIVA;
   movimientos: Movimiento[];
+  paraRevisar: { avisos: Aviso[]; historiaSuficiente: boolean };
 };
 
 type Respuesta = {
+  localesConExtracto: string[];
   locales: { id: string; nombre: string }[];
   porLocal: CuentaLocal[];
 };
@@ -89,9 +92,12 @@ export default function BancoPanel({
   localId,
   periodo,
   onPeriodoDetectado,
+  onLocalSugerido,
 }: {
   localId: string;
   periodo: URLSearchParams;
+  /** Sin local elegido, la sucursal que tiene extracto cargado. */
+  onLocalSugerido?: (localId: string) => void;
   /** Se llama con "AAAA-MM" cuando el archivo subido cae entero en un mes,
    * para que el filtro de arriba salte solo ahí en vez de mostrar "sin
    * movimientos" porque estaba mirando otro período. */
@@ -116,6 +122,11 @@ export default function BancoPanel({
     return () => controlador.abort();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodo.toString(), localId, revision]);
+
+  const sugerido = !localId ? datos?.localesConExtracto[0] : undefined;
+  useEffect(() => {
+    if (sugerido) onLocalSugerido?.(sugerido);
+  }, [sugerido]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (error) return <p className="text-sm text-slate-500 dark:text-[#94a19c]">{error}</p>;
   if (!datos) {
@@ -273,6 +284,8 @@ function DetalleLocal({
           </div>
         )}
       </Panel>
+
+      {cuenta.movimientos.length > 0 && <ParaRevisar {...cuenta.paraRevisar} />}
 
       {cuenta.movimientos.length === 0 ? (
         <EmptyState>
@@ -567,6 +580,68 @@ function DetalleLocal({
  * archivo de una vez rompe el límite de argumentos del motor en un PDF de
  * este tamaño (cientos de miles de bytes).
  */
+/**
+ * Lo que conviene mirar del extracto: cargos que subieron, pagos nuevos,
+ * posibles duplicados. Primero lo que puede ser plata que no tendría que
+ * salir; después lo que es para saber.
+ */
+function ParaRevisar({ avisos, historiaSuficiente }: { avisos: Aviso[]; historiaSuficiente: boolean }) {
+  const revisar = avisos.filter((a) => a.gravedad === "revisar").length;
+  return (
+    <Panel>
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div>
+          <h2 className="font-semibold">Para revisar</h2>
+          <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+            Cargos que subieron, pagos que no aparecían antes y posibles duplicados. Cada aviso dice contra qué se
+            comparó; los impuestos que acompañan cada movimiento no se marcan.
+          </p>
+        </div>
+        {avisos.length > 0 && (
+          <Badge tone={revisar > 0 ? "amber" : "slate"}>
+            {revisar > 0 ? `${revisar} para revisar` : "Nada para revisar"}
+          </Badge>
+        )}
+      </div>
+      {avisos.length === 0 ? (
+        <p className="flex items-center gap-2 px-4 py-4 text-sm text-emerald-700 dark:text-[#4ee6b0]">
+          <CheckCircle2 size={16} aria-hidden />
+          Nada raro en este período.
+        </p>
+      ) : (
+        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+          {avisos.map((a) => (
+            <li key={`${a.tipo}-${a.ids.join("-")}`} className="flex gap-3 px-4 py-3">
+              {a.gravedad === "revisar" ? (
+                <AlertTriangle size={17} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" aria-label="Para revisar" />
+              ) : (
+                <Info size={17} className="mt-0.5 shrink-0 text-slate-400 dark:text-[#7a8882]" aria-label="Para saber" />
+              )}
+              <div className="min-w-0 flex-1">
+                <p className="text-sm">
+                  <span className="font-semibold">{a.titulo}</span>
+                  <span className="text-slate-500 dark:text-[#94a19c]"> · {a.quien}</span>
+                </p>
+                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">{a.detalle}</p>
+              </div>
+              <div className="shrink-0 text-right">
+                <p className="text-sm font-semibold tabular-nums">{plata(a.monto)}</p>
+                <p className="text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">{fechaCorta(a.fecha)}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+      {!historiaSuficiente && (
+        <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+          Para marcar pagos nuevos hace falta al menos un mes de extracto anterior a este período. Subí el extracto
+          del mes anterior y se van a ver también.
+        </p>
+      )}
+    </Panel>
+  );
+}
+
 async function base64DeArchivo(archivo: File): Promise<string> {
   const bytes = new Uint8Array(await archivo.arrayBuffer());
   const TROZO = 8192;

@@ -10,6 +10,7 @@ import {
   Clock,
   MoreHorizontal,
   LayoutDashboard,
+  Landmark,
   Settings,
   Truck,
   PieChart,
@@ -33,7 +34,8 @@ export type NavActivo =
   | "pronostico"
   | "compras"
   | "sectores"
-  | "resultado";
+  | "resultado"
+  | "banco";
 
 type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol; grupo: string };
 
@@ -47,6 +49,7 @@ export const ITEMS: Item[] = [
   { key: "compras", href: "/admin/compras", Icon: Truck, label: "Compras", minimo: "ADMIN", grupo: "Análisis" },
   { key: "sectores", href: "/admin/sectores", Icon: PieChart, label: "Sectores", minimo: "ADMIN", grupo: "Análisis" },
   { key: "resultado", href: "/admin/resultado", Icon: Scale, label: "Resultado", minimo: "ADMIN", grupo: "Análisis" },
+  { key: "banco", href: "/admin/banco", Icon: Landmark, label: "Banco", minimo: "ADMIN", grupo: "Análisis" },
   { key: "reportes", href: "/admin/reportes", Icon: BarChart3, label: "Reportes", minimo: "ADMIN", grupo: "Análisis" },
   { key: "empleados", href: "/admin/empleados", Icon: Users, label: "Equipo", minimo: "ADMIN", grupo: "Gestión" },
   { key: "configuracion", href: "/admin/configuracion", Icon: Settings, label: "Ajustes", minimo: "ADMIN", grupo: "Gestión" },
