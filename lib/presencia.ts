@@ -1,5 +1,7 @@
 import { db } from "./db";
 import { comoFechaSql, inicioDelDia, finDelDia } from "./fechas";
+import { claveDiaAR, fechaSql, sumarDias } from "./fechaAR";
+import { jornadaEnCurso } from "./horas";
 import { evaluarJornada, type Jornada } from "./jornada";
 import { detectarAlertas } from "./alertas";
 import { enviarEmail, plantillaAlertas } from "./email";
@@ -38,6 +40,8 @@ export type FilaPresencia = {
  */
 export async function fotoDelDia(ahora = new Date(), localId?: string) {
   const hoySql = comoFechaSql(ahora);
+  const hoy = claveDiaAR(ahora);
+  const ayerSql = fechaSql(sumarDias(hoy, -1));
 
   const [empleados, turnos, fichajes, ausencias] = await Promise.all([
     db.empleado.findMany({
@@ -45,9 +49,11 @@ export async function fotoDelDia(ahora = new Date(), localId?: string) {
       include: { local: { select: { id: true, nombre: true, toleranciaMin: true, descuentaDescanso: true } } },
       orderBy: { nombre: "asc" },
     }),
-    db.turno.findMany({ where: { fecha: hoySql } }),
+    // Ayer también: quien entró a la noche y sigue adentro pasada la
+    // medianoche está trabajando, no "sin fichar".
+    db.turno.findMany({ where: { fecha: { in: [ayerSql, hoySql] } } }),
     db.fichaje.findMany({
-      where: { timestamp: { gte: inicioDelDia(ahora), lte: finDelDia(ahora) } },
+      where: { timestamp: { gte: inicioDelDia(new Date(ahora.getTime() - 86_400_000)), lte: finDelDia(ahora) } },
       orderBy: { timestamp: "asc" },
     }),
     // Licencias aprobadas que cubren el día de hoy.
@@ -57,7 +63,8 @@ export async function fotoDelDia(ahora = new Date(), localId?: string) {
     }),
   ]);
 
-  const turnoPorEmpleado = new Map(turnos.map((t) => [t.empleadoId, t]));
+  const turnoPorEmpleado = new Map(turnos.filter((t) => t.fecha.getTime() === hoySql.getTime()).map((t) => [t.empleadoId, t]));
+  const turnoDeAyer = new Map(turnos.filter((t) => t.fecha.getTime() === ayerSql.getTime()).map((t) => [t.empleadoId, t]));
   const ausentePorEmpleado = new Map(ausencias.map((a) => [a.empleadoId, a.tipo]));
   const fichajesPorEmpleado = new Map<string, { tipo: typeof fichajes[number]["tipo"]; timestamp: Date }[]>();
   for (const f of fichajes) {
@@ -74,9 +81,11 @@ export async function fotoDelDia(ahora = new Date(), localId?: string) {
     : empleados;
 
   return filtrados.map((e) => {
-    const turno = turnoPorEmpleado.get(e.id);
+    const enCurso = jornadaEnCurso(fichajesPorEmpleado.get(e.id) ?? [], hoy, claveDiaAR, ahora);
+    // La jornada que viene de anoche se mide contra el turno de anoche.
+    const turno = enCurso.dia < hoy ? turnoDeAyer.get(e.id) : turnoPorEmpleado.get(e.id);
     const jornada = evaluarJornada({
-      fichajes: fichajesPorEmpleado.get(e.id) ?? [],
+      fichajes: enCurso.fichajes,
       turno,
       toleranciaMin: e.local.toleranciaMin,
       descuentaDescanso: e.local.descuentaDescanso,

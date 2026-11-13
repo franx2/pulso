@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { requireEncargadoApi } from "@/lib/session";
 import { readJsonBody } from "@/lib/http";
 import { auditar } from "@/lib/auditoria";
-import { calcularHoras } from "@/lib/horas";
-import { fechaSql, finDiaAR, hoyAR, inicioDiaAR, instanteAR } from "@/lib/fechaAR";
+import { asignarJornadas, calcularHoras } from "@/lib/horas";
+import { claveDiaAR, fechaSql, finDiaAR, hoyAR, inicioDiaAR, instanteAR, sumarDias } from "@/lib/fechaAR";
 
 /**
  * La jornada de un empleado en un día, para que el encargado la arregle sin
@@ -32,9 +32,11 @@ export async function GET(request: Request) {
   });
   if (!empleado) return NextResponse.json({ error: "Empleado no encontrado" }, { status: 404 });
 
-  const [fichajes, turno] = await Promise.all([
+  const [cercanos, turno] = await Promise.all([
+    // Un día de cada lado: la jornada es del día en que empezó, y un turno
+    // nocturno termina pasada la medianoche.
     db.fichaje.findMany({
-      where: { empleadoId, timestamp: { gte: inicioDiaAR(dia), lte: finDiaAR(dia) } },
+      where: { empleadoId, timestamp: { gte: inicioDiaAR(sumarDias(dia, -1)), lte: finDiaAR(sumarDias(dia, 1)) } },
       select: {
         id: true,
         tipo: true,
@@ -51,6 +53,10 @@ export async function GET(request: Request) {
       select: { horaInicio: true, horaFin: true, local: { select: { nombre: true } } },
     }),
   ]);
+
+  const fichajes = asignarJornadas(cercanos, claveDiaAR)
+    .filter((a) => a.dia === dia)
+    .map((a) => a.fichaje);
 
   const horas = calcularHoras(fichajes, {
     descuentaDescanso: empleado.local.descuentaDescanso,

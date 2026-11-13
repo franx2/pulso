@@ -123,3 +123,63 @@ export function proximoFichaje(estado: Pick<ResultadoHoras, "abierto" | "enDesca
   if (estado.enDescanso) return "DESCANSO_FIN";
   return estado.abierto ? "SALIDA" : "ENTRADA";
 }
+
+/**
+ * Un turno nocturno no termina a la medianoche. Más que esto entre la entrada
+ * y la marca siguiente ya no es la misma jornada: es una salida olvidada, y la
+ * marca nueva arranca su propio día.
+ */
+export const MAX_HORAS_JORNADA = 16;
+
+/**
+ * A qué día pertenece cada fichaje: al de la ENTRADA de su jornada, no al del
+ * reloj. Una salida a la 01:30 de un turno que empezó a las 22:00 es del día
+ * anterior; partir por medianoche dejaba la entrada sola en un día y la salida
+ * sola en el otro, y el turno se liquidaba como cero horas.
+ *
+ * Los fichajes tienen que ser de UNA persona. Devuelve el mismo orden
+ * cronológico, cada uno con la clave "YYYY-MM-DD" de su jornada.
+ */
+export function asignarJornadas<T extends FichajeSimple>(
+  fichajes: T[],
+  claveDia: (d: Date) => string,
+  maxHoras = MAX_HORAS_JORNADA
+): { fichaje: T; dia: string }[] {
+  const ordenados = [...fichajes].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+  let abierta: { dia: string; desde: number } | null = null;
+  return ordenados.map((f) => {
+    const t = f.timestamp.getTime();
+    if (abierta && t - abierta.desde > maxHoras * 3_600_000) abierta = null;
+    if (abierta) {
+      const dia: string = abierta.dia;
+      if (f.tipo === "SALIDA") abierta = null;
+      return { fichaje: f, dia };
+    }
+    const dia = claveDia(f.timestamp);
+    if (f.tipo === "ENTRADA") abierta = { dia, desde: t };
+    return { fichaje: f, dia };
+  });
+}
+
+/**
+ * Los fichajes de la jornada que hay que mostrar "hoy": la de hoy, o la que
+ * sigue abierta desde ayer (alguien que entró a las 22 y todavía no salió).
+ */
+export function jornadaEnCurso<T extends FichajeSimple>(
+  fichajes: T[],
+  hoy: string,
+  claveDia: (d: Date) => string,
+  ahora = new Date()
+): { dia: string; fichajes: T[] } {
+  const asignados = asignarJornadas(fichajes, claveDia);
+  const ultimo = asignados[asignados.length - 1];
+  if (ultimo && ultimo.dia < hoy) {
+    const deEseDia = asignados.filter((a) => a.dia === ultimo.dia).map((a) => a.fichaje);
+    const estado = calcularHoras(deEseDia);
+    // Abierta hace más de una jornada posible: se olvidó la salida, y lo que
+    // marque ahora es una entrada nueva, no la salida de ayer.
+    const vigente = estado.entrada && ahora.getTime() - estado.entrada.getTime() <= MAX_HORAS_JORNADA * 3_600_000;
+    if (estado.abierto && vigente) return { dia: ultimo.dia, fichajes: deEseDia };
+  }
+  return { dia: hoy, fichajes: asignados.filter((a) => a.dia === hoy).map((a) => a.fichaje) };
+}

@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { requireAdminApi } from "@/lib/session";
 import { evaluarJornada, extrasDelPeriodo } from "@/lib/jornada";
 import { claveDia, claveFechaSql, claveSemana, comoFechaSql, desdeISO, finDelDia } from "@/lib/fechas";
-import type { FichajeSimple } from "@/lib/horas";
+import { asignarJornadas, type FichajeSimple } from "@/lib/horas";
 
 export type FilaReporte = {
   empleadoId: string;
@@ -54,6 +54,10 @@ export async function GET(request: Request) {
 
   const fechaDesde = desdeISO(desde);
   const fechaHasta = finDelDia(desdeISO(hasta));
+  // Los fichajes se traen con un día de margen de cada lado: la jornada es del
+  // día en que empezó, así que la salida de la madrugada siguiente a `hasta`
+  // cuenta, y la del primer día que viene del turno anterior a `desde`, no.
+  const margen = 24 * 3_600_000;
   if (Number.isNaN(fechaDesde.getTime()) || Number.isNaN(fechaHasta.getTime())) {
     return NextResponse.json({ error: "Fechas inválidas" }, { status: 400 });
   }
@@ -65,7 +69,11 @@ export async function GET(request: Request) {
 
   const [fichajes, turnos, locales, feriados] = await Promise.all([
     db.fichaje.findMany({
-      where: { timestamp: { gte: fechaDesde, lte: fechaHasta }, ...filtroEmpleado, ...filtroLocal },
+      where: {
+        timestamp: { gte: new Date(fechaDesde.getTime() - margen), lte: new Date(fechaHasta.getTime() + margen) },
+        ...filtroEmpleado,
+        ...filtroLocal,
+      },
       include: { empleado: { select: { id: true, nombre: true, localId: true, precioHora: true } } },
       orderBy: { timestamp: "asc" },
     }),
@@ -116,15 +124,20 @@ export async function GET(request: Request) {
     return d;
   }
 
+  const fichajesPorEmpleado = new Map<string, typeof fichajes>();
   for (const f of fichajes) {
-    bucket(
-      f.empleadoId,
-      f.empleado.nombre,
-      f.empleado.localId,
-      f.empleado.precioHora,
-      claveDia(f.timestamp),
-      f.localId
-    ).fichajes.push({ tipo: f.tipo, timestamp: f.timestamp });
+    fichajesPorEmpleado.set(f.empleadoId, [...(fichajesPorEmpleado.get(f.empleadoId) ?? []), f]);
+  }
+  for (const lista of fichajesPorEmpleado.values()) {
+    // Cada fichaje va al día de su jornada, no al del reloj: partir por
+    // medianoche liquidaba un turno de 22 a 2 como cero horas.
+    for (const { fichaje: f, dia } of asignarJornadas(lista, claveDia)) {
+      if (dia < desde || dia > hasta) continue;
+      bucket(f.empleadoId, f.empleado.nombre, f.empleado.localId, f.empleado.precioHora, dia, f.localId).fichajes.push({
+        tipo: f.tipo,
+        timestamp: f.timestamp,
+      });
+    }
   }
   for (const t of turnos) {
     // El turno manda sobre qué local aplica ese día: es la fuente de la

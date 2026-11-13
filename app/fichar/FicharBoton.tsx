@@ -90,6 +90,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
   const [local, setLocal] = useState<string | null>(null);
   const [descuentaDescanso, setDescuentaDescanso] = useState(true);
   const [semana, setSemana] = useState<DiaSemana[]>([]);
+  const [jornadaDia, setJornadaDia] = useState<string | null>(null);
   const [cargando, setCargando] = useState(true);
   const [errorCarga, setErrorCarga] = useState(false);
   const [marcando, setMarcando] = useState(false);
@@ -140,6 +141,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
     setLocal(data.local ?? null);
     setDescuentaDescanso(data.descuentaDescanso ?? true);
     setSemana(data.semana ?? []);
+    setJornadaDia(data.jornadaDia ?? null);
     setRostro({ exigido: Boolean(r.exigido), registrado: Boolean(r.registrado) });
     // Con el control activo, los 6.5 MB de modelos se bajan mientras el
     // empleado mira la pantalla, no cuando aprieta el botón.
@@ -310,7 +312,10 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
           : "Todavía no marcaste la entrada";
 
   const hoy = hoyClave();
-  const semanaConHoy = semana.map((d) => (d.dia === hoy ? { ...d, horas: jornada.horasTrabajadas } : d));
+  // Lo que corre en vivo es de la jornada en pantalla, que pasada la
+  // medianoche puede ser la que empezó ayer.
+  const diaEnVivo = jornadaDia ?? hoy;
+  const semanaConHoy = semana.map((d) => (d.dia === diaEnVivo ? { ...d, horas: jornada.horasTrabajadas } : d));
   const totalSemana = semanaConHoy.reduce((s, d) => s + d.horas, 0);
   const maximo = Math.max(9, ...semanaConHoy.map((d) => d.horas));
 
@@ -429,7 +434,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
       )}
 
       <Card>
-        <SectionTitle>Hoy</SectionTitle>
+        <SectionTitle>{diaEnVivo === hoy ? "Hoy" : "Tu turno de anoche"}</SectionTitle>
         {fichajesHoy.length === 0 ? (
           <p className="text-sm text-slate-500 dark:text-[#94a19c]">Cuando marques, tus fichajes aparecen acá.</p>
         ) : (

@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { calcularHoras, proximoFichaje } from "./horas";
+import { asignarJornadas, calcularHoras, jornadaEnCurso, proximoFichaje } from "./horas";
 
 const h = (iso: string) => new Date(iso);
 const casi = (a: number, b: number) => Math.abs(a - b) < 1e-9;
@@ -129,5 +129,60 @@ const descansoAbsurdo = calcularHoras([
   { tipo: "SALIDA", timestamp: h("2026-01-01T10:00:00Z") },
 ]);
 assert.ok(descansoAbsurdo.horasTrabajadas >= 0, "las horas nunca son negativas");
+
+// --- La jornada es del día en que EMPEZÓ, no del reloj ---
+// Claves de día en UTC para el test: lo que importa es la regla, no el huso.
+const dia = (d: Date) => d.toISOString().slice(0, 10);
+
+const noche = asignarJornadas(
+  [
+    { tipo: "ENTRADA" as const, timestamp: h("2026-03-01T22:00:00Z") },
+    { tipo: "DESCANSO_INICIO" as const, timestamp: h("2026-03-01T23:30:00Z") },
+    { tipo: "DESCANSO_FIN" as const, timestamp: h("2026-03-02T00:00:00Z") },
+    { tipo: "SALIDA" as const, timestamp: h("2026-03-02T02:00:00Z") },
+    // Al otro día entra de nuevo: esa es otra jornada.
+    { tipo: "ENTRADA" as const, timestamp: h("2026-03-02T22:00:00Z") },
+  ],
+  dia
+);
+assert.deepStrictEqual(
+  noche.map((a) => a.dia),
+  ["2026-03-01", "2026-03-01", "2026-03-01", "2026-03-01", "2026-03-02"],
+  "la salida de las 02:00 es de la jornada que empezó el día anterior"
+);
+const delPrimero = noche.filter((a) => a.dia === "2026-03-01").map((a) => a.fichaje);
+assert.ok(casi(calcularHoras(delPrimero).horasTrabajadas, 3.5), "22 a 02 con media hora de descanso son 3,5 h, no 0");
+
+// Una salida olvidada no se come el día siguiente: pasadas 16 h, la marca
+// nueva arranca su propia jornada.
+const olvido = asignarJornadas(
+  [
+    { tipo: "ENTRADA" as const, timestamp: h("2026-03-05T09:00:00Z") },
+    { tipo: "ENTRADA" as const, timestamp: h("2026-03-06T09:00:00Z") },
+    { tipo: "SALIDA" as const, timestamp: h("2026-03-06T17:00:00Z") },
+  ],
+  dia
+);
+assert.deepStrictEqual(olvido.map((a) => a.dia), ["2026-03-05", "2026-03-06", "2026-03-06"]);
+
+// La pantalla de "hoy" pasada la medianoche sigue mostrando el turno abierto.
+const enCurso = jornadaEnCurso([{ tipo: "ENTRADA" as const, timestamp: h("2026-03-01T22:00:00Z") }], "2026-03-02", dia, h("2026-03-02T01:00:00Z"));
+assert.strictEqual(enCurso.dia, "2026-03-01");
+assert.strictEqual(proximoFichaje(calcularHoras(enCurso.fichajes)), "SALIDA", "a la 01:00 tiene que poder marcar la salida");
+// Pero si la dejó abierta y ya pasaron más de 16 h, se olvidó la salida: lo
+// que marque ahora es una entrada nueva, no la salida de anoche.
+const olvidada = jornadaEnCurso([{ tipo: "ENTRADA" as const, timestamp: h("2026-03-01T22:00:00Z") }], "2026-03-02", dia, h("2026-03-02T15:00:00Z"));
+assert.deepStrictEqual(olvidada, { dia: "2026-03-02", fichajes: [] });
+// Y una jornada de ayer ya cerrada no aparece hoy.
+const cerrada = jornadaEnCurso(
+  [
+    { tipo: "ENTRADA" as const, timestamp: h("2026-03-01T09:00:00Z") },
+    { tipo: "SALIDA" as const, timestamp: h("2026-03-01T17:00:00Z") },
+  ],
+  "2026-03-02",
+  dia,
+  h("2026-03-02T10:00:00Z")
+);
+assert.deepStrictEqual(cerrada, { dia: "2026-03-02", fichajes: [] });
 
 console.log("lib/horas.test.ts: todos los checks pasaron");

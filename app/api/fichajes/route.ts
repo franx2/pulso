@@ -3,8 +3,8 @@ import { db } from "@/lib/db";
 import { requireEmpleadoApi } from "@/lib/session";
 import { distanciaMetros } from "@/lib/geo";
 import { readJsonBody } from "@/lib/http";
-import { calcularHoras, proximoFichaje } from "@/lib/horas";
-import { comoFechaSql, inicioDelDia } from "@/lib/fechas";
+import { asignarJornadas, calcularHoras, jornadaEnCurso, proximoFichaje } from "@/lib/horas";
+import { comoFechaSql } from "@/lib/fechas";
 import { claveDiaAR, fechaSql, hoyAR, inicioDiaAR, sumarDias } from "@/lib/fechaAR";
 import { bytesADescriptor, descriptorDesdeJson, distanciaRostros } from "@/lib/rostro";
 import { leerDataUrl, type ImagenSubida } from "@/lib/dataUrl";
@@ -16,10 +16,19 @@ import {
   obtenerTokenFudo,
 } from "@/lib/fudo";
 
-const inicioDeHoy = () => inicioDelDia();
-
-/** Lo que ve el empleado de cada fichaje: nunca la foto ni la biometría. */
-const CAMPOS_PUBLICOS = { id: true, tipo: true, timestamp: true, corregido: true } as const;
+/**
+ * Los fichajes de la jornada que el empleado tiene delante: la de hoy, o la
+ * que sigue abierta desde ayer si entró a la noche y todavía no salió. Sin
+ * esto, pasada la medianoche la pantalla le ofrecía "Marcar entrada".
+ */
+async function jornadaActual(empleadoId: string) {
+  const hoy = hoyAR();
+  const fichajes = await db.fichaje.findMany({
+    where: { empleadoId, timestamp: { gte: inicioDiaAR(sumarDias(hoy, -1)) } },
+    orderBy: { timestamp: "asc" },
+  });
+  return jornadaEnCurso(fichajes, hoy, claveDiaAR);
+}
 
 /**
  * Las horas de cada día de la semana en curso, de lunes a domingo, para que
@@ -29,14 +38,17 @@ const CAMPOS_PUBLICOS = { id: true, tipo: true, timestamp: true, corregido: true
 async function semanaDe(empleadoId: string, descuentaDescanso: boolean | undefined) {
   const hoy = hoyAR();
   const lunes = sumarDias(hoy, -((fechaSql(hoy).getUTCDay() + 6) % 7));
+  // Desde el domingo: la salida del lunes a la madrugada puede ser del turno
+  // del domingo a la noche, y al revés.
   const fichajes = await db.fichaje.findMany({
-    where: { empleadoId, timestamp: { gte: inicioDiaAR(lunes) } },
+    where: { empleadoId, timestamp: { gte: inicioDiaAR(sumarDias(lunes, -1)) } },
     select: { tipo: true, timestamp: true },
     orderBy: { timestamp: "asc" },
   });
+  const asignados = asignarJornadas(fichajes, claveDiaAR);
   return Array.from({ length: 7 }, (_, k) => {
     const dia = sumarDias(lunes, k);
-    const delDia = fichajes.filter((f) => claveDiaAR(f.timestamp) === dia);
+    const delDia = asignados.filter((a) => a.dia === dia).map((a) => a.fichaje);
     // Hoy se cuenta en vivo del lado del cliente; acá sólo lo cerrado.
     return { dia, horas: calcularHoras(delDia, { descuentaDescanso }).horasTrabajadas };
   });
@@ -62,16 +74,13 @@ export async function GET() {
   const session = await requireEmpleadoApi();
   if (!session) return NextResponse.json({ error: "No autenticado" }, { status: 401 });
 
-  const [fichajesHoy, turno] = await Promise.all([
-    db.fichaje.findMany({
-      where: { empleadoId: session.empleadoId, timestamp: { gte: inicioDeHoy() } },
-      orderBy: { timestamp: "asc" },
-      select: CAMPOS_PUBLICOS,
-    }),
-    turnoDeHoy(session.empleadoId!),
-  ]);
+  const [jornada, turno] = await Promise.all([jornadaActual(session.empleadoId!), turnoDeHoy(session.empleadoId!)]);
+  // Lo que ve el empleado de cada fichaje: nunca la foto ni la biometría.
+  const fichajesHoy = jornada.fichajes.map((f) => ({ id: f.id, tipo: f.tipo, timestamp: f.timestamp, corregido: f.corregido }));
+  // La jornada que viene de ayer sigue en el local donde entró.
+  const localId = jornada.dia < hoyAR() ? jornada.fichajes[0]?.localId : turno?.localId;
 
-  const local = await db.local.findUnique({ where: { id: turno?.localId ?? session.localId! } });
+  const local = await db.local.findUnique({ where: { id: localId ?? session.localId! } });
   const semana = await semanaDe(session.empleadoId!, local?.descuentaDescanso);
 
   const estado = calcularHoras(fichajesHoy, { descuentaDescanso: local?.descuentaDescanso });
@@ -88,6 +97,8 @@ export async function GET() {
     local: local?.nombre ?? null,
     descuentaDescanso: local?.descuentaDescanso ?? true,
     semana,
+    /** El día de la jornada en pantalla: el de ayer si sigue abierta desde la noche. */
+    jornadaDia: jornada.dia,
   });
 }
 
@@ -106,19 +117,18 @@ export async function POST(request: Request) {
   const lat = typeof body?.lat === "number" ? body.lat : null;
   const lng = typeof body?.lng === "number" ? body.lng : null;
 
-  const [fichajesHoy, turno] = await Promise.all([
-    db.fichaje.findMany({
-      where: { empleadoId: session.empleadoId, timestamp: { gte: inicioDeHoy() } },
-      orderBy: { timestamp: "asc" },
-    }),
-    turnoDeHoy(session.empleadoId!),
-  ]);
+  const [jornada, turno] = await Promise.all([jornadaActual(session.empleadoId!), turnoDeHoy(session.empleadoId!)]);
+  const fichajesHoy = jornada.fichajes;
+  const vieneDeAyer = jornada.dia < hoyAR() && fichajesHoy.length > 0;
 
-  // Dónde ficha: manda el turno del día; si no tiene, la sucursal más cercana
-  // entre las que tiene asignadas; si ninguna tiene ubicación, la principal.
-  const local = turno
-    ? await db.local.findUnique({ where: { id: turno.localId } })
-    : await localMasCercano(session.empleadoId!, session.localId!, lat, lng);
+  // Dónde ficha: la jornada que viene de ayer se cierra donde empezó; si no,
+  // manda el turno del día; si no tiene, la sucursal más cercana entre las que
+  // tiene asignadas; si ninguna tiene ubicación, la principal.
+  const local = vieneDeAyer
+    ? await db.local.findUnique({ where: { id: fichajesHoy[0].localId } })
+    : turno
+      ? await db.local.findUnique({ where: { id: turno.localId } })
+      : await localMasCercano(session.empleadoId!, session.localId!, lat, lng);
 
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 500 });
 
