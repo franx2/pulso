@@ -1,82 +1,83 @@
 import assert from "node:assert";
-import { costoDe, INSUMOS, preciosDeInsumos, RECETAS, type LineaCompra } from "./recetas";
+import { costear, costoDeReventa, INSUMOS, preciosDeInsumos, RECETAS, ultimosPrecios, type LineaCompra } from "./recetas";
 
-// Precios reales de los remitos de agosto de 2026.
+// Precios de ejemplo, con la forma de las facturas y los remitos del proveedor.
 const compras: LineaCompra[] = [
-  { detalle: "CAFE PRESTIGE NEGRO CABRALES x kg", precioUnitario: 51837.67, fecha: "2026-08-29" },
-  { detalle: "CAFE PRESTIGE NEGRO CABRALES X KG", precioUnitario: 47997.85, fecha: "2026-08-25" },
-  { detalle: "PACK LECHE ENTERA X 12LTS", precioUnitario: 24204.67, fecha: "2026-08-29" },
-  { detalle: "HELADO DE PISTACHO", precioUnitario: 9100, fecha: "2026-08-25" },
-  { detalle: "POTE DE HELADO 1 KG 25UN", precioUnitario: 18621.9, fecha: "2026-08-25" },
-  { detalle: "POTE DE HELADO 1/4 KG 25UN", precioUnitario: 7110.18, fecha: "2026-08-25" },
-  { detalle: "CUCURUCHON DULCE X160", precioUnitario: 29743.75, fecha: "2026-08-25" },
-  { detalle: "MEDIALUNA ByN MANTECA x 100 u", precioUnitario: 43702.92, fecha: "2026-08-29" },
+  // El remito trae la lista; la factura, el neto (lista −5%).
+  { detalle: "CAFE PRESTIGE NEGRO CABRALES X KG", precioUnitario: 40000, fecha: "2026-09-01", esFactura: false },
+  { detalle: "CAFE PRESTIGE NEGRO CABRALES x kg", precioUnitario: 41800, fecha: "2026-10-01", esFactura: true },
+  { detalle: "PACK LECHE ENTERA X 12LTS", precioUnitario: 12000, fecha: "2026-10-01", esFactura: true },
+  { detalle: "AZUCAR EN SOBRES CABRALES CAJA X 800 UND", precioUnitario: 8000, fecha: "2026-10-01", esFactura: true },
+  // Dos medialunas distintas el mismo día: no es una suba, son dos productos.
+  { detalle: "MEDIALUNA ByN MANTECA PRELEUDADA x 100 u", precioUnitario: 50000, fecha: "2026-10-01", esFactura: true },
+  { detalle: "MEDIALUNA ByN MANTECA x 100 u", precioUnitario: 40000, fecha: "2026-10-01", esFactura: true },
+  // Helado: una sola lista. El pistacho ya vino con la suba; la menta, todavía no.
+  { detalle: "HELADO DE MENTA GRANIZADA", precioUnitario: 8000, fecha: "2026-10-01", esFactura: true },
+  { detalle: "HELADO DE PISTACHO", precioUnitario: 8000, fecha: "2026-10-01", esFactura: true },
+  { detalle: "HELADO DE PISTACHO", precioUnitario: 9000, fecha: "2026-11-01", esFactura: true },
+  { detalle: "POTE DE HELADO 1 KG 25UN", precioUnitario: 25000, fecha: "2026-10-01", esFactura: true },
+  { detalle: "MINI CUCURUCHON DULCE X240", precioUnitario: 24000, fecha: "2026-10-01", esFactura: true },
+  { detalle: "PRESENTACION ALARGADA 13 BOMBONES", precioUnitario: 10000, fecha: "2026-10-01", esFactura: true },
 ];
 
-const precios = preciosDeInsumos(compras);
+const ultimos = ultimosPrecios(compras);
+const precios = preciosDeInsumos(ultimos);
+const cerca = (a: number, b: number, msg?: string) => assert.ok(Math.abs(a - b) < 0.01, `${msg ?? ""} dio ${a}, esperaba ${b}`);
 
-// LA CONVERSIÓN ES EL PUNTO: un pack de 12 litros no cuesta lo mismo que un
-// litro, ni una caja de 25 potes lo mismo que un pote.
-assert.ok(Math.abs(precios.get("leche")!.precio - 24204.67 / 12) < 0.01, "leche por litro");
-assert.ok(Math.abs(precios.get("pote1")!.precio - 18621.9 / 25) < 0.01, "pote por unidad");
-assert.ok(Math.abs(precios.get("cucurucho")!.precio - 29743.75 / 160) < 0.01);
-assert.ok(Math.abs(precios.get("medialuna")!.precio - 43702.92 / 100) < 0.01);
-// El café se compra y se usa por kilo: no se divide.
-assert.strictEqual(precios.get("cafe")!.precio, 51837.67);
+// El remito se lleva a neto con el mismo 5% de la factura, y gana la compra
+// más reciente: lo que importa para el margen es lo que cuesta hoy.
+const cafe = ultimos.get("CAFE PRESTIGE NEGRO CABRALES X KG")!;
+cerca(cafe.precio, 41800);
+cerca(cafe.anterior!, 40000 * 0.95);
+assert.strictEqual(cafe.vigenteDesde, "2026-10-01");
 
-// Se toma la compra MÁS RECIENTE, no un promedio: el café subió 8% en cuatro
-// días y para saber si algo todavía deja margen importa lo que cuesta hoy.
-assert.strictEqual(precios.get("cafe")!.fecha, "2026-08-29");
+// LA CONVERSIÓN ES EL PUNTO: un pack de 12 litros no cuesta lo mismo que un ml.
+cerca(precios.get("leche")!.porUnidad, 1);
+cerca(precios.get("cafe")!.porUnidad, 41.8);
 
-// --- Costo de la infusión que llevan todas las promos ---
+// Dos productos de un mismo insumo se promedian y no parecen una suba.
+cerca(precios.get("medialuna")!.porUnidad, 450);
+assert.strictEqual(ultimos.get("MEDIALUNA BYN MANTECA X 100 U")!.anterior, null);
 
-const clasica = costoDe("PROMO CLÁSICA", precios)!;
-assert.ok(clasica);
-// 14 g de café + 150 ml de leche + 2 medialunas.
-const esperado = 0.014 * 51837.67 + 0.15 * (24204.67 / 12) + 2 * (43702.92 / 100);
-assert.ok(Math.abs(clasica.costo - esperado) < 0.01, `dio ${clasica.costo}, esperaba ${esperado}`);
-assert.strictEqual(clasica.detalle.length, 3);
-assert.ok(clasica.completo);
+// El helado es una lista: la suba del pistacho rige para todos los sabores.
+cerca(precios.get("helado")!.porUnidad, 9);
 
-// --- Helados: el envase cuenta ---
+// Cortado suelto: 14 g + 40 ml + un sobre de azúcar.
+cerca(costear("CORTADO", precios)!.costo, 14 * 41.8 + 40 + 10);
 
-const pote1 = costoDe("HELADO 1KG", precios)!;
-assert.ok(Math.abs(pote1.costo - (9100 + 18621.9 / 25)) < 0.01);
-const cucurucho = costoDe("CUCURUCHO 2 SABORES", precios)!;
-assert.ok(Math.abs(cucurucho.costo - (0.12 * 9100 + 29743.75 / 160)) < 0.01);
+// La promo usa la infusión que fijó el dueño (14 g y 150 ml), no un cortado.
+const clasica = costear("PROMO CLÁSICA", precios)!;
+cerca(clasica.costo, 14 * 41.8 + 150 + 10 + 2 * 450);
+assert.ok(clasica.supuesto, "la elección de 2 medialunas se muestra como supuesto");
 
-// EL ORDEN IMPORTA: "CUCURUCHON 3 SABORES" lleva más helado que un cucurucho
-// común, y su regla va antes. Si ganara la otra, se subestimaría el costo.
-const cucuruchon = costoDe("CUCURUCHON 3 SABORES", precios)!;
-assert.strictEqual(cucuruchon.nombre, "Cucuruchón");
-assert.ok(cucuruchon.costo > cucurucho.costo);
+// Helado por formato: los gramos de la equivalencia (editable) + el envase.
+cerca(costear("HELADO 1KG", precios)!.costo, 1070 * 9 + 1000);
+cerca(costear("HELADO 1KG", precios, { kilo: 1000 })!.costo, 1000 * 9 + 1000, "con la equivalencia editada");
+cerca(costear("CUCURUCHO 2 SABORES", precios)!.costo, 180 * 9 + 100);
 
-// Y una promo genérica cae en la receta general, que sólo cubre la infusión y
-// lo dice: dar por completo un costo que no lo está sería peor que no tenerlo.
-const generica = costoDe("PROMO TOSTÓN", precios)!;
-assert.strictEqual(generica.nombre, "Promo (sólo infusión)");
-assert.ok(!generica.completo);
-assert.match(generica.faltante!, /acompañamiento/);
-
-// El pote de 1/2 kg no existe en los remitos: se usa el de 1/4 y queda dicho.
-const medio = costoDe("HELADO 1/2KG", precios)!;
-assert.ok(!medio.completo);
-assert.match(medio.faltante!, /1\/2 kg no está/);
-
-// Sin receta no se inventa un costo.
-assert.strictEqual(costoDe("TABLETA 70%", precios), null);
+// EL ORDEN IMPORTA: "ESPRESSO DOBLE" no puede caer en "ESPRESSO", ni "PROMO
+// TOSTÓN" en el tostón suelto.
+assert.strictEqual(costear("ESPRESSO DOBLE", precios)!.receta, "Espresso doble");
+assert.strictEqual(costear("PROMO TOSTÓN", precios)!.receta, "Promo tostón");
+assert.strictEqual(costear("LICUADO DE HELADO Y LECHE", precios)!.receta, "Licuado de helado y leche");
 
 // Un insumo sin compras se reporta, no se cuenta como cero.
-const sinCafe = costoDe("PROMO CLÁSICA", preciosDeInsumos(compras.filter((c) => !/CAFE/i.test(c.detalle))))!;
-assert.deepStrictEqual(sinCafe.sinPrecio, ["Café en grano"]);
-assert.ok(!sinCafe.completo);
-assert.ok(sinCafe.costo < clasica.costo);
+const tostado = costear("TOSTADO DE JYQ (ENTERO)", precios)!;
+assert.ok(tostado.faltan.includes("Jamón cocido"));
+assert.strictEqual(tostado.costo, 0);
 
-// Toda receta tiene que referirse a insumos que existen.
+// Sin receta no se inventa un costo; lo que se revende con el mismo nombre
+// cuesta lo que se pagó.
+assert.strictEqual(costear("TABLETA 70%", precios), null);
+cerca(costoDeReventa("PRESENTACIÓN ALARGADA 13 BOMBONES.", ultimos)!.costo, 10000);
+
+// Toda receta se refiere a insumos y recetas que existen.
+const ids = new Set(RECETAS.map((r) => r.id));
 for (const receta of RECETAS) {
   for (const c of receta.componentes) {
-    assert.ok(INSUMOS.some((i) => i.id === c.insumo), `"${receta.nombre}" usa un insumo inexistente: ${c.insumo}`);
-    assert.ok(c.cantidad > 0, `"${receta.nombre}" tiene una cantidad no positiva`);
+    if ("insumo" in c) assert.ok(INSUMOS.some((x) => x.id === c.insumo), `"${receta.nombre}" usa un insumo inexistente: ${c.insumo}`);
+    if ("receta" in c) assert.ok(ids.has(c.receta), `"${receta.nombre}" usa una receta inexistente: ${c.receta}`);
+    if ("cantidad" in c) assert.ok(c.cantidad > 0, `"${receta.nombre}" tiene una cantidad no positiva`);
   }
 }
 

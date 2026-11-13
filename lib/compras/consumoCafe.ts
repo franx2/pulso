@@ -85,9 +85,9 @@ const normalizar = (texto: string) =>
 /**
  * El café en el remito.
  *
- * Cabrales es la marca que compra el negocio; el mismo patrón que usa
- * `lib/compras/recetas.ts` para costear la promo, para que las dos cuentas
- * midan exactamente lo mismo.
+ * Cabrales es la marca que compra el negocio. Acá entran todos los cafés
+ * (también el Colombia y el descafeinado) porque se mide cuánto café se va;
+ * `lib/compras/recetas.ts` costea la taza sólo con el Prestige de la máquina.
  */
 export function esCafeComprado(detalle: string): boolean {
   return /CAFE.*CABRALES|CABRALES.*(GRANO|PRESTIGE)/i.test(detalle);

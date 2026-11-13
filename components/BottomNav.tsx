@@ -7,6 +7,7 @@ import {
   Brain,
   BarChart3,
   CalendarDays,
+  ChefHat,
   Clock,
   MoreHorizontal,
   LayoutDashboard,
@@ -35,7 +36,8 @@ export type NavActivo =
   | "compras"
   | "sectores"
   | "resultado"
-  | "banco";
+  | "banco"
+  | "carta";
 
 type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol; grupo: string };
 
@@ -48,6 +50,7 @@ export const ITEMS: Item[] = [
   { key: "pronostico", href: "/admin/pronostico", Icon: Brain, label: "Pronóstico", minimo: "ADMIN", grupo: "Análisis" },
   { key: "compras", href: "/admin/compras", Icon: Truck, label: "Compras", minimo: "ADMIN", grupo: "Análisis" },
   { key: "sectores", href: "/admin/sectores", Icon: PieChart, label: "Sectores", minimo: "ADMIN", grupo: "Análisis" },
+  { key: "carta", href: "/admin/carta", Icon: ChefHat, label: "Carta", minimo: "ADMIN", grupo: "Análisis" },
   { key: "resultado", href: "/admin/resultado", Icon: Scale, label: "Resultado", minimo: "ADMIN", grupo: "Análisis" },
   { key: "banco", href: "/admin/banco", Icon: Landmark, label: "Banco", minimo: "ADMIN", grupo: "Análisis" },
   { key: "reportes", href: "/admin/reportes", Icon: BarChart3, label: "Reportes", minimo: "ADMIN", grupo: "Análisis" },

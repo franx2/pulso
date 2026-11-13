@@ -229,7 +229,7 @@ export function importeAFacturar(c: { tipo: string; total: number; ajustePct: nu
   const lista = c.total / (1 + c.ajustePct / 100);
   return Math.round(lista * (1 - DESCUENTO_FACTURA) * (1 + IVA) * 100) / 100;
 }
-const DESCUENTO_FACTURA = 0.05;
+export const DESCUENTO_FACTURA = 0.05;
 
 /**
  * "USO DE MARCA SEPTIEMBRE", normalizado, si las observaciones empiezan así.
