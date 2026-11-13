@@ -1,8 +1,10 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Download, FileSpreadsheet, Printer, Search } from "lucide-react";
-import { Badge, Button, Card, EmptyState, Input, Label, PageTitle, Select, Spinner } from "@/components/ui";
+import { Download, FileSpreadsheet, Printer } from "lucide-react";
+import { Badge, Button, Card, EmptyState, Label, PageTitle, Select, Spinner } from "@/components/ui";
+import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
+import { rangoDias } from "@/lib/periodo";
 import CostoLaboral from "./CostoLaboral";
 
 type Empleado = { id: string; nombre: string };
@@ -22,23 +24,15 @@ type Fila = {
   montoAPagar: number | null;
 };
 
-function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
-}
-
-function haceUnaSemanaISO() {
-  const d = new Date();
-  d.setDate(d.getDate() - 7);
-  return d.toISOString().slice(0, 10);
-}
-
 export default function ReportesClient() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
   const [locales, setLocales] = useState<Local[]>([]);
   const [empleadoId, setEmpleadoId] = useState("");
   const [localId, setLocalId] = useState("");
-  const [desde, setDesde] = useState(haceUnaSemanaISO());
-  const [hasta, setHasta] = useState(hoyISO());
+  // El período compartido de todas las pantallas, en días concretos: la
+  // liquidación y las descargas trabajan con desde/hasta.
+  const { valor, setValor, params: periodo, hoy } = usePeriodo();
+  const { desde, hasta } = rangoDias(periodo, hoy);
   const [filas, setFilas] = useState<Fila[]>([]);
   const [cargando, setCargando] = useState(false);
 
@@ -51,22 +45,24 @@ export default function ReportesClient() {
       .then((d) => setLocales(d.locales ?? []));
   }, []);
 
-  async function buscar() {
-    setCargando(true);
+  // Se actualiza solo al cambiar un filtro: con el período compartido, un
+  // botón "Buscar" aparte dejaba la pantalla mostrando otro rango que el elegido.
+  useEffect(() => {
+    const controlador = new AbortController();
     const params = new URLSearchParams({ desde, hasta });
     if (empleadoId) params.set("empleadoId", empleadoId);
     if (localId) params.set("localId", localId);
-    const res = await fetch(`/api/reportes?${params}`);
-    const data = await res.json();
-    setFilas(data.filas ?? []);
-    setCargando(false);
-  }
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount, no data lib
-    buscar();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch reactivo, sin librería de datos
+    setCargando(true);
+    fetch(`/api/reportes?${params}`, { signal: controlador.signal })
+      .then((r) => r.json())
+      .then((data) => setFilas(data.filas ?? []))
+      .catch(() => {})
+      .finally(() => {
+        if (!controlador.signal.aborted) setCargando(false);
+      });
+    return () => controlador.abort();
+  }, [desde, hasta, empleadoId, localId]);
 
   function url(extra: Record<string, string> = {}, base = "/api/reportes") {
     const params = new URLSearchParams({ desde, hasta, ...extra });
@@ -82,18 +78,12 @@ export default function ReportesClient() {
 
   return (
     <div className="flex flex-col gap-6">
-      <PageTitle subtitle="Horas trabajadas por rango de fechas">Reportes</PageTitle>
+      <PageTitle subtitle="Horas trabajadas en el período elegido">Reportes</PageTitle>
 
       <Card className="flex flex-col gap-3">
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <Label>Desde</Label>
-            <Input type="date" value={desde} onChange={(e) => setDesde(e.target.value)} />
-          </div>
-          <div>
-            <Label>Hasta</Label>
-            <Input type="date" value={hasta} onChange={(e) => setHasta(e.target.value)} />
-          </div>
+        <div>
+          <Label>Período</Label>
+          <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} />
         </div>
         {locales.length > 1 && (
           <div>
@@ -119,10 +109,6 @@ export default function ReportesClient() {
             ))}
           </Select>
         </div>
-        <Button onClick={buscar}>
-          <Search size={16} />
-          Buscar
-        </Button>
         <div className="flex flex-wrap gap-2">
           <a href={url({ formato: "xlsx" })} className="flex-1">
             <Button variant="ghost" type="button" className="w-full">

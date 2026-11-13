@@ -88,3 +88,23 @@ body {
   --serie-real: #c1cbc6;
   --serie-banda: rgba(55, 230, 176, 0.18);
 }
+
+/* El panel del selector de período: baja apenas desde el botón que lo abrió. */
+@keyframes aparecer {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.98);
+  }
+}
+
+/* En el celular el panel sube desde abajo, sobre un velo que atenúa la pantalla. */
+@keyframes subir {
+  from {
+    transform: translateY(100%);
+  }
+}
+@keyframes velo {
+  from {
+    opacity: 0;
+  }
+}

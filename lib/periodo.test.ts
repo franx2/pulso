@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { diaDeFechaSql, diasEntre } from "./fechaAR";
-import { rangoDias, resolverRango, ultimoDiaDelMes, MAX_DIAS_RANGO } from "./periodo";
+import { moverPeriodo, normalizarPeriodo, rangoDias, resolverRango, ultimoDiaDelMes, valorPorDefecto, MAX_DIAS_RANGO } from "./periodo";
 
 /**
  * Comparar contra una ventana incompleta inventa variaciones. Ya pasó tres
@@ -145,4 +145,48 @@ assert.strictEqual(dias("periodo=mes-calendario&mes=2026-09", "2026-09-05").hast
 assert.strictEqual(dias("periodo=mes-calendario&mes=2026-08", "2026-09-05").hasta, "2026-08-31");
 assert.strictEqual(dias("desde=2020-01-01&hasta=2026-01-01", "2026-09-05").hasta, "2021-12-30", "se recorta al tope");
 
+
+// --- Las flechas del selector: anterior y siguiente del mismo largo ---
+
+const HOY = "2026-11-13";
+const def = valorPorDefecto(HOY);
+assert.strictEqual(def.periodo, "mtd", "arranca en este mes");
+
+// Este mes → octubre → septiembre; y de octubre para adelante vuelve a "este mes".
+const oct = moverPeriodo(def, -1, HOY)!;
+assert.deepStrictEqual([oct.periodo, oct.mes], ["mes-calendario", "2026-10"]);
+assert.strictEqual(moverPeriodo(oct, -1, HOY)!.mes, "2026-09");
+assert.strictEqual(moverPeriodo(oct, 1, HOY)!.periodo, "mtd");
+assert.strictEqual(moverPeriodo(def, 1, HOY), null, "no hay mes que viene");
+
+// Enero para atrás cruza el año.
+assert.strictEqual(moverPeriodo({ ...def, periodo: "mes-calendario", mes: "2026-01" }, -1, HOY)!.mes, "2025-12");
+
+// Año: para atrás sí, para adelante no pasa del año en curso.
+const anio = { ...def, periodo: "anio-calendario" as const, anio: "2026" };
+assert.strictEqual(moverPeriodo(anio, -1, HOY)!.anio, "2025");
+assert.strictEqual(moverPeriodo(anio, 1, HOY), null);
+
+// Hoy → ayer → hoy.
+const ayer = moverPeriodo({ ...def, periodo: "hoy" }, -1, HOY)!;
+assert.deepStrictEqual([ayer.periodo, ayer.desde, ayer.hasta], ["rango", "2026-11-12", "2026-11-12"]);
+assert.strictEqual(moverPeriodo(ayer, 1, HOY)!.periodo, "hoy");
+
+// Últimos 7 días → los 7 de antes, pegados.
+const sem = moverPeriodo({ ...def, periodo: "semana" }, -1, HOY)!;
+assert.deepStrictEqual([sem.desde, sem.hasta], ["2026-10-31", "2026-11-06"]);
+assert.strictEqual(moverPeriodo({ ...def, periodo: "semana" }, 1, HOY), null);
+
+// Un rango que quedaría en el futuro se apoya en hoy con el mismo largo.
+const r = moverPeriodo({ ...def, periodo: "rango", desde: "2026-11-01", hasta: "2026-11-10" }, 1, HOY)!;
+assert.deepStrictEqual([r.desde, r.hasta], ["2026-11-04", "2026-11-13"]);
+
+// --- Lo guardado en el navegador o en la URL se valida ---
+
+assert.strictEqual(normalizarPeriodo(null, HOY).periodo, "mtd");
+assert.strictEqual(normalizarPeriodo({ periodo: "cualquiera" }, HOY).periodo, "mtd");
+assert.strictEqual(normalizarPeriodo({ periodo: "mes-calendario", mes: "2026-11" }, HOY).periodo, "mtd", "el mes en curso es este mes");
+assert.strictEqual(normalizarPeriodo({ periodo: "mes-calendario", mes: "2027-01" }, HOY).mes, "2026-11", "un mes futuro no");
+const futuro = normalizarPeriodo({ periodo: "rango", desde: "2026-11-20", hasta: "2026-12-01" }, HOY);
+assert.deepStrictEqual([futuro.desde, futuro.hasta], [HOY, HOY]);
 console.log("lib/periodo.test.ts: todos los checks pasaron");

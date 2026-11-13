@@ -15,7 +15,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { ComparisonChart, type ComparisonPoint } from "@/components/AnalyticsCharts";
-import PeriodoSelector, { OPCIONES, type Periodo } from "@/components/PeriodoSelector";
+import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { Badge, Button, EmptyState, Input, Metrica, PageTitle, Panel, SelectorSegmentado } from "@/components/ui";
 import ProductosPanel from "./ProductosPanel";
 import { fechaCompleta, fechaLarga, numeroCompacto, plata, plataCompacta, numero } from "@/lib/formato";
@@ -457,11 +457,6 @@ function DashboardSkeleton() {
 
 export type EstadoInicial = {
   vista?: string;
-  periodo?: string;
-  mes?: string;
-  anio?: string;
-  desde?: string;
-  hasta?: string;
   dia?: string;
   local?: string;
 };
@@ -473,17 +468,9 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   const [vista, setVista] = useState<Vista>(
     VISTAS.some((v) => v.clave === inicial.vista) ? (inicial.vista as Vista) : "rendimiento"
   );
-  const [periodo, setPeriodo] = useState<Periodo>(
-    OPCIONES.some((p) => p.clave === inicial.periodo) ? (inicial.periodo as Periodo) : "mes"
-  );
-  const [mesElegido, setMesElegido] = useState(
-    /^\d{4}-\d{2}$/.test(inicial.mes ?? "") ? inicial.mes! : hoy.slice(0, 7)
-  );
-  const [anioElegido, setAnioElegido] = useState(
-    /^\d{4}$/.test(inicial.anio ?? "") ? inicial.anio! : hoy.slice(0, 4)
-  );
-  const [desde, setDesde] = useState(esDia(inicial.desde) ? inicial.desde : sumarDias(hoy, -29));
-  const [hasta, setHasta] = useState(esDia(inicial.hasta) ? inicial.hasta : hoy);
+  // El período es el mismo de todas las pantallas: lo elegido en Compras o
+  // Resultado se ve acá, y al revés.
+  const { valor: periodo, setValor: setPeriodo, params: paramsPeriodo } = usePeriodo();
   const [fechaLocal, setFechaLocal] = useState(esDia(inicial.dia) ? inicial.dia : hoy);
   const [alcance, setAlcance] = useState(inicial.local ?? "");
   const [metricaGrafico, setMetricaGrafico] = useState<MetricaGrafico>("ventas");
@@ -500,13 +487,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
 
   useEffect(() => {
     const controlador = new AbortController();
-    const params = new URLSearchParams({ periodo });
-    if (periodo === "mes-calendario") params.set("mes", mesElegido);
-    if (periodo === "anio-calendario") params.set("anio", anioElegido);
-    if (periodo === "rango") {
-      params.set("desde", desde);
-      params.set("hasta", hasta);
-    }
+    const params = new URLSearchParams(paramsPeriodo);
 
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch reactivo sin librería de datos
     setCargando(true);
@@ -526,7 +507,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
         if (!controlador.signal.aborted) setCargando(false);
       });
     return () => controlador.abort();
-  }, [periodo, mesElegido, anioElegido, desde, hasta, revision]);
+  }, [paramsPeriodo, revision]);
 
   useEffect(() => {
     if (vista !== "locales" || !alcance) return;
@@ -556,22 +537,17 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
   // El estado vive también en la URL: recargar no vuelve a la vista por
   // defecto y el link que se manda muestra lo mismo que se está viendo.
   // `replaceState` y no `router.replace` a propósito: los datos ya se piden
-  // por fetch, así que no hace falta navegar ni pisar el historial.
+  // por fetch, así que no hace falta navegar ni pisar el historial. El
+  // período lo escribe `usePeriodo`; acá sólo lo propio de esta pantalla.
   useEffect(() => {
-    const params = new URLSearchParams();
-    if (vista !== "rendimiento") params.set("vista", vista);
-    if (periodo !== "mes") params.set("periodo", periodo);
-    if (periodo === "mes-calendario") params.set("mes", mesElegido);
-    if (periodo === "anio-calendario") params.set("anio", anioElegido);
-    if (periodo === "rango") {
-      params.set("desde", desde);
-      params.set("hasta", hasta);
-    }
-    if (alcance) params.set("local", alcance);
-    if (vista === "locales" && alcance) params.set("dia", fechaLocal);
-    const query = params.toString();
-    window.history.replaceState(null, "", query ? `?${query}` : window.location.pathname);
-  }, [vista, periodo, mesElegido, anioElegido, desde, hasta, alcance, fechaLocal]);
+    const url = new URL(window.location.href);
+    const poner = (clave: string, valor: string | null) =>
+      valor ? url.searchParams.set(clave, valor) : url.searchParams.delete(clave);
+    poner("vista", vista !== "rendimiento" ? vista : null);
+    poner("local", alcance || null);
+    poner("dia", vista === "locales" && alcance ? fechaLocal : null);
+    window.history.replaceState(window.history.state, "", url);
+  }, [vista, alcance, fechaLocal]);
 
   /** El encargado la vio y la da por atendida; deja de aparecer. */
   async function resolverAlerta(id: string) {
@@ -718,19 +694,9 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
               </div>
             ) : (
               <div className="flex min-w-0 items-center gap-2">
-                <CalendarRange size={16} className="shrink-0 text-slate-500" aria-hidden />
-                <span className="shrink-0 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Período</span>
-                <PeriodoSelector
-                  valor={{ periodo, mes: mesElegido, anio: anioElegido, desde, hasta }}
-                  onChange={(v) => {
-                    setPeriodo(v.periodo);
-                    setMesElegido(v.mes);
-                    setAnioElegido(v.anio);
-                    setDesde(v.desde);
-                    setHasta(v.hasta);
-                  }}
-                  hoy={hoy}
-                />
+                <CalendarRange size={16} className="hidden shrink-0 text-slate-500 sm:block" aria-hidden />
+                <span className="hidden shrink-0 text-xs font-semibold text-slate-500 sm:inline dark:text-[#94a19c]">Período</span>
+                <PeriodoSelector valor={periodo} onChange={setPeriodo} hoy={hoy} rango={datos?.rango} />
               </div>
             )}
           </div>

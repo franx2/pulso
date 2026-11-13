@@ -61,7 +61,7 @@ const COLOR: Record<SectorClave, string> = {
 
 export default function SectoresClient() {
   const [datos, setDatos] = useState<Respuesta | null>(null);
-  const { valor, setValor, params: periodo, hoy } = usePeriodo("mes");
+  const { valor, setValor, params: periodo, hoy } = usePeriodo();
   const [localId, setLocalId] = useState("");
   const [desplegado, setDesplegado] = useState<string | null>(null);
   const [error, setError] = useState("");

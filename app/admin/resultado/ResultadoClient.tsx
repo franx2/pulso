@@ -67,7 +67,7 @@ const ARREGLO: Record<string, { texto: string; href: string }> = {
 };
 
 export default function ResultadoClient() {
-  const { valor, setValor, params: periodo, hoy } = usePeriodo("mtd");
+  const { valor, setValor, params: periodo, hoy } = usePeriodo();
   const [localId, setLocalId] = useState("");
   const [vista, setVista] = useState<Vista>("resumen");
   const [datos, setDatos] = useState<Respuesta | null>(null);

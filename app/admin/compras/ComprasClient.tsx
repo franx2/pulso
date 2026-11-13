@@ -323,7 +323,7 @@ export default function ComprasClient() {
   const [revision, setRevision] = useState(0);
   const [guardando, setGuardando] = useState<string | null>(null);
   const [localId, setLocalId] = useState("");
-  const { valor, setValor, params: periodo, hoy } = usePeriodo("mes");
+  const { valor, setValor, params: periodo, hoy } = usePeriodo();
   const [vista, setVista] = useState<Vista>("resumen");
   const [busqueda, setBusqueda] = useState("");
 
@@ -492,7 +492,7 @@ export default function ComprasClient() {
           </div>
           <div>
             <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Período</p>
-            <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} />
+            <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos} />
           </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">

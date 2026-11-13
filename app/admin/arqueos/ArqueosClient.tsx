@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { Wallet } from "lucide-react";
 import { Badge, Card, EmptyState, Label, PageTitle, Select, Spinner } from "@/components/ui";
+import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
+import { rangoDias } from "@/lib/periodo";
 
 type Local = { id: string; nombre: string };
 type Arqueo = {
@@ -28,6 +30,8 @@ export default function ArqueosClient() {
   const [localId, setLocalId] = useState("");
   const [arqueos, setArqueos] = useState<Arqueo[]>([]);
   const [cargando, setCargando] = useState(true);
+  const { valor, setValor, params: periodo, hoy } = usePeriodo();
+  const { desde, hasta } = rangoDias(periodo, hoy);
 
   useEffect(() => {
     fetch("/api/locales")
@@ -38,32 +42,43 @@ export default function ArqueosClient() {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-change, no data lib
     setCargando(true);
-    const params = new URLSearchParams(localId ? { localId } : {});
-    fetch(`/api/arqueos?${params}`)
+    const controlador = new AbortController();
+    const params = new URLSearchParams({ desde, hasta, ...(localId ? { localId } : {}) });
+    fetch(`/api/arqueos?${params}`, { signal: controlador.signal })
       .then((r) => r.json())
       .then((d) => setArqueos(d.arqueos ?? []))
-      .finally(() => setCargando(false));
-  }, [localId]);
+      .catch(() => {})
+      .finally(() => {
+        if (!controlador.signal.aborted) setCargando(false);
+      });
+    return () => controlador.abort();
+  }, [localId, desde, hasta]);
 
   return (
     <div className="flex flex-col gap-6">
-      <PageTitle subtitle="Efectivo esperado (según Fudo) vs. contado al fichar salida, últimos 7 días">
+      <PageTitle subtitle="Efectivo esperado (según Fudo) vs. contado al fichar salida">
         Arqueos de caja
       </PageTitle>
 
-      {locales.length > 1 && (
-        <Card>
-          <Label>Sucursal</Label>
-          <Select value={localId} onChange={(e) => setLocalId(e.target.value)}>
-            <option value="">Todas</option>
-            {locales.map((l) => (
-              <option key={l.id} value={l.id}>
-                {l.nombre}
-              </option>
-            ))}
-          </Select>
-        </Card>
-      )}
+      <Card className="flex flex-col gap-3">
+        <div>
+          <Label>Período</Label>
+          <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} />
+        </div>
+        {locales.length > 1 && (
+          <div>
+            <Label>Sucursal</Label>
+            <Select value={localId} onChange={(e) => setLocalId(e.target.value)}>
+              <option value="">Todas</option>
+              {locales.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nombre}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
+      </Card>
 
       {cargando ? (
         <Spinner />

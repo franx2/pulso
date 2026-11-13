@@ -3,11 +3,12 @@ import { PageShell } from "@/components/PageShell";
 import DashboardClient from "./DashboardClient";
 
 /**
- * El período y el local elegidos viajan en la URL para que el tablero se
- * pueda compartir por link ("mirá marzo en Chacras") y para que recargar no
- * devuelva a la vista por defecto. Se leen acá, en el servidor, y bajan como
- * valores iniciales: después el cliente los mantiene con `replaceState`, sin
- * navegar, porque los datos ya se piden por fetch.
+ * La vista y el local elegidos viajan en la URL para que el tablero se
+ * pueda compartir por link ("mirá Chacras") y para que recargar no devuelva a
+ * la vista por defecto. Se leen acá, en el servidor, y bajan como valores
+ * iniciales: después el cliente los mantiene con `replaceState`, sin navegar,
+ * porque los datos ya se piden por fetch. El período es el compartido de
+ * todas las pantallas y lo lee `usePeriodo` en el cliente.
  */
 export default async function DashboardPage({
   searchParams,
@@ -26,11 +27,6 @@ export default async function DashboardPage({
       <DashboardClient
         inicial={{
           vista: texto("vista"),
-          periodo: texto("periodo"),
-          mes: texto("mes"),
-          anio: texto("anio"),
-          desde: texto("desde"),
-          hasta: texto("hasta"),
           dia: texto("dia"),
           local: texto("local"),
         }}
