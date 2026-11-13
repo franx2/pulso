@@ -63,6 +63,18 @@ export function porcentaje(n: number | null | undefined, opciones: { signo?: boo
   return `${prefijo}${n.toFixed(decimales)}%`;
 }
 
+/**
+ * Horas para una persona, no para una planilla: "5 h 30 min", "45 min".
+ * El "8,50 h" de la liquidación obliga a hacer la cuenta de cabeza.
+ */
+export function duracion(horas: number): string {
+  const total = Math.max(0, Math.round(horas * 60));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  if (h === 0) return `${m} min`;
+  return m === 0 ? `${h} h` : `${h} h ${m} min`;
+}
+
 export function kilos(n: number): string {
   return `${numero(n, 1)} kg`;
 }

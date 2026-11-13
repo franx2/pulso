@@ -21,7 +21,7 @@ export default function RegistrarRostro({
   const [abierto, setAbierto] = useState(false);
 
   return (
-    <Card className="w-full max-w-xs">
+    <Card className="w-full">
       <SectionTitle>Reconocimiento facial</SectionTitle>
       <p className="mb-3 text-sm text-slate-500 dark:text-[#94a19c]">
         {registrado

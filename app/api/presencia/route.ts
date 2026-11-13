@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { requireEncargadoApi } from "@/lib/session";
-import { comoFechaSql, inicioDelDia } from "@/lib/fechas";
+import { comoFechaSql, finDelDia, inicioDelDia } from "@/lib/fechas";
 import { fotoDelDia, sincronizarAlertas, notificarAlertasPendientes } from "@/lib/presencia";
 
 export async function GET(request: Request) {
@@ -54,6 +54,7 @@ export async function GET(request: Request) {
       },
       select: {
         id: true,
+        empleadoId: true,
         tipo: true,
         timestamp: true,
         rostro: true,
@@ -65,6 +66,19 @@ export async function GET(request: Request) {
     }),
   ]);
 
+  // Para aprobar con criterio: qué fichó esa persona el día que pide corregir.
+  const delDia = await Promise.all(
+    correcciones.map((c) => {
+      const momento = c.fechaHora ?? c.fichaje?.timestamp;
+      if (!momento) return Promise.resolve([]);
+      return db.fichaje.findMany({
+        where: { empleadoId: c.empleadoId, timestamp: { gte: inicioDelDia(momento), lte: finDelDia(momento) } },
+        select: { tipo: true, timestamp: true },
+        orderBy: { timestamp: "asc" },
+      });
+    })
+  );
+
   return NextResponse.json({
     filas: foto.map((f) => f.fila),
     alertas: alertas.map((a) => ({
@@ -73,8 +87,10 @@ export async function GET(request: Request) {
       detalle: a.detalle,
       empleado: a.empleado.nombre,
     })),
-    correcciones: correcciones.map((c) => ({
+    correcciones: correcciones.map((c, k) => ({
       id: c.id,
+      empleadoId: c.empleadoId,
+      delDia: delDia[k].map((f) => ({ tipo: f.tipo, timestamp: f.timestamp.toISOString() })),
       empleado: c.empleado.nombre,
       tipo: c.tipo,
       tipoFichaje: c.tipoFichaje,
@@ -95,6 +111,7 @@ export async function GET(request: Request) {
     })),
     rostrosDudosos: rostrosDudosos.map((f) => ({
       id: f.id,
+      empleadoId: f.empleadoId,
       empleado: f.empleado.nombre,
       tipo: f.tipo,
       timestamp: f.timestamp.toISOString(),

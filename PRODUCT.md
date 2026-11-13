@@ -53,7 +53,7 @@ Sin materiales de marca (logo, fotos, cartelería) disponibles todavía. Sí hay
 
 ## Product Principles
 
-1. Un fichaje nunca se bloquea: si falla la cámara, el GPS o el reconocimiento facial, el marcado igual se registra y queda señalado para que un encargado lo revise — nadie se queda sin poder fichar por un permiso denegado.
+1. La cámara nunca bloquea un fichaje: si falla la cámara o el reconocimiento facial, el marcado igual se registra y queda señalado para que un encargado lo revise. La ubicación sí es obligatoria en los locales con geocerca (decisión del dueño, 13/11/2026): sin GPS no se ficha, y la pantalla explica cómo activarlo. Lo que no se pudo fichar lo arregla el encargado desde la jornada, con motivo auditado.
 2. Se diseña para condiciones reales de cocina (vapor, guantes, luz mala), no para una oficina con buena luz.
 3. Lo multi-sucursal es el caso normal, no un agregado posterior: cada política (horario, descanso, tope de horas, geocerca) vive por local, porque el negocio abre sucursales activamente.
 4. Se prioriza biometría del dispositivo sobre secretos compartidos (PIN, contraseña) cuando es posible, porque el personal comparte turnos y celulares y olvida contraseñas.

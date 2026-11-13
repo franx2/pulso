@@ -64,12 +64,17 @@ const TONO: Record<EstadoSolicitud, "amber" | "emerald" | "slate"> = {
 /** Instante real (fichaje corregido): se muestra en hora local. */
 const diaLocal = (iso: string) =>
   fechaCorta(new Date(iso));
+const hoyISODe = (iso: string) => {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+};
 const hoyISO = () => {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 };
 
-export default function MisSolicitudes() {
+/** `revision` cambia cuando se pidió una corrección desde la lista de hoy. */
+export default function MisSolicitudes({ revision = 0 }: { revision?: number }) {
   const [correcciones, setCorrecciones] = useState<Correccion[]>([]);
   const [ausencias, setAusencias] = useState<Ausencia[]>([]);
   const [modal, setModal] = useState<"correccion" | "ausencia" | null>(null);
@@ -85,13 +90,13 @@ export default function MisSolicitudes() {
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch-on-mount, no data lib
-    cargar();
-  }, []);
+    cargar().catch(() => undefined);
+  }, [revision]);
 
   const pendientes = [...correcciones, ...ausencias].filter((s) => s.estado === "PENDIENTE").length;
 
   return (
-    <Card className="w-full max-w-xs">
+    <Card className="w-full">
       <SectionTitle
         action={pendientes > 0 ? <Badge tone="amber">{pendientes} pendiente{pendientes === 1 ? "" : "s"}</Badge> : undefined}
       >
@@ -101,7 +106,7 @@ export default function MisSolicitudes() {
       <div className="flex gap-2">
         <Button variant="ghost" className="flex-1 text-xs" onClick={() => setModal("correccion")}>
           <PencilLine size={14} />
-          Corregir fichaje
+          Falta un fichaje
         </Button>
         <Button variant="ghost" className="flex-1 text-xs" onClick={() => setModal("ausencia")}>
           <Palmtree size={14} />
@@ -164,13 +169,42 @@ export default function MisSolicitudes() {
   );
 }
 
-function ModalCorreccion({ onClose, onListo }: { onClose: () => void; onListo: () => void }) {
-  const [tipoFichaje, setTipoFichaje] = useState("ENTRADA");
-  const [fecha, setFecha] = useState(hoyISO());
-  const [hora, setHora] = useState("09:00");
+const CON_ARTICULO: Record<string, string> = {
+  ENTRADA: "la entrada",
+  SALIDA: "la salida",
+  DESCANSO_INICIO: "el inicio del descanso",
+  DESCANSO_FIN: "la vuelta del descanso",
+};
+
+export type FichajeACorregir = { id: string; tipo: string; timestamp: string };
+
+const horaLocal = (iso: string) => {
+  const d = new Date(iso);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+};
+
+/**
+ * Pedir una corrección. Sin `fichaje`, es agregar uno que faltó; con un
+ * fichaje de la lista, es cambiarle la hora o pedir que lo borren porque se
+ * marcó sin querer.
+ */
+export function ModalCorreccion({
+  onClose,
+  onListo,
+  fichaje,
+}: {
+  onClose: () => void;
+  onListo: () => void;
+  fichaje?: FichajeACorregir;
+}) {
+  const [accion, setAccion] = useState<"MODIFICAR" | "ELIMINAR">("MODIFICAR");
+  const [tipoFichaje, setTipoFichaje] = useState(fichaje?.tipo ?? "ENTRADA");
+  const [fecha, setFecha] = useState(fichaje ? hoyISODe(fichaje.timestamp) : hoyISO());
+  const [hora, setHora] = useState(fichaje ? horaLocal(fichaje.timestamp) : "09:00");
   const [motivo, setMotivo] = useState("");
   const [error, setError] = useState("");
   const [enviando, setEnviando] = useState(false);
+  const tipo = fichaje ? accion : "AGREGAR";
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -181,54 +215,106 @@ function ModalCorreccion({ onClose, onListo }: { onClose: () => void; onListo: (
     const [hh, mm] = hora.split(":").map(Number);
     const fechaHora = new Date(y, m - 1, d, hh, mm, 0, 0).toISOString();
 
-    const res = await fetch("/api/correcciones", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ tipo: "AGREGAR", tipoFichaje, fechaHora, motivo }),
-    });
-    const data = await res.json();
-    setEnviando(false);
-    if (!res.ok) return setError(data.error ?? "No se pudo enviar");
-    onListo();
+    try {
+      const res = await fetch("/api/correcciones", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          tipo,
+          fichajeId: fichaje?.id,
+          ...(tipo === "ELIMINAR" ? {} : { tipoFichaje, fechaHora }),
+          motivo,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) return setError(data.error ?? "No se pudo enviar");
+      onListo();
+    } catch {
+      setError("No pudimos enviarla. Revisá la conexión y probá de nuevo.");
+    } finally {
+      setEnviando(false);
+    }
   }
 
+  const titulo = fichaje
+    ? `Corregir ${CON_ARTICULO[fichaje.tipo] ?? "el fichaje"} de las ${horaLocal(fichaje.timestamp)}`
+    : "Agregar un fichaje que faltó";
+
   return (
-    <Modal title="Corregir un fichaje" onClose={onClose}>
+    <Modal title={titulo} onClose={onClose}>
       <form onSubmit={enviar} className="flex flex-col gap-3">
         <p className="text-sm text-slate-500 dark:text-[#94a19c]">
-          Si te olvidaste de fichar, pedí que lo agreguen. El encargado lo tiene que aprobar.
+          {fichaje
+            ? "Tu encargado lo revisa y, si lo aprueba, se corrige solo."
+            : "Si te olvidaste de fichar, pedí que lo agreguen. Tu encargado lo tiene que aprobar."}
         </p>
-        <div>
-          <Label>Qué fichaje falta</Label>
-          <Select value={tipoFichaje} onChange={(e) => setTipoFichaje(e.target.value)}>
-            <option value="ENTRADA">Entrada</option>
-            <option value="SALIDA">Salida</option>
-            <option value="DESCANSO_INICIO">Inicio de descanso</option>
-            <option value="DESCANSO_FIN">Fin de descanso</option>
-          </Select>
-        </div>
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <Label>Fecha</Label>
-            <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
-          </div>
-          <div className="flex-1">
-            <Label>Hora</Label>
-            <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} required />
-          </div>
-        </div>
+
+        {fichaje && (
+          <fieldset className="grid grid-cols-2 gap-2">
+            <legend className="sr-only">Qué querés corregir</legend>
+            {(
+              [
+                ["MODIFICAR", "La hora está mal"],
+                ["ELIMINAR", "Lo marqué sin querer"],
+              ] as const
+            ).map(([valor, texto]) => (
+              <label
+                key={valor}
+                className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg border px-3 text-center text-sm font-semibold transition-colors ${
+                  accion === valor
+                    ? "border-emerald-700 bg-emerald-50 text-emerald-900 dark:border-[#37e6b0] dark:bg-[#0f2620] dark:text-[#cdfbea]"
+                    : "border-slate-200 text-slate-600 dark:border-[#29403b] dark:text-[#c1cbc6]"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="accion"
+                  value={valor}
+                  checked={accion === valor}
+                  onChange={() => setAccion(valor)}
+                  className="sr-only"
+                />
+                {texto}
+              </label>
+            ))}
+          </fieldset>
+        )}
+
+        {tipo !== "ELIMINAR" && (
+          <>
+            <div>
+              <Label>{fichaje ? "Qué fichaje era" : "Qué fichaje falta"}</Label>
+              <Select value={tipoFichaje} onChange={(e) => setTipoFichaje(e.target.value)}>
+                <option value="ENTRADA">Entrada</option>
+                <option value="SALIDA">Salida</option>
+                <option value="DESCANSO_INICIO">Inicio de descanso</option>
+                <option value="DESCANSO_FIN">Fin de descanso</option>
+              </Select>
+            </div>
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <Label>Fecha</Label>
+                <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} required disabled={Boolean(fichaje)} />
+              </div>
+              <div className="flex-1">
+                <Label>{fichaje ? "Hora correcta" : "Hora"}</Label>
+                <Input type="time" value={hora} onChange={(e) => setHora(e.target.value)} required />
+              </div>
+            </div>
+          </>
+        )}
         <div>
           <Label>Qué pasó</Label>
           <Input
             value={motivo}
             onChange={(e) => setMotivo(e.target.value)}
-            placeholder="Me quedé sin batería"
+            placeholder={tipo === "ELIMINAR" ? "Toqué dos veces el botón" : "Me quedé sin batería"}
             required
           />
         </div>
         <Button type="submit" disabled={enviando}>
           <Plus size={16} />
-          {enviando ? "Enviando…" : "Enviar solicitud"}
+          {enviando ? "Enviando…" : "Enviar al encargado"}
         </Button>
         <ErrorText>{error}</ErrorText>
       </form>

@@ -3,6 +3,7 @@ import { db } from "@/lib/db";
 import { requireEncargadoApi } from "@/lib/session";
 import { readJsonBody } from "@/lib/http";
 import { auditar } from "@/lib/auditoria";
+import { comoFechaSql } from "@/lib/fechas";
 
 /**
  * Resuelve una solicitud de corrección.
@@ -56,12 +57,21 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     : null;
   let despues: Record<string, unknown> | null = null;
 
+  // Si ese día tenía turno, el fichaje es del local del turno: pudo rotar.
+  const turnoDelDia =
+    solicitud.tipo === "AGREGAR" && solicitud.fechaHora
+      ? await db.turno.findFirst({
+          where: { empleadoId: solicitud.empleadoId, fecha: comoFechaSql(solicitud.fechaHora) },
+          select: { localId: true },
+        })
+      : null;
+
   await db.$transaction(async (tx) => {
     if (solicitud.tipo === "AGREGAR") {
       const creado = await tx.fichaje.create({
         data: {
           empleadoId: solicitud.empleadoId,
-          localId: solicitud.empleado.localId,
+          localId: turnoDelDia?.localId ?? solicitud.empleado.localId,
           tipo: solicitud.tipoFichaje!,
           timestamp: solicitud.fechaHora!,
           corregido: true,

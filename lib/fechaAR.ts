@@ -51,6 +51,18 @@ export function inicioDiaAR(dia: string): Date {
   return new Date(fechaSql(dia).getTime() + OFFSET_AR_MS);
 }
 
+/** "2026-11-13" + "09:05" en hora argentina → el instante. */
+export function instanteAR(dia: string, hora: string): Date {
+  const [h, m] = hora.split(":").map(Number);
+  return new Date(inicioDiaAR(dia).getTime() + (h * 60 + m) * 60_000);
+}
+
+/** "09:05" en hora argentina de un instante. */
+export function horaAR(instante: Date | string): string {
+  const d = typeof instante === "string" ? new Date(instante) : instante;
+  return new Date(d.getTime() - OFFSET_AR_MS).toISOString().slice(11, 16);
+}
+
 /** Último milisegundo del día argentino, para acotar rangos de instantes. */
 export function finDiaAR(dia: string): Date {
   return new Date(inicioDiaAR(sumarDias(dia, 1)).getTime() - 1);

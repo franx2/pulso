@@ -30,6 +30,9 @@ import {
   Textarea,
 } from "@/components/ui";
 import { formatearFechaSql } from "@/lib/fechas";
+import { claveDiaAR } from "@/lib/fechaAR";
+import { duracion } from "@/lib/formato";
+import JornadaModal from "./JornadaModal";
 
 type Local = { id: string; nombre: string };
 
@@ -52,6 +55,8 @@ type Alerta = { id: string; tipo: string; detalle: string; empleado: string };
 
 type Correccion = {
   id: string;
+  empleadoId: string;
+  delDia: { tipo: string; timestamp: string }[];
   empleado: string;
   tipo: string;
   tipoFichaje: string | null;
@@ -72,6 +77,7 @@ type Ausencia = {
 
 type RostroDudoso = {
   id: string;
+  empleadoId: string;
   empleado: string;
   tipo: string;
   timestamp: string;
@@ -144,6 +150,7 @@ export default function PresenciaClient() {
     empleado: string;
   } | null>(null);
   const [comentarioRechazo, setComentarioRechazo] = useState("");
+  const [jornada, setJornada] = useState<{ empleadoId: string; nombre: string; dia?: string } | null>(null);
 
   const cargar = useCallback(async (local: string) => {
     const params = local ? `?localId=${local}` : "";
@@ -313,6 +320,13 @@ export default function PresenciaClient() {
                     {MOTIVO_ROSTRO[r.rostro]}
                     {r.distancia !== null && ` (distancia ${r.distancia})`}
                   </p>
+                  <button
+                    type="button"
+                    onClick={() => setJornada({ empleadoId: r.empleadoId, nombre: r.empleado })}
+                    className="mt-1 text-sm font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]"
+                  >
+                    Ver jornada
+                  </button>
                 </div>
                 {r.tieneFoto && (
                   <a href={`/api/fichajes/${r.id}/foto`} target="_blank" rel="noreferrer">
@@ -364,6 +378,26 @@ export default function PresenciaClient() {
                     )}
                   </p>
                   <p className="mt-1 text-sm italic text-slate-500 dark:text-[#94a19c]">“{c.motivo}”</p>
+                  <p className="mt-2 text-xs text-slate-500 dark:text-[#94a19c]">
+                    Ese día fichó:{" "}
+                    {c.delDia.length === 0
+                      ? "nada"
+                      : c.delDia.map((f) => `${ETIQUETA_FICHAJE[f.tipo] ?? f.tipo} ${hora(f.timestamp)}`).join(" · ")}
+                    {" · "}
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setJornada({
+                          empleadoId: c.empleadoId,
+                          nombre: c.empleado,
+                          dia: claveDiaAR(c.fechaHora ?? c.actual?.timestamp ?? new Date().toISOString()),
+                        })
+                      }
+                      className="font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]"
+                    >
+                      Ver jornada
+                    </button>
+                  </p>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -460,7 +494,13 @@ export default function PresenciaClient() {
               </SectionTitle>
               <div className="flex flex-col gap-2 md:gap-1.5">
                 {delGrupo.map((f) => (
-                  <Card key={f.empleadoId} className="flex items-center justify-between gap-3 md:p-3">
+                  <button
+                    type="button"
+                    key={f.empleadoId}
+                    onClick={() => setJornada({ empleadoId: f.empleadoId, nombre: f.nombre })}
+                    aria-label={`Ver y corregir la jornada de ${f.nombre}`}
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 md:p-3 dark:border-[#29403b] dark:bg-[#101c19] dark:hover:bg-[#172724] dark:focus-visible:ring-[#37e6b0]"
+                  >
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{f.nombre}</p>
                       <p className="truncate text-sm text-slate-500 dark:text-[#94a19c]">
@@ -478,16 +518,27 @@ export default function PresenciaClient() {
                         </div>
                       )}
                     </div>
-                    <span className="shrink-0 text-sm font-semibold text-slate-600 dark:text-[#c1cbc6]">
-                      {f.horasTrabajadas.toFixed(2)} h
+                    <span className="flex shrink-0 items-center gap-2 text-sm font-semibold tabular-nums text-slate-600 dark:text-[#c1cbc6]">
+                      {f.horasTrabajadas > 0 ? duracion(f.horasTrabajadas) : "—"}
+                      <PencilLine size={14} className="text-slate-400 dark:text-[#5f6d67]" aria-hidden />
                     </span>
-                  </Card>
+                  </button>
                 ))}
               </div>
             </div>
           );
         })
       )}
+      {jornada && (
+        <JornadaModal
+          empleadoId={jornada.empleadoId}
+          nombre={jornada.nombre}
+          diaInicial={jornada.dia}
+          onClose={() => setJornada(null)}
+          onCambio={() => void cargar(localId).catch(() => undefined)}
+        />
+      )}
+
       {rechazo && (
         <Modal title="Rechazar solicitud" onClose={() => (resolviendoId ? undefined : setRechazo(null))}>
           <form onSubmit={confirmarRechazo} className="flex flex-col gap-4">

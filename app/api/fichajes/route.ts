@@ -5,6 +5,7 @@ import { distanciaMetros } from "@/lib/geo";
 import { readJsonBody } from "@/lib/http";
 import { calcularHoras, proximoFichaje } from "@/lib/horas";
 import { comoFechaSql, inicioDelDia } from "@/lib/fechas";
+import { claveDiaAR, fechaSql, hoyAR, inicioDiaAR, sumarDias } from "@/lib/fechaAR";
 import { bytesADescriptor, descriptorDesdeJson, distanciaRostros } from "@/lib/rostro";
 import { leerDataUrl, type ImagenSubida } from "@/lib/dataUrl";
 import type { VerificacionRostro } from "@prisma/client";
@@ -16,6 +17,30 @@ import {
 } from "@/lib/fudo";
 
 const inicioDeHoy = () => inicioDelDia();
+
+/** Lo que ve el empleado de cada fichaje: nunca la foto ni la biometría. */
+const CAMPOS_PUBLICOS = { id: true, tipo: true, timestamp: true, corregido: true } as const;
+
+/**
+ * Las horas de cada día de la semana en curso, de lunes a domingo, para que
+ * el empleado sepa cuánto lleva sin tener que preguntar. Sin plata: eso lo
+ * liquida el admin.
+ */
+async function semanaDe(empleadoId: string, descuentaDescanso: boolean | undefined) {
+  const hoy = hoyAR();
+  const lunes = sumarDias(hoy, -((fechaSql(hoy).getUTCDay() + 6) % 7));
+  const fichajes = await db.fichaje.findMany({
+    where: { empleadoId, timestamp: { gte: inicioDiaAR(lunes) } },
+    select: { tipo: true, timestamp: true },
+    orderBy: { timestamp: "asc" },
+  });
+  return Array.from({ length: 7 }, (_, k) => {
+    const dia = sumarDias(lunes, k);
+    const delDia = fichajes.filter((f) => claveDiaAR(f.timestamp) === dia);
+    // Hoy se cuenta en vivo del lado del cliente; acá sólo lo cerrado.
+    return { dia, horas: calcularHoras(delDia, { descuentaDescanso }).horasTrabajadas };
+  });
+}
 
 /** Turno de hoy, que además define en qué sucursal le toca fichar. */
 async function turnoDeHoy(empleadoId: string) {
@@ -41,11 +66,13 @@ export async function GET() {
     db.fichaje.findMany({
       where: { empleadoId: session.empleadoId, timestamp: { gte: inicioDeHoy() } },
       orderBy: { timestamp: "asc" },
+      select: CAMPOS_PUBLICOS,
     }),
     turnoDeHoy(session.empleadoId!),
   ]);
 
   const local = await db.local.findUnique({ where: { id: turno?.localId ?? session.localId! } });
+  const semana = await semanaDe(session.empleadoId!, local?.descuentaDescanso);
 
   const estado = calcularHoras(fichajesHoy, { descuentaDescanso: local?.descuentaDescanso });
 
@@ -58,6 +85,9 @@ export async function GET() {
     horasTrabajadas: estado.horasTrabajadas,
     turno: turno && { horaInicio: turno.horaInicio, horaFin: turno.horaFin },
     usaCaja,
+    local: local?.nombre ?? null,
+    descuentaDescanso: local?.descuentaDescanso ?? true,
+    semana,
   });
 }
 
@@ -179,7 +209,8 @@ export async function POST(request: Request) {
   });
 
   return NextResponse.json({
-    fichaje,
+    fichaje: { id: fichaje.id, tipo: fichaje.tipo, timestamp: fichaje.timestamp, efectivoEsperado: fichaje.efectivoEsperado },
+    local: local.nombre,
     rostro: rostro.resultado,
     usaCaja,
     fondoInicial,

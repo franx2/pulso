@@ -1,5 +1,6 @@
 import assert from "node:assert";
 import {
+  duracion,
   etiquetaCategoria,
   fechaCompleta,
   fechaCorta,
@@ -78,5 +79,12 @@ assert.strictEqual(etiquetaCategoria("Cafetería"), "Cafetería");
 // Una categoría que ES un número no puede quedar vacía.
 assert.strictEqual(etiquetaCategoria("2026"), "2026");
 assert.strictEqual(etiquetaCategoria(null), "");
+
+// Horas para una persona: sin decimales que haya que convertir de cabeza.
+assert.strictEqual(duracion(5.5), "5 h 30 min");
+assert.strictEqual(duracion(0.75), "45 min");
+assert.strictEqual(duracion(8), "8 h");
+assert.strictEqual(duracion(7.999), "8 h", "59,94 min se redondea a la hora, no a \"7 h 60 min\"");
+assert.strictEqual(duracion(-1), "0 min");
 
 console.log("lib/formato.test.ts: todos los checks pasaron");
