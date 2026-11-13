@@ -80,7 +80,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const empleado = await db.empleado.update({
     where: { id },
     data: {
-      ...(body.activo !== undefined ? { activo: Boolean(body.activo) } : {}),
+      // Activar a quien pidió la cuenta la saca de "pendientes".
+      ...(body.activo !== undefined ? { activo: Boolean(body.activo), ...(body.activo ? { pendienteDesde: null } : {}) } : {}),
       ...(body.nombre !== undefined ? { nombre: body.nombre.trim() } : {}),
       ...(localId ? { localId } : {}),
       ...(body.email !== undefined ? { email: body.email.trim() || null } : {}),
@@ -124,4 +125,23 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }
 
   return NextResponse.json({ empleado, token });
+}
+
+/**
+ * Rechazar una cuenta pedida desde la pantalla de ingreso. Sólo para
+ * pendientes: alguien que ya trabajó tiene fichajes y horas que no se
+ * borran; a esa persona se la desactiva.
+ */
+export async function DELETE(_request: Request, { params }: { params: Promise<{ id: string }> }) {
+  const session = await requireAdminApi();
+  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+
+  const { id } = await params;
+  const objetivo = await db.empleado.findUnique({ where: { id }, select: { pendienteDesde: true, activo: true } });
+  if (!objetivo) return NextResponse.json({ error: "Empleado no encontrado" }, { status: 404 });
+  if (!objetivo.pendienteDesde || objetivo.activo) {
+    return NextResponse.json({ error: "Sólo se pueden rechazar cuentas pendientes; a los demás, desactivalos" }, { status: 400 });
+  }
+  await db.empleado.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
 }

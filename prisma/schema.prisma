@@ -587,6 +587,10 @@ model Empleado {
   consentimientoBiometrico DateTime?
   rol          Rol                  @default(EMPLEADO)
   activo       Boolean              @default(true)
+  /// Se creó la cuenta sola desde la pantalla de ingreso y espera que un
+  /// admin la active. Null para todo el resto: un desactivado no está
+  /// "pendiente", es alguien que ya no trabaja.
+  pendienteDesde DateTime?
   createdAt    DateTime             @default(now())
   /// Sucursal por defecto: se usa al fichar si no hay turno que indique otra.
   local        Local                @relation("LocalPrincipal", fields: [localId], references: [id])

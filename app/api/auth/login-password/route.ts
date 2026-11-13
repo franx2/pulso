@@ -27,8 +27,17 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Usuario o contraseña incorrectos" }, { status: 400 });
   };
 
-  if (!empleado || !empleado.activo) return invalido();
+  if (!empleado) return invalido();
   if (!verificarPassword(body.password, empleado.passwordHash)) return invalido();
+  // Recién con la contraseña correcta se dice que la cuenta espera
+  // activación: antes sería confirmar a cualquiera que ese usuario existe.
+  if (!empleado.activo && empleado.pendienteDesde) {
+    return NextResponse.json(
+      { error: "Tu cuenta todavía no está activa. Avisale a tu encargado o al administrador." },
+      { status: 403 }
+    );
+  }
+  if (!empleado.activo) return invalido();
 
   limpiarIntentos(usuario);
   await iniciarSesion(empleado);

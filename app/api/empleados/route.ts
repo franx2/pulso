@@ -36,6 +36,8 @@ export async function GET() {
             credenciales: { select: { id: true } },
             // Sólo para saber si tiene: el hash se descarta abajo.
             passwordHash: true,
+            pendienteDesde: true,
+            createdAt: true,
             fichajes: { orderBy: { timestamp: "desc" }, take: 1, select: { timestamp: true, tipo: true } },
             invitaciones: {
               where: { usado: false, expiraEn: { gt: new Date() } },

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Banknote, Check, KeyRound, Link as LinkIcon, Lock, Pencil, Plus, Search, X } from "lucide-react";
+import { Banknote, Bell, Check, KeyRound, Link as LinkIcon, Lock, Pencil, Plus, Search, X } from "lucide-react";
 import {
   Badge,
   Button,
@@ -48,6 +48,8 @@ type Empleado = {
   invitaciones: { token: string }[];
   tieneContrasena: boolean;
   ultimoFichaje: { timestamp: string; tipo: string } | null;
+  /** Pidió la cuenta desde la pantalla de ingreso y espera activación. */
+  pendienteDesde: string | null;
 };
 
 const ETIQUETA_ROL: Record<Rol, string> = { ADMIN: "Admin", ENCARGADO: "Encargado", EMPLEADO: "Empleado" };
@@ -179,6 +181,7 @@ export default function EmpleadosClient() {
         .replace(/[̀-ͯ]/g, "")
         .toLowerCase();
     return empleados
+      .filter((e) => !e.pendienteDesde)
       .filter((e) => verInactivos || e.activo)
       .filter((e) => !filtroRol || e.rol === filtroRol)
       .filter((e) => !filtroLocal || e.localId === filtroLocal || e.asignaciones.some((a) => a.local.id === filtroLocal))
@@ -190,7 +193,8 @@ export default function EmpleadosClient() {
       .sort((a, b) => Number(b.activo) - Number(a.activo) || a.nombre.localeCompare(b.nombre, "es"));
   }, [empleados, busqueda, filtroLocal, filtroRol, verInactivos]);
 
-  const inactivos = empleados.filter((e) => !e.activo).length;
+  const pendientes = empleados.filter((e) => e.pendienteDesde && !e.activo);
+  const inactivos = empleados.filter((e) => !e.activo && !e.pendienteDesde).length;
   const todosMarcados = visibles.length > 0 && visibles.every((e) => seleccion.has(e.id));
 
   function alternarSeleccion(id: string) {
@@ -251,6 +255,39 @@ export default function EmpleadosClient() {
         </Aviso>
       )}
 
+      {pendientes.length > 0 && (
+        <Panel className="border-amber-300 bg-amber-50/60 dark:border-amber-500/40 dark:bg-amber-500/10">
+          <div className="flex items-center gap-2 border-b border-amber-200 px-4 py-3 dark:border-amber-500/30">
+            <Bell size={16} className="text-amber-700 dark:text-amber-300" aria-hidden />
+            <h2 className="font-semibold text-amber-950 dark:text-amber-200">
+              {pendientes.length === 1 ? "1 persona espera" : `${pendientes.length} personas esperan`} que actives su cuenta
+            </h2>
+          </div>
+          <ul className="divide-y divide-amber-200/70 dark:divide-amber-500/20">
+            {pendientes.map((e) => (
+              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
+                <div className="min-w-0">
+                  <p className="font-semibold">{e.nombre}</p>
+                  <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">
+                    @{e.usuario} · {e.local.nombre}
+                    {e.email && ` · ${e.email}`} · pidió la cuenta el {new Date(e.pendienteDesde!).toLocaleDateString("es-AR")}
+                  </p>
+                </div>
+                <div className="flex shrink-0 gap-2">
+                  <Button variant="ghost" className="py-1.5 text-sm" onClick={() => setEdicion({ tipo: "editar", empleado: e })}>
+                    Revisar
+                  </Button>
+                  <Button className="py-1.5 text-sm" onClick={() => actualizar(e.id, { activo: true })}>
+                    <Check size={15} aria-hidden />
+                    Activar como Empleado
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </Panel>
+      )}
+
       {pestana === "roles" ? (
         <RolesYPermisos empleados={empleados} />
       ) : (
@@ -295,7 +332,7 @@ export default function EmpleadosClient() {
             </div>
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
               <span className="font-medium text-slate-700 dark:text-[#dbe5e0]">
-                {visibles.length} de {empleados.filter((e) => verInactivos || e.activo).length} usuarios
+                {visibles.length} de {empleados.filter((e) => !e.pendienteDesde && (verInactivos || e.activo)).length} usuarios
               </span>
               {inactivos > 0 && (
                 <label className="inline-flex items-center gap-2">
@@ -487,7 +524,11 @@ export default function EmpleadosClient() {
             setEdicion(null);
             if (accion === "passkey") await actualizar(e.id, { reinvitar: true });
             else if (accion === "contrasena") await ponerContrasena(e);
-            else await actualizar(e.id, { activo: !e.activo });
+            else if (accion === "rechazar") {
+              const res = await fetch(`/api/empleados/${e.id}`, { method: "DELETE" });
+              if (!res.ok) setError((await res.json().catch(() => null))?.error ?? "No se pudo rechazar");
+              await cargar();
+            } else await actualizar(e.id, { activo: !e.activo });
           }}
         />
       )}
@@ -522,9 +563,10 @@ function FichaUsuario({
   onCerrar: () => void;
   onCreado: (token: string) => void;
   onGuardar: (id: string, cambios: Record<string, unknown>) => Promise<boolean>;
-  onAccion: (e: Empleado, accion: "passkey" | "contrasena" | "activo") => void;
+  onAccion: (e: Empleado, accion: "passkey" | "contrasena" | "activo" | "rechazar") => void;
 }) {
   const e = edicion.tipo === "editar" ? edicion.empleado : null;
+  const pendiente = Boolean(e?.pendienteDesde && !e.activo);
   const [usuario, setUsuario] = useState("");
   const [nombre, setNombre] = useState(e?.nombre ?? "");
   const [email, setEmail] = useState(e?.email ?? "");
@@ -552,6 +594,8 @@ function FichaUsuario({
         localesExtra: extrasValidos,
         categoriaId: categoriaId || null,
         precioHora: precioHora === "" ? null : Number(precioHora),
+        // Revisar a un pendiente y guardar es activarlo.
+        ...(pendiente ? { activo: true } : {}),
       });
       setGuardando(false);
       if (!ok) setError("No se pudo guardar. Revisá los datos.");
@@ -569,7 +613,7 @@ function FichaUsuario({
   }
 
   return (
-    <Modal title={e ? `Editar a ${e.nombre}` : "Nuevo usuario"} onClose={onCerrar} maxWidth="max-w-lg">
+    <Modal title={pendiente ? `Activar la cuenta de ${e!.nombre}` : e ? `Editar a ${e.nombre}` : "Nuevo usuario"} onClose={onCerrar} maxWidth="max-w-lg">
       <form onSubmit={enviar} className="flex flex-col gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           {!e && (
@@ -670,7 +714,7 @@ function FichaUsuario({
           </div>
         )}
 
-        {e && (
+        {e && !pendiente && (
           <div className="rounded-lg border border-slate-200 p-3 dark:border-[#29403b]">
             <p className="text-sm font-semibold">Acceso</p>
             <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">{acceso(e).texto}. Si cambió de celular o se olvidó cómo entrar:</p>
@@ -690,7 +734,11 @@ function FichaUsuario({
         <ErrorText>{error}</ErrorText>
 
         <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-[#1c2521]">
-          {e ? (
+          {pendiente ? (
+            <Button type="button" variant="danger" onClick={() => onAccion(e!, "rechazar")}>
+              Rechazar y borrar
+            </Button>
+          ) : e ? (
             <Button type="button" variant={e.activo ? "danger" : "ghost"} onClick={() => onAccion(e, "activo")}>
               {e.activo ? "Desactivar usuario" : "Volver a activar"}
             </Button>
@@ -703,7 +751,7 @@ function FichaUsuario({
             </Button>
             <Button type="submit" disabled={guardando}>
               <Check size={16} aria-hidden />
-              {guardando ? "Guardando…" : e ? "Guardar cambios" : "Crear usuario"}
+              {guardando ? "Guardando…" : pendiente ? "Activar cuenta" : e ? "Guardar cambios" : "Crear usuario"}
             </Button>
           </div>
         </div>
