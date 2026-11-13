@@ -9,6 +9,16 @@ export const REGLAS_HELADO = [
 
 export type ReglaHelado = (typeof REGLAS_HELADO)[number];
 
+/** Los gramos que el dueño cambió, por id de regla. Lo que falta usa el de fábrica. */
+export type GramosHelado = Partial<Record<ReglaHelado["id"], number>>;
+
+export const ES_FORMATO_HELADO = (id: string): id is ReglaHelado["id"] => REGLAS_HELADO.some((r) => r.id === id);
+
+/** Las reglas con lo que se editó encima, y el valor de fábrica al lado. */
+export function reglasHelado(ajustes: GramosHelado = {}) {
+  return REGLAS_HELADO.map((r) => ({ id: r.id, etiqueta: r.etiqueta, gramos: ajustes[r.id] ?? r.gramos, porDefecto: r.gramos }));
+}
+
 export type CompraHelado = {
   detalle: string;
   cantidadKg: number;
@@ -101,14 +111,19 @@ export function esVentaRelacionadaConHelado(producto: string): boolean {
   return !esAccesorioSinHelado(nombre) && /HELADO|BOCHA|CUCURUCHO/.test(nombre);
 }
 
-export function resumirHelado(compras: CompraHelado[], ventas: VentaHelado[]): ResumenHelado {
+export function resumirHelado(
+  compras: CompraHelado[],
+  ventas: VentaHelado[],
+  ajustes: GramosHelado = {}
+): ResumenHelado {
+  const gramosDe = (regla: ReglaHelado) => ajustes[regla.id] ?? regla.gramos;
   const formatos = new Map(
     REGLAS_HELADO.map((regla) => [
       regla.id,
       {
         id: regla.id,
         etiqueta: regla.etiqueta,
-        gramosPorUnidad: regla.gramos,
+        gramosPorUnidad: gramosDe(regla),
         unidades: 0,
         kilos: 0,
       },
@@ -136,7 +151,7 @@ export function resumirHelado(compras: CompraHelado[], ventas: VentaHelado[]): R
   for (const venta of ventas) {
     const regla = reglaParaVentaHelado(venta.producto);
     if (regla) {
-      const kilos = (venta.cantidad * regla.gramos) / 1000;
+      const kilos = (venta.cantidad * gramosDe(regla)) / 1000;
       const formato = formatos.get(regla.id)!;
       formato.unidades += venta.cantidad;
       formato.kilos += kilos;

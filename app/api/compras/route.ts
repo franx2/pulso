@@ -4,7 +4,8 @@ import { diaDeFechaSql, fechaSql } from "@/lib/fechaAR";
 import { rangoDias } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
 import {
-  REGLAS_HELADO,
+  reglasHelado,
+  type GramosHelado,
   esHeladoComprado,
   resumirHelado,
   type CompraHelado,
@@ -16,8 +17,8 @@ import { definicionDe } from "@/lib/compras/promos";
 import {
   GRAMOS_POR_INFUSION,
   esCafeComprado,
+  kilosDeCompra,
   resumirCafe,
-  type CompraCafe,
   type VentaCafe,
 } from "@/lib/compras/consumoCafe";
 
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
   // traducir de cabeza.
   const { desde, hasta, dias } = rangoDias(params);
 
-  const [compras, locales, ventasHelado, diasConVentas, overridesFilas, ventasCafe] = await Promise.all([
+  const [compras, locales, ventasHelado, diasConVentas, overridesFilas, equivalencias, ventasCafe] = await Promise.all([
     db.compra.findMany({
       // Un remito que ya tiene su factura no se muestra ni se suma: la compra es la factura.
       where: { fecha: { gte: fechaSql(desde) }, reemplazadaPorId: null },
@@ -61,11 +62,13 @@ export async function GET(request: Request) {
       select: { localId: true, fecha: true },
     }),
     db.sectorProducto.findMany({ select: { producto: true, sector: true } }),
+    db.equivalenciaHelado.findMany({ select: { formato: true, gramos: true } }),
     db.productoDiario.findMany({
       where: {
         fecha: { gte: fechaSql(desde), lte: fechaSql(hasta) },
         OR: [
-          ...["CAFE", "CORTADO", "LATTE", "CAPUCC", "CAPUCH", "MOCCA", "MOCHA", "LAGRIMA", "AMERICANO", "ESPRESSO", "EXPRESO", "MACCHIATO", "FLAT WHITE"].map(
+          // Con y sin tilde: `contains` no la ignora, y "CAFÉ" no es "CAFE".
+          ...["CAFE", "CAFÉ", "MOCA", "CORTADO", "LATTE", "CAPUCC", "CAPUCH", "MOCCA", "MOCHA", "LAGRIMA", "AMERICANO", "ESPRESSO", "EXPRESO", "MACCHIATO", "FLAT WHITE"].map(
             (palabra) => ({ producto: { contains: palabra, mode: "insensitive" as const } })
           ),
           // Las promos entran enteras: recién su definición dice si llevan
@@ -79,6 +82,7 @@ export async function GET(request: Request) {
     }),
   ]);
 
+  const gramosHelado: GramosHelado = Object.fromEntries(equivalencias.map((e) => [e.formato, e.gramos]));
   const overridesSector = new Map(overridesFilas.map((o) => [o.producto, o.sector as Sector]));
 
   // El royalty se controla contra las ventas del mes que el remito declara,
@@ -174,7 +178,7 @@ export async function GET(request: Request) {
       diasConVentas: desdeComparacion
         ? (diasVentaPorLocal.get(local.id) ?? []).filter((fecha) => fecha >= desdeComparacion).length
         : 0,
-      ...resumirHelado(entradas, ventasComparables),
+      ...resumirHelado(entradas, ventasComparables, gramosHelado),
     };
   });
   // --- Café ---
@@ -182,7 +186,7 @@ export async function GET(request: Request) {
   // El café se compra por kilo y se vende, casi siempre, adentro de una promo.
   // La ventana arranca en el primer remito de café de cada local: comparar
   // ventas de días en los que no hay compra cargada da una merma inventada.
-  const comprasCafePorLocal = new Map<string, (CompraCafe & { fecha: string })[]>();
+  const comprasCafePorLocal = new Map<string, (Parameters<typeof resumirCafe>[0][number] & { fecha: string })[]>();
   for (const compra of compras) {
     if (!compra.localId || compra.tipo !== "MERCADERIA" || !compra.verificado) continue;
     const entradas = comprasCafePorLocal.get(compra.localId) ?? [];
@@ -191,7 +195,9 @@ export async function GET(request: Request) {
       entradas.push({
         fecha: diaDeFechaSql(compra.fecha),
         detalle: item.detalle,
-        cantidadKg: item.cantidadExacta,
+        // En kilos según la presentación: dos "X250G" son medio kilo.
+        cantidadKg: kilosDeCompra(item.detalle, item.cantidadExacta, item.unidad),
+        cantidad: item.cantidadExacta,
         costo: item.totalConAjuste,
       });
     }
@@ -235,7 +241,8 @@ export async function GET(request: Request) {
   const localesConCompras = controlHeladoPorLocal.filter((local) => local.desdeComparacion != null);
   const controlHeladoTotal = resumirHelado(
     [...comprasHeladoPorLocal.values()].flat(),
-    [...ventasComparablesPorLocal.values()].flat()
+    [...ventasComparablesPorLocal.values()].flat(),
+    gramosHelado
   );
 
   return NextResponse.json({
@@ -253,7 +260,7 @@ export async function GET(request: Request) {
     controles,
     locales,
     helado: {
-      reglas: REGLAS_HELADO.map((regla) => ({ id: regla.id, etiqueta: regla.etiqueta, gramos: regla.gramos })),
+      reglas: reglasHelado(gramosHelado),
       total: {
         ...controlHeladoTotal,
         desdeComparacion:

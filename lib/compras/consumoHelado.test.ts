@@ -3,6 +3,7 @@ import {
   esHeladoComprado,
   esVentaRelacionadaConHelado,
   reglaParaVentaHelado,
+  reglasHelado,
   resumirHelado,
 } from "./consumoHelado";
 
@@ -57,5 +58,13 @@ assert.deepEqual(
 const sinCompras = resumirHelado([], [{ producto: "HELADO 1KG", cantidad: 2 }]);
 assert.equal(sinCompras.balanceKg, null);
 assert.equal(sinCompras.ratioVendidoCompradoPct, null);
+
+// Los gramos editados pisan los de fábrica: 10 bochas a 80 g son 0,8 kg, no 0,9.
+const editado = resumirHelado([], [{ producto: "CUCURUCHO 1 SABOR", cantidad: 10 }], { "bocha-1": 80 });
+assert.equal(editado.vendidoKgEstimado, 0.8);
+assert.equal(editado.formatos[0].gramosPorUnidad, 80);
+const reglas = reglasHelado({ "bocha-1": 80 });
+assert.deepEqual(reglas.find((r) => r.id === "bocha-1"), { id: "bocha-1", etiqueta: "1 bocha / cucurucho", gramos: 80, porDefecto: 90 });
+assert.equal(reglas.find((r) => r.id === "kilo")?.gramos, 1070, "lo no editado queda de fábrica");
 
 console.log("lib/compras/consumoHelado.test.ts: todos los checks pasaron");

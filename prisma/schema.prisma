@@ -992,6 +992,17 @@ model MovimientoBancario {
 /// que ya se cargan solos por mail) y el saldo inicial del local, compone la
 /// cuenta corriente: no se guarda un saldo, se recalcula siempre de estas
 /// tres fuentes para que nunca quede desincronizado de los remitos reales.
+/// Cuántos gramos de helado lleva cada formato de venta (bocha, pote…). Hay
+/// fila sólo para lo que el dueño cambió: el resto usa el valor de fábrica de
+/// `REGLAS_HELADO` en `lib/compras/consumoHelado.ts`. Es de toda la cadena:
+/// una bocha pesa lo mismo en todas las sucursales.
+model EquivalenciaHelado {
+  /// El `id` de la regla: "bocha-1", "cuarto", "kilo"…
+  formato       String   @id
+  gramos        Float
+  actualizadoEn DateTime @updatedAt
+}
+
 model PagoProveedor {
   id      String @id @default(cuid())
   local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)

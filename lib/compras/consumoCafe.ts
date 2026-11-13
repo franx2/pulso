@@ -11,8 +11,10 @@
  *
  * 1. **Sueltos** — el cortado, el latte, el americano. El nombre alcanza.
  * 2. **Promos** — cuentan una infusión cuando su definición en la carta dice
- *    que la lleva. La promo que no está declarada no se estima: se lista como
- *    pendiente, igual que el helado hace con lo que no sabe leer.
+ *    que la lleva. La que no está declarada cuenta una infusión **supuesta**
+ *    (dos si es "para dos"): la carta dice que todas la incluyen, y dejarlas
+ *    en cero hacía faltar 10 kg por trimestre en Las Cañas —"Desayuno amigos"
+ *    sola vende 400 por trimestre—. Se informan aparte para poder auditarlas.
  *
  * El gramaje es uno solo y es un promedio deliberado. Una parte de esas
  * infusiones son té o mate cocido y no llevan café en absoluto; otra parte son
@@ -38,7 +40,7 @@ export type VentaCafe = {
   cantidad: number;
 };
 
-export type OrigenCafe = "suelto" | "promo";
+export type OrigenCafe = "suelto" | "promo" | "supuesto";
 
 export type ResumenCafe = {
   compradoKg: number;
@@ -54,6 +56,8 @@ export type ResumenCafe = {
   infusiones: number;
   infusionesSueltas: number;
   infusionesEnPromo: number;
+  /** Promos sin composición cargada, contadas con una infusión cada una. */
+  infusionesSupuestas: number;
   /** Qué productos aportaron, para poder discutir el número. */
   detalle: {
     producto: string;
@@ -64,11 +68,10 @@ export type ResumenCafe = {
   }[];
   /** Compras de café, por si hay más de una marca o presentación. */
   compras: { detalle: string; kilos: number; costo: number }[];
-  /**
-   * Promos sin composición declarada. No se estiman: son el trabajo que falta
-   * para que este control cierre, y decirlo es más útil que inventarlo.
-   */
-  promosSinDefinir: { producto: string; unidades: number }[];
+  /** Las promos sin composición cargada que entraron con una infusión supuesta. */
+  promosSupuestas: { producto: string; unidades: number; infusiones: number }[];
+  /** Café comprado que no dice cuánto pesa ("X 20UN"): no se suma. */
+  comprasSinPeso: { detalle: string; cantidad: number }[];
 };
 
 const normalizar = (texto: string) =>
@@ -91,6 +94,23 @@ export function esCafeComprado(detalle: string): boolean {
 }
 
 /**
+ * Kilos de café de un renglón del remito, según la presentación.
+ *
+ * La cantidad del remito es en unidades de venta, no en kilos: dos "MOLIDO
+ * X250G" son medio kilo, no dos. Null si la presentación no dice el peso
+ * ("DESCAFEINADO X 20UN"): sumarlo como un kilo inflaba lo comprado.
+ */
+export function kilosDeCompra(detalle: string, cantidad: number, unidad: string | null): number | null {
+  const d = normalizar(detalle);
+  const gramos = d.match(/X\s*(\d+(?:[.,]\d+)?)\s*(?:G|GR|GRS|GRAMOS)\b/);
+  if (gramos) return (cantidad * Number(gramos[1].replace(",", "."))) / 1000;
+  const kg = d.match(/X\s*(\d+(?:[.,]\d+)?)\s*KG\b/);
+  if (kg) return cantidad * Number(kg[1].replace(",", "."));
+  if (/X\s*KG\b|POR KG|\bKG\b/.test(d) || /KILO/i.test(unidad ?? "")) return cantidad;
+  return null;
+}
+
+/**
  * Bebidas que NO llevan café aunque se sirvan en la barra.
  *
  * Va antes que todo lo demás: "SUBMARINO" es chocolate, y un "TE" que
@@ -98,9 +118,15 @@ export function esCafeComprado(detalle: string): boolean {
  */
 const SIN_CAFE = /\bTE\b|\bTE DE\b|MATE|SUBMARINO|CHOCOLATE|LECHE SOLA|JUGO|LIMONADA|LICUADO|AGUA|GASEOSA/;
 
+/**
+ * Lo que dice "café" y no es una taza: un sabor de helado, la vajilla, o un
+ * agregado a una bebida que ya se contó ("AGREGA TAZÓN CAFÉ XL").
+ */
+const NO_ES_UNA_TAZA = /HELADO DE|SABOR|VAJILLA|PLATO|\bTAZA\b|AGREG|ADICIONAL|OPCION|EXTRA\b|COOKIE|GALLET|TORTA|ALFAJOR/;
+
 /** Bebidas con espresso. Conservador: sólo lo que sin duda lleva café. */
 const CON_CAFE =
-  /\bCAFE\b|CORTADO|LATTE|CAPUCCINO|CAPUCHINO|MOCCA|MOCHA|LAGRIMA|AMERICANO|ESPRESSO|EXPRESO|MACCHIATO|FLAT WHITE|CARAJILLO|RISTRETTO|CAFETERA/;
+  /\bCAFE\b|CORTADO|LATTE|CAPUCCINO|CAPUCHINO|MOCCA|MOCHA|MOCACCINO|LAGRIMA|AMERICANO|ESPRESSO|EXPRESO|MACCHIATO|FLAT WHITE|CARAJILLO|RISTRETTO|CAFETERA/;
 
 /**
  * Cuántos gramos de café se fueron en una unidad vendida.
@@ -111,7 +137,24 @@ export function gramosDeVenta(producto: string): number | null {
   const nombre = normalizar(producto);
   if (SIN_CAFE.test(nombre) && !CON_CAFE.test(nombre)) return null;
   if (!CON_CAFE.test(nombre)) return null;
+  // Un paquete para llevar ("CAFE PRESTIGE X KG") se va entero.
+  if (/\bX\s*\d*\s*(KG|G|GR|GRS)\b/.test(nombre)) {
+    const paquete = kilosDeCompra(nombre, 1, null);
+    if (paquete != null) return paquete * 1000;
+  }
+  if (NO_ES_UNA_TAZA.test(nombre)) return null;
   return /\bDOBLE\b|\bDOPPIO\b/.test(nombre) ? GRAMOS_DOBLE : GRAMOS_POR_INFUSION;
+}
+
+/**
+ * Cuántas infusiones se suponen en una promo sin composición cargada.
+ * Cero para lo que no es un desayuno o una merienda: los agregados ("AGREGÁ
+ * JUGO A TU PROMO"), las promos de helado o de un combo de regalo.
+ */
+export function infusionesSupuestas(producto: string): number {
+  const n = normalizar(producto);
+  if (/AGREG|\bSUMA\b|ADICIONAL|EXTRA|OPCION|HELADO|SMOOTHIE|JUGO|COMBO|LICUADO/.test(n)) return 0;
+  return /PARA DOS|2 PERSONAS|\bX ?2\b/.test(n) ? 2 : 1;
 }
 
 /** Si el contenido declarado de una promo incluye una infusión. */
@@ -120,7 +163,8 @@ export function promoLlevaInfusion(contenido: string): boolean {
 }
 
 export function resumirCafe(
-  compras: CompraCafe[],
+  /** `cantidadKg` null = la presentación no dice cuánto pesa. */
+  compras: (Omit<CompraCafe, "cantidadKg"> & { cantidadKg: number | null; cantidad?: number })[],
   ventas: VentaCafe[],
   /**
    * Cómo saber si una venta es una promo y qué lleva. Se inyecta para que
@@ -133,8 +177,15 @@ export function resumirCafe(
   let compradoKg = 0;
   let costoComprado = 0;
   const porCompra = new Map<string, { detalle: string; kilos: number; costo: number }>();
+  const sinPeso = new Map<string, { detalle: string; cantidad: number }>();
   for (const compra of compras) {
     if (!esCafeComprado(compra.detalle)) continue;
+    if (compra.cantidadKg == null) {
+      const previo = sinPeso.get(normalizar(compra.detalle)) ?? { detalle: compra.detalle, cantidad: 0 };
+      previo.cantidad += compra.cantidad ?? 0;
+      sinPeso.set(normalizar(compra.detalle), previo);
+      continue;
+    }
     compradoKg += compra.cantidadKg;
     costoComprado += compra.costo;
     const clave = normalizar(compra.detalle);
@@ -148,10 +199,11 @@ export function resumirCafe(
     string,
     { producto: string; origen: OrigenCafe; unidades: number; gramosPorUnidad: number; kilos: number }
   >();
-  const pendientes = new Map<string, { producto: string; unidades: number }>();
+  const supuestas = new Map<string, { producto: string; unidades: number; infusiones: number }>();
   let consumidoGramos = 0;
   let infusionesSueltas = 0;
   let infusionesEnPromo = 0;
+  let totalSupuestas = 0;
 
   for (const venta of ventas) {
     if (venta.cantidad <= 0) continue;
@@ -166,12 +218,21 @@ export function resumirCafe(
       continue;
     }
 
-    // Una promo sin definir puede llevar café o no. Se lista, no se estima.
+    // Una promo sin composición cargada: la infusión que dice la carta, como
+    // supuesto y a la vista.
     if (esPromo(venta.producto)) {
+      const porUnidad = infusionesSupuestas(venta.producto);
+      if (porUnidad === 0) continue;
+      const infusiones = venta.cantidad * porUnidad;
+      const gramos = infusiones * GRAMOS_POR_INFUSION;
+      consumidoGramos += gramos;
+      totalSupuestas += infusiones;
+      acumular(detalle, venta.producto, "supuesto", venta.cantidad, porUnidad * GRAMOS_POR_INFUSION, gramos);
       const clave = normalizar(venta.producto);
-      const previo = pendientes.get(clave) ?? { producto: venta.producto, unidades: 0 };
+      const previo = supuestas.get(clave) ?? { producto: venta.producto, unidades: 0, infusiones: 0 };
       previo.unidades += venta.cantidad;
-      pendientes.set(clave, previo);
+      previo.infusiones += infusiones;
+      supuestas.set(clave, previo);
       continue;
     }
 
@@ -179,12 +240,13 @@ export function resumirCafe(
     if (gramosPorUnidad == null) continue;
     const gramos = venta.cantidad * gramosPorUnidad;
     consumidoGramos += gramos;
-    infusionesSueltas += venta.cantidad * (gramosPorUnidad / GRAMOS_POR_INFUSION);
+    // Un paquete para llevar suma kilos, no tazas.
+    if (gramosPorUnidad <= GRAMOS_DOBLE) infusionesSueltas += venta.cantidad * (gramosPorUnidad / GRAMOS_POR_INFUSION);
     acumular(detalle, venta.producto, "suelto", venta.cantidad, gramosPorUnidad, gramos);
   }
 
   const consumidoKg = consumidoGramos / 1000;
-  const infusiones = infusionesSueltas + infusionesEnPromo;
+  const infusiones = infusionesSueltas + infusionesEnPromo + totalSupuestas;
   const costoPorKg = compradoKg > 0 ? costoComprado / compradoKg : null;
 
   return {
@@ -198,9 +260,11 @@ export function resumirCafe(
     infusiones,
     infusionesSueltas,
     infusionesEnPromo,
+    infusionesSupuestas: totalSupuestas,
     detalle: [...detalle.values()].sort((a, b) => b.kilos - a.kilos),
     compras: [...porCompra.values()].sort((a, b) => b.kilos - a.kilos),
-    promosSinDefinir: [...pendientes.values()].sort((a, b) => b.unidades - a.unidades),
+    promosSupuestas: [...supuestas.values()].sort((a, b) => b.unidades - a.unidades),
+    comprasSinPeso: [...sinPeso.values()],
   };
 }
 

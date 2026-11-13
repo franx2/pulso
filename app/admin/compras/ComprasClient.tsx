@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
 import { BarraContexto, SelectorLocal } from "@/components/BarraContexto";
 import ClasificadorSectores, { SectorChip } from "@/components/ClasificadorSectores";
+import EquivalenciasHelado from "./EquivalenciasHelado";
 import CuentaCorrientePanel from "./CuentaCorrientePanel";
 import {
   AlertTriangle,
@@ -119,7 +120,7 @@ type Respuesta = {
   controles: ControlRoyalty[];
   locales: { id: string; nombre: string }[];
   helado: {
-    reglas: { id: string; etiqueta: string; gramos: number }[];
+    reglas: { id: string; etiqueta: string; gramos: number; porDefecto: number }[];
     total: HeladoTotal;
     porLocal: HeladoLocal[];
   };
@@ -142,9 +143,11 @@ type ResumenCafe = {
   infusiones: number;
   infusionesSueltas: number;
   infusionesEnPromo: number;
-  detalle: { producto: string; origen: "suelto" | "promo"; unidades: number; gramosPorUnidad: number; kilos: number }[];
+  detalle: { producto: string; origen: "suelto" | "promo" | "supuesto"; unidades: number; gramosPorUnidad: number; kilos: number }[];
   compras: { detalle: string; kilos: number; costo: number }[];
-  promosSinDefinir: { producto: string; unidades: number }[];
+  infusionesSupuestas: number;
+  promosSupuestas: { producto: string; unidades: number; infusiones: number }[];
+  comprasSinPeso: { detalle: string; cantidad: number }[];
 };
 type CafeTotal = ResumenCafe & {
   desdeComparacion: string | null;
@@ -313,6 +316,12 @@ function CompraDetalle({
     </div>
   );
 }
+
+const ETIQUETA_ORIGEN_CAFE: Record<"suelto" | "promo" | "supuesto", string> = {
+  suelto: "Suelto",
+  promo: "Promo",
+  supuesto: "Promo supuesta",
+};
 
 export default function ComprasClient() {
   const [datos, setDatos] = useState<Respuesta | null>(null);
@@ -809,20 +818,11 @@ export default function ComprasClient() {
               )}
             </Panel>
 
-            <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
-                <h2 className="font-semibold">Equivalencias aplicadas</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Son las reglas usadas en el cálculo anterior.</p>
-              </div>
-              <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
-                {datos.helado.reglas.map((regla) => (
-                  <div key={regla.id} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                    <span className="text-slate-600 dark:text-[#c1cbc6]">{regla.etiqueta}</span>
-                    <span className="font-semibold tabular-nums">{regla.gramos} g</span>
-                  </div>
-                ))}
-              </div>
-            </Panel>
+            <EquivalenciasHelado
+              key={datos.helado.reglas.map((r) => `${r.id}:${r.gramos}`).join("|")}
+              reglas={datos.helado.reglas}
+              onGuardado={() => setRevision((v) => v + 1)}
+            />
           </div>
 
           <div className="grid gap-5 xl:grid-cols-2">
@@ -1016,10 +1016,11 @@ export default function ComprasClient() {
             <p className="mt-1 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
               Cada infusión se cuenta a {datos.cafe.gramosPorInfusion} g. Es un promedio a
               propósito: parte de esas infusiones son té o mate cocido y no llevan un grano, y
-              parte son dobles y llevan el doble. Una promo suma una infusión sólo si su
-              composición declarada dice que la lleva.
+              parte son dobles y llevan el doble. Una promo con su composición cargada suma lo
+              que dice la carta; la que no la tiene suma una infusión (dos si es para dos), que es
+              lo que la carta dice que llevan todas.
             </p>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-3 sm:grid-cols-3">
               <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
                 <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
                   Vendido suelto
@@ -1034,6 +1035,13 @@ export default function ComprasClient() {
                 <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesEnPromo)}</p>
                 <p className="text-xs text-slate-500 dark:text-[#94a19c]">promos con infusión declarada</p>
               </div>
+              <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
+                  Promo sin composición
+                </p>
+                <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesSupuestas)}</p>
+                <p className="text-xs text-slate-500 dark:text-[#94a19c]">una infusión supuesta cada una</p>
+              </div>
             </div>
 
             {cafeActual.detalle.length > 0 && (
@@ -1044,8 +1052,8 @@ export default function ComprasClient() {
                     <div className="min-w-0">
                       <p className="font-medium">{fila.producto}</p>
                       <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-[#94a19c]">
-                        <Badge tone={fila.origen === "promo" ? "amber" : "slate"}>
-                          {fila.origen === "promo" ? "Promo" : "Suelto"}
+                        <Badge tone={fila.origen === "suelto" ? "slate" : "amber"}>
+                          {ETIQUETA_ORIGEN_CAFE[fila.origen]}
                         </Badge>
                         {numero(fila.unidades)} un. × {fila.gramosPorUnidad} g
                       </p>
@@ -1074,8 +1082,8 @@ export default function ComprasClient() {
                       >
                         <td className="py-2 pr-3 font-medium">{fila.producto}</td>
                         <td className="py-2 pr-3">
-                          <Badge tone={fila.origen === "promo" ? "amber" : "slate"}>
-                            {fila.origen === "promo" ? "Promo" : "Suelto"}
+                          <Badge tone={fila.origen === "suelto" ? "slate" : "amber"}>
+                            {ETIQUETA_ORIGEN_CAFE[fila.origen]}
                           </Badge>
                         </td>
                         <td className="py-2 pr-3 text-right tabular-nums">{numero(fila.unidades)}</td>
@@ -1108,27 +1116,34 @@ export default function ComprasClient() {
             </Panel>
           )}
 
-          {cafeActual.promosSinDefinir.length > 0 && (
+          {cafeActual.promosSupuestas.length > 0 && (
             <Panel className="p-4">
               <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200">
                 <AlertTriangle size={16} aria-hidden />
-                Promos sin composición declarada
+                Promos contadas con una infusión supuesta
               </h2>
               <p className="mt-1 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
-                No se sabe si llevan infusión, así que no suman café. Mientras estén acá, el
-                consumo medido queda corto y la diferencia se ve más grande de lo que es.
+                No tienen su composición cargada. Suman una infusión cada una (dos las que son para
+                dos); si alguna no lleva café, o lleva dos, el consumo de arriba queda corrido.
               </p>
               <div className="mt-3 divide-y divide-slate-100 dark:divide-[#1c2521]">
-                {cafeActual.promosSinDefinir.slice(0, 12).map((promo) => (
+                {cafeActual.promosSupuestas.slice(0, 15).map((promo) => (
                   <div key={promo.producto} className="flex items-center justify-between gap-3 py-2 text-sm">
                     <span className="min-w-0 truncate">{promo.producto}</span>
                     <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
-                      {numero(promo.unidades)} vendidas
+                      {numero(promo.unidades)} vendidas · {numero(promo.infusiones)} infusiones
                     </span>
                   </div>
                 ))}
               </div>
             </Panel>
+          )}
+
+          {cafeActual.comprasSinPeso.length > 0 && (
+            <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+              No se suma porque el remito no dice cuánto pesa:{" "}
+              {cafeActual.comprasSinPeso.map((c) => `${c.detalle} (${numero(c.cantidad)})`).join(", ")}.
+            </p>
           )}
 
           {cafeActual.compradoKg === 0 && (
