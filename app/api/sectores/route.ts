@@ -5,6 +5,7 @@ import { fechaSql } from "@/lib/fechaAR";
 import { rangoDias } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
 import { definicionDe, PROMOS } from "@/lib/compras/promos";
+import { importeAFacturar } from "@/lib/compras/remito";
 import {
   claveProducto,
   margenPorSector,
@@ -59,7 +60,11 @@ export async function GET(request: Request) {
           ...(localId ? { localId } : { localId: { not: null } }),
         },
       },
-      select: { detalle: true, totalConAjuste: true, compra: { select: { localId: true } } },
+      select: {
+        detalle: true,
+        totalConAjuste: true,
+        compra: { select: { localId: true, tipo: true, total: true, ajustePct: true, ivaCredito: true } },
+      },
     }),
     cargarOverrides(),
     db.local.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
@@ -78,7 +83,13 @@ export async function GET(request: Request) {
     cantidad: p._sum.cantidad ?? 0,
   }));
 
-  const lineasCompra = compras.map((c) => ({ detalle: c.detalle, total: c.totalConAjuste }));
+  // La línea de un remito sin factura cuesta lo que se va a facturar, no la
+  // lista + 10,5% que dice el remito: se escala por la misma proporción.
+  const lineasCompra = compras.map((c) => {
+    const { compra } = c;
+    const factor = compra.ivaCredito == null && compra.total > 0 ? importeAFacturar(compra) / compra.total : 1;
+    return { detalle: c.detalle, total: c.totalConAjuste * factor };
+  });
 
   // El mix se calcula sobre TODA la venta; el margen, sólo sobre los locales
   // que tienen remitos. Son dos preguntas distintas y mezclarlas fue el bug.

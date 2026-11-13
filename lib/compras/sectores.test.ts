@@ -221,4 +221,16 @@ assert.strictEqual(helados.compra, 400);
 assert.strictEqual(helados.margenPct, null);
 assert.strictEqual(helados.costoPct, null);
 
+// --- Insumos del remito con nombre de compra, sin pisar lo que ya era de venta ---
+assert.strictEqual(sectorDe("PACK LECHE ENTERA X 12LTS", null), "CAFETERIA");
+assert.strictEqual(sectorDe("MAPLE HUEVO", null), "CAFETERIA");
+assert.strictEqual(sectorDe("TÉ DILMAH EXC. PERFECT CEYLON X 50 SAQ.", null), "CAFETERIA", "la tilde rompía el \b");
+assert.strictEqual(sectorDe("VASO TÉRMICO DÍA DEL PADRE", null), "SIN_CLASIFICAR", "TÉRMICO no es té");
+assert.strictEqual(sectorDe("CHOCOMENSAJE ELIJO CREER", null), "CHOCOLATERIA");
+assert.strictEqual(sectorDe("HUEVO 90GR", "Pascuas"), "CHOCOLATERIA", "huevo de Pascua es chocolate");
+assert.strictEqual(sectorDe("RAMA INDIVIDUAL LECHE", "CHOCOLATERIA"), "CHOCOLATERIA");
+assert.strictEqual(sectorDe("PAILEADO DE NARANJA", "Conos"), "HELADOS");
+assert.strictEqual(sectorDe("ROSCA DE PASCUA", "3. Panificados"), "CAFETERIA");
+assert.strictEqual(sectorDe("INSUMOS VARIOS DE COMPRAS", null), "SIN_CLASIFICAR", "envases y papelería no son mercadería");
+
 console.log("lib/compras/sectores.test.ts: todos los checks pasaron");
