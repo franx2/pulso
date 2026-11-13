@@ -11,9 +11,9 @@
 
 import type { TipoCompra } from "@prisma/client";
 import { db } from "@/lib/db";
-import { fechaSql } from "@/lib/fechaAR";
+import { fechaSql, sumarDias } from "@/lib/fechaAR";
 import { textoDePdf } from "@/lib/compras/pdf";
-import { costoPorLinea, parsearRemito, verificarRemito, type RemitoParseado } from "@/lib/compras/remito";
+import { costoPorLinea, mesDeRoyalty, parsearRemito, verificarRemito, type RemitoParseado } from "@/lib/compras/remito";
 import { pareceFactura, parsearFactura, verificarFactura, type FacturaParseada } from "@/lib/compras/factura";
 
 /**
@@ -85,6 +85,22 @@ async function buscarRemitoFacturado(
     });
     if (porNumero) return porNumero;
   }
+  // El royalty no trae "REMITO dd/mm": se reconoce por el mes ("USO DE MARCA
+  // SEPTIEMBRE"), y es el del mismo local emitido en los dos meses anteriores.
+  const royalty = mesDeRoyalty(factura.observaciones);
+  if (royalty) {
+    return db.compra.findFirst({
+      where: {
+        localId,
+        tipo: "SERVICIO",
+        ivaCredito: null,
+        reemplazadaPorId: null,
+        observaciones: { startsWith: royalty, mode: "insensitive" },
+        fecha: { gte: fechaSql(sumarDias(factura.fecha, -70)), lte: fechaSql(factura.fecha) },
+      },
+      select: { id: true, numero: true },
+    });
+  }
   if (!factura.remitoReferido) return null;
   // ponytail: por fecha toma un remito de ese día; si hubiera dos y la
   // factura no trae PPTO, reemplaza uno solo. Hasta ahora las que vienen sin
@@ -100,6 +116,20 @@ async function buscarRemitoFacturado(
  * lo nombra con "PPTO 5084"). Nace reemplazado, para no sumar dos veces.
  */
 async function facturaQueLoReemplaza(remito: RemitoParseado, localId: string): Promise<string | null> {
+  const royalty = mesDeRoyalty(remito.observaciones);
+  if (royalty) {
+    const factura = await db.compra.findFirst({
+      where: {
+        localId,
+        tipo: "SERVICIO",
+        ivaCredito: { not: null },
+        observaciones: { startsWith: royalty, mode: "insensitive" },
+        fecha: { gte: fechaSql(remito.fecha), lte: fechaSql(sumarDias(remito.fecha, 70)) },
+      },
+      select: { id: true },
+    });
+    return factura?.id ?? null;
+  }
   const candidatas = await db.compra.findMany({
     where: { localId, ivaCredito: { not: null }, observaciones: { contains: `PPTO ${remito.numeroComprobante}` } },
     select: { id: true, observaciones: true },

@@ -219,16 +219,27 @@ export function verificarRemito(remito: RemitoParseado): Verificacion {
  * El remito suma la lista y le agrega el ajuste (10,5%); la factura de esa
  * misma compra aplica 5% de descuento sobre la lista ("Desc./Rec.") y suma
  * 21% de IVA. En los 11 pares remito/factura de jul–sep 2026 la factura dio
- * siempre 4,03% más que el remito.
- * ponytail: sólo mercadería con ajuste; un remito sin ajuste o el royalty no
- * tienen pares contra los cuales verificar, y quedan tal cual.
+ * siempre 4,03% más que el remito. El royalty sigue la misma cuenta: el
+ * presupuesto 16-5180 de septiembre y su factura 16-2823 dan igual.
+ * ponytail: sólo con ajuste; un remito sin ajuste no tiene pares contra los
+ * cuales verificar, y queda tal cual.
  */
 export function importeAFacturar(c: { tipo: string; total: number; ajustePct: number | null }): number {
-  if (c.tipo !== "MERCADERIA" || !c.ajustePct) return c.total;
+  if (!c.ajustePct) return c.total;
   const lista = c.total / (1 + c.ajustePct / 100);
   return Math.round(lista * (1 - DESCUENTO_FACTURA) * (1 + IVA) * 100) / 100;
 }
 const DESCUENTO_FACTURA = 0.05;
+
+/**
+ * "USO DE MARCA SEPTIEMBRE", normalizado, si las observaciones empiezan así.
+ * Tiene que empezar: "DIFERENCIA USO DE MARCA ABRIL" es otro comprobante y no
+ * lo reemplaza la factura del mes.
+ */
+export function mesDeRoyalty(observaciones: string | null): string | null {
+  const m = observaciones?.trim().match(/^USO DE MARCA\s+([A-ZÁÉÍÓÚÑ]+)/i);
+  return m ? `USO DE MARCA ${m[1].toUpperCase()}` : null;
+}
 
 export function costoPorLinea(remito: RemitoParseado) {
   const factor = remito.ajustePct != null ? 1 + remito.ajustePct / 100 : 1;

@@ -1,7 +1,7 @@
 import assert from "node:assert";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { costoPorLinea, importeAFacturar, parsearRemito, RemitoIlegible, verificarRemito } from "./remito";
+import { costoPorLinea, importeAFacturar, mesDeRoyalty, parsearRemito, RemitoIlegible, verificarRemito } from "./remito";
 
 /**
  * Los fixtures son el texto real de cuatro remitos del proveedor (agosto de
@@ -182,9 +182,13 @@ assert.match(vMutilado.problemas[0], /líneas sin leer/);
 // --- Lo que se va a facturar por un remito ---
 // Lista 1.000 → remito 1.105 (+10,5%); factura: 1.000 × 0,95 × 1,21 = 1.149,50.
 assert.strictEqual(importeAFacturar({ tipo: "MERCADERIA", total: 1105, ajustePct: 10.5 }), 1149.5);
-// Sin ajuste o royalty: no hay contra qué verificar, queda el total del remito.
+// Sin ajuste: no hay contra qué verificar, queda el total del remito.
 assert.strictEqual(importeAFacturar({ tipo: "MERCADERIA", total: 1000, ajustePct: 0 }), 1000);
 assert.strictEqual(importeAFacturar({ tipo: "MERCADERIA", total: 1000, ajustePct: null }), 1000);
-assert.strictEqual(importeAFacturar({ tipo: "SERVICIO", total: 1105, ajustePct: 10.5 }), 1105);
+// El royalty con ajuste sigue la misma cuenta que la mercadería.
+assert.strictEqual(importeAFacturar({ tipo: "SERVICIO", total: 1105, ajustePct: 10.5 }), 1149.5);
+assert.strictEqual(mesDeRoyalty("USO DE MARCA septiembre"), "USO DE MARCA SEPTIEMBRE");
+assert.strictEqual(mesDeRoyalty("DIFERENCIA USO DE MARCA ABRIL"), null, "una diferencia es otro comprobante");
+assert.strictEqual(mesDeRoyalty("REMITO 20/10"), null);
 
 console.log("lib/compras/remito.test.ts: todos los checks pasaron");

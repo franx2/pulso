@@ -104,7 +104,7 @@ export async function GET(request: Request) {
       .reduce((s, c) => s + importeAFacturar({ tipo: c.tipo, total: c.subtotal, ajustePct: c.ajustePct }), 0);
     const royaltyBruto = remitos
       .filter((c) => c.tipo === "SERVICIO")
-      .reduce((s, c) => s + c.subtotal, 0);
+      .reduce((s, c) => s + importeAFacturar({ tipo: c.tipo, total: c.subtotal, ajustePct: c.ajustePct }), 0);
     const netoFactura = (tipo: "MERCADERIA" | "SERVICIO") =>
       facturas.filter((c) => c.tipo === tipo).reduce((s, c) => s + c.subtotal - c.ivaCredito!, 0);
 
