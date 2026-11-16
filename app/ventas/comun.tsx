@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LayoutGrid, Package, Settings, Wallet } from "lucide-react";
+import { BarChart3, LayoutGrid, Package, ReceiptText, Settings, Wallet } from "lucide-react";
 
 const CLAVE_LOCAL = "pulso.ventas.local";
 
@@ -41,14 +41,16 @@ export function imprimir(url: string) {
 
 const SECCIONES = [
   { clave: "salon", href: "/ventas", label: "Salón", Icono: LayoutGrid },
+  { clave: "listado", href: "/ventas/listado", label: "Ventas", Icono: ReceiptText },
   { clave: "caja", href: "/ventas/caja", label: "Caja", Icono: Wallet },
+  { clave: "reportes", href: "/ventas/reportes", label: "Reportes", Icono: BarChart3 },
   { clave: "productos", href: "/ventas/productos", label: "Productos", Icono: Package },
   { clave: "configuracion", href: "/ventas/configuracion", label: "Configuración", Icono: Settings },
 ] as const;
 
 export function NavVentas({ activo }: { activo: (typeof SECCIONES)[number]["clave"] }) {
   return (
-    <nav aria-label="Secciones de ventas" className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-[#29403b] dark:bg-[#0b1412]">
+    <nav aria-label="Secciones de ventas" className="scrollbar-hidden inline-flex max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-[#29403b] dark:bg-[#0b1412]">
       {SECCIONES.map(({ clave, href, label, Icono }) => (
         <Link
           key={clave}

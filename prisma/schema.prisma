@@ -214,6 +214,7 @@ model Local {
   categoriasVenta      CategoriaVenta[]
   productosVenta       ProductoVenta[]
   ingredientes         Ingrediente[]
+  descuentos           DescuentoPlantilla[]
   mediosPago           MedioPago[]
   cajas                Caja[]
   ventas               Venta[]
@@ -1343,6 +1344,12 @@ model ItemVenta {
   /// Cuándo se imprimió la comanda. Null = cargado pero todavía no enviado:
   /// se puede borrar sin permiso; después, anularlo pide motivo y permiso.
   enviadoEn           DateTime?
+  /// Descuento sobre este renglón: porcentaje (con `descuentoMonto` como
+  /// tope, si es > 0) o, sin porcentaje, un monto fijo. `descuentoNombre` es
+  /// el descuento de la lista que se usó, o "Libre".
+  descuentoPct        Float?
+  descuentoMonto      Float                @default(0)
+  descuentoNombre     String?
   anulado             Boolean              @default(false)
   motivoAnulacion     MotivoAnulacionItem?
   comentarioAnulacion String?
@@ -1479,4 +1486,23 @@ model MovimientoStock {
   createdAt     DateTime            @default(now())
 
   @@index([ingredienteId, createdAt])
+}
+
+/// Un descuento predefinido del local, como en Fudo: "Empleado 50%",
+/// "Cortesía 100%", "Cumpleaños $5.000". Porcentaje (con tope opcional) o
+/// monto fijo; se aplica a la venta entera o a un producto.
+model DescuentoPlantilla {
+  id         String   @id @default(cuid())
+  local      Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId    String
+  nombre     String
+  porcentaje Float?
+  monto      Float?
+  /// Máximo que puede descontar un porcentaje.
+  tope       Float?
+  activo     Boolean  @default(true)
+  orden      Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  @@unique([localId, nombre])
 }

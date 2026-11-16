@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /**
  * Cerrar la caja con lo que se contó. No se puede con ventas en curso: lo que
@@ -19,6 +19,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const caja = await db.caja.findUnique({ where: { id }, select: { cerradaEn: true, localId: true } });
   if (!caja) return NextResponse.json({ error: "Caja no encontrada" }, { status: 404 });
+  if (!enLocal(ctx, caja.localId)) return fueraDeLocal();
   if (caja.cerradaEn) return NextResponse.json({ error: "La caja ya está cerrada" }, { status: 409 });
   const enCurso = await db.venta.count({ where: { localId: caja.localId, estado: "EN_CURSO" } });
   if (enCurso > 0) {

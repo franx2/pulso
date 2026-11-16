@@ -3,7 +3,8 @@ import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
 import { resumenDeCaja } from "@/lib/ventas/calculos";
 import { cajaAbierta } from "@/lib/ventas/consultas";
-import { contextoVentas, noAutenticado, sinPermiso, type ContextoVentas } from "@/lib/ventas/sesion";
+import { ordenarMedios } from "@/lib/ventas/importarFudo";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso, type ContextoVentas } from "@/lib/ventas/sesion";
 
 async function detalle(ctx: ContextoVentas, caja: { id: string; fondoInicial: number }) {
   const [pagos, movimientos, ventas] = await Promise.all([
@@ -42,6 +43,7 @@ export async function GET(request: Request) {
   const ctx = await contextoVentas();
   if (!ctx) return noAutenticado();
   const localId = new URL(request.url).searchParams.get("localId") ?? "";
+  if (!enLocal(ctx, localId)) return fueraDeLocal();
 
   const [abierta, cerradas, enCurso] = await Promise.all([
     cajaAbierta(localId),
@@ -74,6 +76,10 @@ export async function GET(request: Request) {
       efectivoContado: c.efectivoContado,
     })),
     permisos: ctx.permisos,
+    // El orden fijo de los medios del local: el color de cada uno sale de acá.
+    ordenMedios: ordenarMedios(await db.medioPago.findMany({ where: { localId }, select: { nombre: true, tipo: true }, orderBy: { orden: "asc" } })).map(
+      (m) => m.nombre
+    ),
   });
 }
 
@@ -86,6 +92,7 @@ export async function POST(request: Request) {
   const body = await readJsonBody<{ localId?: string; fondoInicial?: number; nombre?: string }>(request);
   const local = await db.local.findUnique({ where: { id: body?.localId ?? "" }, select: { id: true } });
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 400 });
+  if (!enLocal(ctx, local.id)) return fueraDeLocal();
   const fondo = Number(body?.fondoInicial ?? 0);
   if (!(fondo >= 0)) return NextResponse.json({ error: "El fondo inicial no puede ser negativo" }, { status: 400 });
   if (await cajaAbierta(local.id)) return NextResponse.json({ error: "Ya hay una caja abierta en este local" }, { status: 409 });

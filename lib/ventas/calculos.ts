@@ -3,22 +3,46 @@
  * mientras el mozo carga y el servidor cuando cierra, así no pueden discrepar.
  */
 
-export type ItemCalculo = { precio: number; cantidad: number; anulado: boolean };
+export type ItemCalculo = {
+  precio: number;
+  cantidad: number;
+  anulado: boolean;
+  descuentoPct?: number | null;
+  descuentoMonto?: number | null;
+};
 export type PagoCalculo = { monto: number; propina: number; anulado: boolean };
 
 const redondear = (n: number) => Math.round(n * 100) / 100;
 
 /**
- * Subtotal de lo no anulado, el descuento y el total.
- * El porcentaje gana sobre el monto fijo si vienen los dos; el descuento nunca
- * deja el total por debajo de cero.
+ * Un descuento, igual para un renglón o para la venta entera: con porcentaje,
+ * el monto es el tope (si es mayor a cero); sin porcentaje, es un monto fijo.
+ * Nunca descuenta más que la base.
+ */
+export function montoDescuento(base: number, d: { pct?: number | null; monto?: number | null }) {
+  const pct = d.pct && d.pct > 0 ? Math.min(d.pct, 100) : 0;
+  const monto = Math.max(0, d.monto ?? 0);
+  const bruto = pct > 0 ? Math.min((base * pct) / 100, monto > 0 ? monto : Infinity) : monto;
+  return redondear(Math.min(Math.max(0, base), bruto));
+}
+
+/** Lo que cuesta un renglón con su descuento. */
+export function totalDeLinea(i: ItemCalculo) {
+  const bruto = i.precio * i.cantidad;
+  return redondear(bruto - montoDescuento(bruto, { pct: i.descuentoPct, monto: i.descuentoMonto }));
+}
+
+/**
+ * Bruto de lo no anulado, descuentos por producto, descuento de la venta y
+ * total. El descuento de la venta se aplica sobre lo que quedó después de los
+ * descuentos por producto.
  */
 export function totalesDeVenta(items: ItemCalculo[], descuento: { pct?: number | null; monto?: number | null } = {}) {
-  const subtotal = redondear(items.filter((i) => !i.anulado).reduce((s, i) => s + i.precio * i.cantidad, 0));
-  const pct = descuento.pct && descuento.pct > 0 ? Math.min(descuento.pct, 100) : 0;
-  const bruto = pct > 0 ? (subtotal * pct) / 100 : Math.max(0, descuento.monto ?? 0);
-  const montoDescuento = redondear(Math.min(subtotal, bruto));
-  return { subtotal, descuento: montoDescuento, total: redondear(subtotal - montoDescuento) };
+  const validos = items.filter((i) => !i.anulado);
+  const bruto = redondear(validos.reduce((s, i) => s + i.precio * i.cantidad, 0));
+  const subtotal = redondear(validos.reduce((s, i) => s + totalDeLinea(i), 0));
+  const montoVenta = montoDescuento(subtotal, descuento);
+  return { bruto, descuentoItems: redondear(bruto - subtotal), subtotal, descuento: montoVenta, total: redondear(subtotal - montoVenta) };
 }
 
 /** Lo cobrado (sin propinas) y cuánto falta. */

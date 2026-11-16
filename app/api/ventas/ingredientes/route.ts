@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma, type UnidadIngrediente } from "@prisma/client";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 const UNIDADES: UnidadIngrediente[] = ["G", "ML", "U"];
 
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   if (!(costo >= 0)) return NextResponse.json({ error: "El costo no puede ser negativo" }, { status: 400 });
   const local = await db.local.findUnique({ where: { id: body?.localId ?? "" }, select: { id: true } });
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 400 });
+  if (!enLocal(ctx, local.id)) return fueraDeLocal();
   try {
     const ing = await db.ingrediente.create({
       data: {

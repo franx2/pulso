@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import type { MotivoAnulacionItem } from "@prisma/client";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { resolverDescuento, type PedidoDescuento } from "@/lib/ventas/descuentos";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 const MOTIVOS: MotivoAnulacionItem[] = [
   "PEDIDO_DEL_CLIENTE",
@@ -18,7 +19,7 @@ const MOTIVOS: MotivoAnulacionItem[] = [
 async function buscar(ventaId: string, itemId: string) {
   return db.itemVenta.findFirst({
     where: { id: itemId, ventaId },
-    select: { id: true, enviadoEn: true, anulado: true, venta: { select: { estado: true } } },
+    select: { id: true, enviadoEn: true, anulado: true, venta: { select: { estado: true, localId: true } } },
   });
 }
 
@@ -36,11 +37,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     comentario?: string | null;
     precio?: number;
     anular?: { motivo?: string; comentario?: string };
+    /** Descuento de este renglón: de la lista, libre, o null para quitarlo. */
+    descuento?: PedidoDescuento;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
   const item = await buscar(id, itemId);
   if (!item) return NextResponse.json({ error: "Producto no encontrado en la venta" }, { status: 404 });
+  if (!enLocal(ctx, item.venta.localId)) return fueraDeLocal();
   if (item.venta.estado !== "EN_CURSO") return NextResponse.json({ error: "La venta ya está cerrada" }, { status: 409 });
   if (item.anulado) return NextResponse.json({ error: "Ese producto ya está anulado" }, { status: 409 });
 
@@ -81,6 +85,13 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     if (!(body.precio >= 0)) return NextResponse.json({ error: "Precio inválido" }, { status: 400 });
     data.precio = body.precio;
   }
+  if (body.descuento !== undefined) {
+    const r = await resolverDescuento(ctx, item.venta.localId, body.descuento);
+    if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
+    data.descuentoPct = r.ok.pct;
+    data.descuentoMonto = r.ok.monto;
+    data.descuentoNombre = r.ok.nombre;
+  }
   await db.itemVenta.update({ where: { id: itemId }, data });
   return NextResponse.json({ ok: true });
 }
@@ -92,6 +103,7 @@ export async function DELETE(_request: Request, { params }: { params: Promise<{ 
   const { id, itemId } = await params;
   const item = await buscar(id, itemId);
   if (!item) return NextResponse.json({ error: "Producto no encontrado en la venta" }, { status: 404 });
+  if (!enLocal(ctx, item.venta.localId)) return fueraDeLocal();
   if (item.venta.estado !== "EN_CURSO") return NextResponse.json({ error: "La venta ya está cerrada" }, { status: 409 });
   if (item.enviadoEn) return NextResponse.json({ error: "Ya se envió a cocina: hay que anularlo con motivo" }, { status: 409 });
   await db.itemVenta.delete({ where: { id: itemId } });

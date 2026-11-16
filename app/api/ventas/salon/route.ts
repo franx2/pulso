@@ -14,7 +14,7 @@ export async function GET(request: Request) {
   if (!ctx) return noAutenticado();
 
   const locales = await db.local.findMany({
-    where: { salones: { some: {} } },
+    where: { salones: { some: {} }, ...(ctx.locales ? { id: { in: ctx.locales } } : {}) },
     select: { id: true, nombre: true },
     orderBy: { nombre: "asc" },
   });
@@ -52,7 +52,7 @@ export async function GET(request: Request) {
         descuentoPct: true,
         descuentoMonto: true,
         mozo: { select: { nombre: true } },
-        items: { select: { precio: true, cantidad: true, anulado: true, enviadoEn: true } },
+        items: { select: { precio: true, cantidad: true, anulado: true, enviadoEn: true, descuentoPct: true, descuentoMonto: true } },
         pagos: { where: { anulado: false }, select: { monto: true } },
       },
     }),

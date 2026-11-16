@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /**
  * Mandar a cocina lo cargado y no enviado: se marca con la misma hora, y esa
@@ -13,8 +13,9 @@ export async function POST(_request: Request, { params }: { params: Promise<{ id
   if (prohibido) return prohibido;
   const { id } = await params;
 
-  const venta = await db.venta.findUnique({ where: { id }, select: { estado: true } });
+  const venta = await db.venta.findUnique({ where: { id }, select: { estado: true, localId: true } });
   if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  if (!enLocal(ctx, venta.localId)) return fueraDeLocal();
   if (venta.estado !== "EN_CURSO") return NextResponse.json({ error: "La venta ya está cerrada" }, { status: 409 });
 
   const enviadoEn = new Date();

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /**
  * Editar un producto y, si viene, reemplazar su receta entera. Queda marcado
@@ -28,6 +28,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
 
   const producto = await db.productoVenta.findUnique({ where: { id }, select: { localId: true } });
   if (!producto) return NextResponse.json({ error: "Producto no encontrado" }, { status: 404 });
+  if (!enLocal(ctx, producto.localId)) return fueraDeLocal();
 
   const data: Record<string, unknown> = { editadoEn: new Date() };
   if (body.nombre !== undefined) {

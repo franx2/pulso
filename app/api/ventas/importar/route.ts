@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
 import { importarDeFudo } from "@/lib/ventas/importarFudo";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /** Más de mil productos: en la primera importación tarda. */
 export const maxDuration = 300;
@@ -39,6 +39,7 @@ export async function POST(request: Request) {
   const prohibido = sinPermiso(ctx, "update_products") ?? sinPermiso(ctx, "admin_rooms");
   if (prohibido) return prohibido;
   const body = await readJsonBody<{ localId?: string }>(request);
+  if (!enLocal(ctx, body?.localId)) return fueraDeLocal();
   try {
     const resultado = await importarDeFudo(body?.localId ?? "");
     return NextResponse.json({ resultado });

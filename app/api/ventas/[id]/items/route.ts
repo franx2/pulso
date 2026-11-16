@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /**
  * Cargar un producto en la venta. Nombre, precio y cocina se copian del
@@ -21,6 +21,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
 
   const venta = await db.venta.findUnique({ where: { id }, select: { estado: true, localId: true } });
   if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  if (!enLocal(ctx, venta.localId)) return fueraDeLocal();
   if (venta.estado !== "EN_CURSO") return NextResponse.json({ error: "La venta ya está cerrada" }, { status: 409 });
 
   const producto = await db.productoVenta.findFirst({

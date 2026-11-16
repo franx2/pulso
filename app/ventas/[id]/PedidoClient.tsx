@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   ChefHat,
   Minus,
+  Percent,
   MessageSquare,
   MoreHorizontal,
   Plus,
@@ -21,13 +22,16 @@ import {
 } from "lucide-react";
 import { Button, ErrorText, Input, Label, Modal, Panel, Select, SelectorSegmentado, Textarea } from "@/components/ui";
 import { plata } from "@/lib/formato";
-import { saldoDeVenta, totalesDeVenta } from "@/lib/ventas/calculos";
+import { montoDescuento, saldoDeVenta, totalDeLinea, totalesDeVenta } from "@/lib/ventas/calculos";
 import type { VentaCompleta } from "@/lib/ventas/consultas";
 import { aNumero, ETIQUETA_MOTIVO, imprimir, tiempoDesde } from "../comun";
+import { COLOR_CAT } from "../graficos";
 
 type Item = VentaCompleta["items"][number];
 type Categoria = { id: string; nombre: string; padreId: string | null };
-type Producto = { id: string; nombre: string; precio: number; categoriaId: string; favorito: boolean; codigo: string | null };
+type Producto = { id: string; nombre: string; precio: number; categoriaId: string; favorito: boolean; codigo: string | null; cocinaId: string | null };
+type Cocina = { id: string; nombre: string };
+type Plantilla = { id: string; nombre: string; porcentaje: number | null; monto: number | null; tope: number | null; activo: boolean };
 type Medio = { id: string; nombre: string; tipo: string };
 type Datos = {
   venta: VentaCompleta;
@@ -54,7 +58,8 @@ async function pedir(url: string, method: string, body?: unknown) {
 export default function PedidoClient({ id }: { id: string }) {
   const router = useRouter();
   const [datos, setDatos] = useState<Datos | null>(null);
-  const [carta, setCarta] = useState<{ categorias: Categoria[]; productos: Producto[]; medios: Medio[] } | null>(null);
+  const [carta, setCarta] = useState<{ categorias: Categoria[]; productos: Producto[]; medios: Medio[]; cocinas: Cocina[] } | null>(null);
+  const [plantillas, setPlantillas] = useState<Plantilla[]>([]);
   const [categoria, setCategoria] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [vista, setVista] = useState<"carta" | "pedido">("carta");
@@ -66,6 +71,7 @@ export default function PedidoClient({ id }: { id: string }) {
     | { tipo: "anular"; item: Item }
     | { tipo: "comentario"; item: Item }
     | { tipo: "opciones" }
+    | { tipo: "descuento"; item?: Item }
     | { tipo: "cerrada"; vuelto: number; factura: string | null }
     | null
   >(null);
@@ -79,7 +85,12 @@ export default function PedidoClient({ id }: { id: string }) {
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch al montar, sin librería de datos
     cargar()
-      .then((d) => pedir(`/api/ventas/carta?localId=${d.venta.local.id}`, "GET"))
+      .then((d) => {
+        pedir(`/api/ventas/descuentos?localId=${d.venta.local.id}`, "GET")
+          .then((r) => setPlantillas(r.descuentos.filter((x: Plantilla) => x.activo)))
+          .catch(() => undefined);
+        return pedir(`/api/ventas/carta?localId=${d.venta.local.id}`, "GET");
+      })
       .then((c) => {
         setCarta(c);
         const hayFavoritos = c.productos.some((p: Producto) => p.favorito);
@@ -155,6 +166,9 @@ export default function PedidoClient({ id }: { id: string }) {
           anulado: false,
           motivoAnulacion: null,
           comentarioAnulacion: null,
+          descuentoPct: null,
+          descuentoMonto: 0,
+          descuentoNombre: null,
         });
       const t = totalesDeVenta(items, { pct: d.venta.descuentoPct, monto: d.venta.descuentoMonto });
       return { ...d, venta: { ...d.venta, items, ...t, ...saldoDeVenta(t.total, d.venta.pagos) } };
@@ -197,6 +211,12 @@ export default function PedidoClient({ id }: { id: string }) {
   if (!venta || !carta) return <div className="h-96 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando el pedido" />;
 
   const titulo = venta.mesa ? `Mesa ${venta.mesa.numero}` : venta.cliente ? `Mostrador · ${venta.cliente}` : "Mostrador";
+  const puedeDescontar = Boolean(permisos.apply_discounts || permisos.create_discounts);
+  // El color de cada cocina sale de su lugar fijo en la lista del local.
+  const colorCocina = (cocinaId: string | null | undefined) => {
+    const k = carta.cocinas.findIndex((c) => c.id === cocinaId);
+    return k >= 0 ? COLOR_CAT(k) : "#94a3b8";
+  };
 
   const panelCarta = (
     <Panel className="flex min-h-0 flex-col">
@@ -234,6 +254,17 @@ export default function PedidoClient({ id }: { id: string }) {
           </div>
         )}
       </div>
+      {carta.cocinas.length > 1 && (
+        <p className="flex flex-wrap gap-x-3 gap-y-1 border-b border-slate-100 px-3 py-2 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+          <span className="font-medium">Va a:</span>
+          {carta.cocinas.map((c, k) => (
+            <span key={c.id} className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 rounded-full" style={{ background: COLOR_CAT(k) }} aria-hidden />
+              {c.nombre}
+            </span>
+          ))}
+        </p>
+      )}
       {productos.length === 0 ? (
         <p className="px-4 py-10 text-center text-sm text-slate-500 dark:text-[#94a19c]">{busqueda ? "No hay productos con ese nombre." : "Sin productos en esta categoría."}</p>
       ) : (
@@ -248,7 +279,10 @@ export default function PedidoClient({ id }: { id: string }) {
                 disabled={!abierta || !permisos.create_additions}
                 className="relative flex min-h-[4.5rem] flex-col justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left transition-[transform,border-color,background-color] duration-100 ease-out hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 active:scale-[0.97] disabled:opacity-50 dark:border-[#29403b] dark:bg-[#101c19] dark:hover:bg-[#172724]"
               >
-                <span className="line-clamp-2 text-sm font-medium leading-snug">{p.nombre}</span>
+                <span className="line-clamp-2 text-sm font-medium leading-snug">
+                  <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: colorCocina(p.cocinaId) }} aria-hidden />
+                  {p.nombre}
+                </span>
                 <span className="mt-1 text-sm font-semibold tabular-nums text-slate-600 dark:text-[#c1cbc6]">{plata(p.precio)}</span>
                 {cuantos && (
                   <span className="absolute right-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6875rem] font-bold text-[#241703]">
@@ -305,9 +339,15 @@ export default function PedidoClient({ id }: { id: string }) {
                     <Paso onClick={() => setModal({ tipo: "comentario", item: i })} etiqueta={`Comentario para ${i.nombre}`}>
                       <MessageSquare size={14} aria-hidden />
                     </Paso>
+                    {puedeDescontar && (
+                      <Paso onClick={() => setModal({ tipo: "descuento", item: i })} etiqueta={`Descuento para ${i.nombre}`}>
+                        <Percent size={14} aria-hidden />
+                      </Paso>
+                    )}
                   </div>
+                  <DescuentoDeLinea item={i} />
                 </div>
-                <span className="pt-0.5 text-sm font-semibold tabular-nums">{plata(i.precio * i.cantidad)}</span>
+                <PrecioDeLinea item={i} />
               </li>
             ))}
           </Grupo>
@@ -319,12 +359,24 @@ export default function PedidoClient({ id }: { id: string }) {
                 <span className="w-7 pt-0.5 text-sm font-semibold tabular-nums text-slate-500 dark:text-[#94a19c]">{i.cantidad}×</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">{i.nombre}</p>
-                  <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                    <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorCocina(i.cocina?.id) }} aria-hidden />
                     {i.cocina?.nombre ?? "Sin cocina"} · {hora(i.enviadoEn!)}
                     {i.comentario && ` · ${i.comentario}`}
                   </p>
+                  <DescuentoDeLinea item={i} />
                 </div>
-                <span className="pt-0.5 text-sm tabular-nums">{plata(i.precio * i.cantidad)}</span>
+                <PrecioDeLinea item={i} />
+                {abierta && puedeDescontar && (
+                  <button
+                    type="button"
+                    onClick={() => setModal({ tipo: "descuento", item: i })}
+                    aria-label={`Descuento para ${i.nombre}`}
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 dark:hover:bg-[#1d1830] dark:hover:text-violet-300"
+                  >
+                    <Percent size={15} aria-hidden />
+                  </button>
+                )}
                 {abierta && (
                   <button
                     type="button"
@@ -354,12 +406,25 @@ export default function PedidoClient({ id }: { id: string }) {
 
       <div className="border-t border-slate-200 px-4 py-3 dark:border-[#29403b]">
         <dl className="grid grid-cols-[1fr_auto] gap-y-0.5 text-sm">
-          {venta.descuento > 0 && (
+          {(venta.descuento > 0 || venta.descuentoItems > 0) && (
             <>
               <dt className="text-slate-500 dark:text-[#94a19c]">Subtotal</dt>
-              <dd className="text-right tabular-nums">{plata(venta.subtotal)}</dd>
-              <dt className="text-slate-500 dark:text-[#94a19c]">Descuento{venta.descuentoPct ? ` ${venta.descuentoPct}%` : ""}</dt>
-              <dd className="text-right tabular-nums">−{plata(venta.descuento)}</dd>
+              <dd className="text-right tabular-nums">{plata(venta.bruto)}</dd>
+            </>
+          )}
+          {venta.descuentoItems > 0 && (
+            <>
+              <dt className="text-violet-700 dark:text-violet-300">Descuentos en productos</dt>
+              <dd className="text-right tabular-nums text-violet-700 dark:text-violet-300">−{plata(venta.descuentoItems)}</dd>
+            </>
+          )}
+          {venta.descuento > 0 && (
+            <>
+              <dt className="text-violet-700 dark:text-violet-300">
+                {venta.descuentoMotivo ?? "Descuento"}
+                {venta.descuentoPct ? ` ${venta.descuentoPct}%` : ""}
+              </dt>
+              <dd className="text-right tabular-nums text-violet-700 dark:text-violet-300">−{plata(venta.descuento)}</dd>
             </>
           )}
           <dt className="pt-1 text-base font-semibold">Total</dt>
@@ -373,6 +438,17 @@ export default function PedidoClient({ id }: { id: string }) {
             </>
           )}
         </dl>
+
+        {abierta && puedeDescontar && venta.items.length > 0 && (
+          <button
+            type="button"
+            onClick={() => setModal({ tipo: "descuento" })}
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-violet-700 underline-offset-2 hover:underline dark:text-violet-300"
+          >
+            <Percent size={14} aria-hidden />
+            {venta.descuento > 0 ? "Cambiar el descuento de la venta" : "Descuento a toda la venta"}
+          </button>
+        )}
 
         {abierta ? (
           <div className="mt-3 grid grid-cols-2 gap-2">
@@ -497,6 +573,33 @@ export default function PedidoClient({ id }: { id: string }) {
           }}
         />
       )}
+      {modal?.tipo === "descuento" && (
+        <ModalDescuento
+          item={modal.item}
+          plantillas={plantillas}
+          libre={Boolean(permisos.create_discounts)}
+          deLista={Boolean(permisos.apply_discounts)}
+          base={modal.item ? modal.item.precio * modal.item.cantidad : venta.subtotal}
+          actual={
+            modal.item
+              ? modal.item.descuentoNombre
+              : venta.descuento > 0
+                ? (venta.descuentoMotivo ?? "Descuento")
+                : null
+          }
+          onClose={() => setModal(null)}
+          onAplicar={async (descuento, mensaje) => {
+            const ok = await hacer(
+              () =>
+                modal.item
+                  ? pedir(`/api/ventas/${id}/items/${modal.item.id}`, "PATCH", { descuento })
+                  : pedir(`/api/ventas/${id}`, "PATCH", { descuento }),
+              mensaje
+            );
+            if (ok) setModal(null);
+          }}
+        />
+      )}
       {modal?.tipo === "comentario" && (
         <ModalComentario
           item={modal.item}
@@ -552,7 +655,7 @@ function Grupo({ titulo, tono, children }: { titulo: string; tono?: "ambar"; chi
       >
         {titulo}
       </h2>
-      <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">{children}</ul>
+      <ul className={`divide-y divide-slate-100 dark:divide-[#1c2521] ${tono === "ambar" ? "bg-amber-50/50 dark:bg-[#211c12]" : ""}`}>{children}</ul>
     </section>
   );
 }
@@ -819,11 +922,7 @@ function ModalOpciones({
   const [comentario, setComentario] = useState(venta.comentario ?? "");
   const [mozoId, setMozoId] = useState(venta.mozo?.id ?? "");
   const [mesaId, setMesaId] = useState("");
-  const [tipoDesc, setTipoDesc] = useState<"pct" | "monto">(venta.descuentoMonto > 0 ? "monto" : "pct");
-  const [desc, setDesc] = useState(String(venta.descuentoPct ?? (venta.descuentoMonto || "")));
-  const [motivoDesc, setMotivoDesc] = useState(venta.descuentoMotivo ?? "");
   const [motivoAnular, setMotivoAnular] = useState("");
-  const vistaPrevia = totalesDeVenta(venta.items, tipoDesc === "pct" ? { pct: aNumero(desc) } : { monto: aNumero(desc) });
 
   return (
     <Modal title="Opciones de la venta" onClose={onClose} maxWidth="max-w-lg">
@@ -887,45 +986,6 @@ function ModalOpciones({
           </Button>
         </form>
 
-        {permisos.create_discounts && (
-          <form
-            onSubmit={(e) => {
-              e.preventDefault();
-              const valor = aNumero(desc);
-              onGuardar(
-                tipoDesc === "pct"
-                  ? { descuentoPct: valor || null, descuentoMonto: 0, descuentoMotivo: motivoDesc }
-                  : { descuentoPct: null, descuentoMonto: valor, descuentoMotivo: motivoDesc },
-                valor ? "Descuento aplicado" : "Descuento quitado"
-              );
-            }}
-            className="flex flex-col gap-3 border-t border-slate-100 pt-4 dark:border-[#1c2521]"
-          >
-            <h3 className="font-semibold">Descuento</h3>
-            <div className="flex items-end gap-2">
-              <SelectorSegmentado
-                label="Tipo de descuento"
-                valor={tipoDesc}
-                onChange={setTipoDesc}
-                opciones={[
-                  { clave: "pct", label: "%" },
-                  { clave: "monto", label: "$" },
-                ]}
-              />
-              <div className="flex-1">
-                <Input inputMode="decimal" value={desc} onChange={(e) => setDesc(e.target.value)} aria-label="Valor del descuento" placeholder="0" />
-              </div>
-            </div>
-            <Input value={motivoDesc} onChange={(e) => setMotivoDesc(e.target.value)} placeholder="Motivo (opcional): cliente frecuente, error de cocina…" aria-label="Motivo del descuento" />
-            <p className="text-sm text-slate-500 dark:text-[#94a19c]">
-              Queda en {plata(vistaPrevia.total)} (−{plata(vistaPrevia.descuento)})
-            </p>
-            <Button type="submit" variant="ghost">
-              Aplicar descuento
-            </Button>
-          </form>
-        )}
-
         {permisos.cancel_sales && (
           <form
             onSubmit={(e) => {
@@ -952,4 +1012,134 @@ function textoFactura(f: { cae: string | null; numero: number | null; error: str
   if (!f) return null;
   if (f.cae) return `Factura emitida: N° ${f.numero} · CAE ${f.cae}`;
   return "ARCA no respondió: la factura quedó pendiente y se reintenta sola.";
+}
+
+/** "Empleado 50% · −$2.500" debajo del producto, si tiene descuento. */
+function DescuentoDeLinea({ item }: { item: Item }) {
+  const bruto = item.precio * item.cantidad;
+  const monto = bruto - totalDeLinea(item);
+  if (monto <= 0) return null;
+  return (
+    <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-[#1d1830] dark:text-violet-200">
+      <Percent size={11} aria-hidden />
+      {item.descuentoNombre ?? "Descuento"}
+      {item.descuentoPct ? ` ${item.descuentoPct}%` : ""} · −{plata(monto)}
+    </p>
+  );
+}
+
+/** El precio del renglón; si tiene descuento, el original tachado arriba. */
+function PrecioDeLinea({ item }: { item: Item }) {
+  const bruto = item.precio * item.cantidad;
+  const neto = totalDeLinea(item);
+  return (
+    <span className="pt-0.5 text-right text-sm font-semibold tabular-nums">
+      {neto < bruto && <span className="block text-xs font-normal text-slate-400 line-through dark:text-[#5f6d67]">{plata(bruto)}</span>}
+      {plata(neto)}
+    </span>
+  );
+}
+
+/**
+ * Elegir un descuento: los de la lista del local (los arma el admin en
+ * Configuración) y, para quien tiene el permiso, uno libre.
+ */
+function ModalDescuento({
+  item,
+  plantillas,
+  libre,
+  deLista,
+  base,
+  actual,
+  onClose,
+  onAplicar,
+}: {
+  item?: Item;
+  plantillas: Plantilla[];
+  libre: boolean;
+  deLista: boolean;
+  base: number;
+  actual: string | null;
+  onClose: () => void;
+  onAplicar: (descuento: { plantillaId?: string; pct?: number | null; monto?: number | null } | null, mensaje: string) => void;
+}) {
+  const [tipo, setTipo] = useState<"pct" | "monto">("pct");
+  const [valor, setValor] = useState("");
+  const n = aNumero(valor);
+  const vistaPrevia = montoDescuento(base, tipo === "pct" ? { pct: n } : { monto: n });
+
+  return (
+    <Modal title={item ? `Descuento en ${item.nombre}` : "Descuento a toda la venta"} onClose={onClose} maxWidth="max-w-lg">
+      <div className="flex flex-col gap-5">
+        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+          Sobre {plata(base)}
+          {actual && (
+            <>
+              {" "}· ahora tiene <strong className="text-violet-700 dark:text-violet-300">{actual}</strong>
+            </>
+          )}
+        </p>
+
+        {deLista &&
+          (plantillas.length ? (
+            <div className="grid gap-2 sm:grid-cols-2">
+              {plantillas.map((p) => {
+                const monto = montoDescuento(base, p.porcentaje ? { pct: p.porcentaje, monto: p.tope } : { monto: p.monto });
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => onAplicar({ plantillaId: p.id }, `${p.nombre} aplicado`)}
+                    className="flex min-h-14 flex-col items-start justify-center rounded-lg border border-violet-200 bg-violet-50/60 px-3 py-2 text-left transition-colors hover:border-violet-400 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 dark:border-[#3a2f5c] dark:bg-[#1d1830] dark:hover:bg-[#261f40]"
+                  >
+                    <span className="text-sm font-semibold text-violet-900 dark:text-violet-100">{p.nombre}</span>
+                    <span className="text-xs text-violet-800/80 dark:text-violet-200/80">
+                      {p.porcentaje ? `${p.porcentaje}%${p.tope ? ` hasta ${plata(p.tope)}` : ""}` : plata(p.monto ?? 0)} · −{plata(monto)}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+              El local todavía no tiene descuentos en la lista. Se cargan en Ventas → Configuración.
+            </p>
+          ))}
+
+        {libre && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onAplicar(tipo === "pct" ? { pct: n } : { monto: n }, "Descuento aplicado");
+            }}
+            className="flex flex-col gap-2 border-t border-slate-100 pt-4 dark:border-[#1c2521]"
+          >
+            <h3 className="text-sm font-semibold">Descuento libre</h3>
+            <div className="flex items-end gap-2">
+              <SelectorSegmentado
+                label="Tipo de descuento"
+                valor={tipo}
+                onChange={setTipo}
+                opciones={[
+                  { clave: "pct", label: "%" },
+                  { clave: "monto", label: "$" },
+                ]}
+              />
+              <Input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} aria-label="Valor del descuento" placeholder="0" className="flex-1" />
+              <Button type="submit" variant="ghost" disabled={n <= 0 || (tipo === "pct" && n > 100)}>
+                Aplicar −{plata(vistaPrevia)}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {actual && (
+          <Button variant="danger" onClick={() => onAplicar(null, "Descuento quitado")}>
+            <X size={15} aria-hidden />
+            Quitar el descuento
+          </Button>
+        )}
+      </div>
+    </Modal>
+  );
 }

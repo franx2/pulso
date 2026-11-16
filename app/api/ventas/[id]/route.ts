@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
 import { ventaCompleta } from "@/lib/ventas/consultas";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { resolverDescuento, type PedidoDescuento } from "@/lib/ventas/descuentos";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 export async function GET(_request: Request, { params }: { params: Promise<{ id: string }> }) {
   const ctx = await contextoVentas();
@@ -10,6 +11,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { id } = await params;
   const venta = await ventaCompleta(id);
   if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  if (!enLocal(ctx, venta.local.id)) return fueraDeLocal();
 
   // Para cambiar de mozo o de mesa sin otra consulta.
   const [mozos, mesasLibres] = await Promise.all([
@@ -47,11 +49,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     descuentoPct?: number | null;
     descuentoMonto?: number | null;
     descuentoMotivo?: string | null;
+    /** El descuento de la venta entera: de la lista, libre, o null para quitarlo. */
+    descuento?: PedidoDescuento;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
   const venta = await db.venta.findUnique({ where: { id }, select: { estado: true, localId: true } });
   if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  if (!enLocal(ctx, venta.localId)) return fueraDeLocal();
   if (venta.estado !== "EN_CURSO") return NextResponse.json({ error: "La venta ya está cerrada" }, { status: 409 });
 
   const data: Record<string, unknown> = {};
@@ -86,6 +91,14 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     data.descuentoPct = pct && pct > 0 ? pct : null;
     data.descuentoMonto = pct && pct > 0 ? 0 : monto;
     data.descuentoMotivo = body.descuentoMotivo?.trim() || null;
+  }
+
+  if (body.descuento !== undefined) {
+    const r = await resolverDescuento(ctx, venta.localId, body.descuento);
+    if ("error" in r) return NextResponse.json({ error: r.error }, { status: r.status });
+    data.descuentoPct = r.ok.pct;
+    data.descuentoMonto = r.ok.monto;
+    data.descuentoMotivo = r.ok.nombre;
   }
 
   await db.venta.update({ where: { id }, data });

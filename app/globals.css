@@ -79,6 +79,17 @@ body {
   /* La banda del intervalo: en claro el menta al 18% sobre blanco casi no
      se veía, que es justo lo que el intervalo tiene que comunicar. */
   --serie-banda: rgba(21, 154, 120, 0.16);
+  /* Categóricos de Ventas (reportes, cocinas, categorías), en orden fijo.
+     Validados con el chequeo de daltonismo: azul, naranja, violeta, ocre,
+     magenta, celeste, verde. Los valores se escriben al lado de cada barra,
+     que es lo que exige el contraste bajo de los tonos claros. */
+  --cat-1: #2c5ba0;
+  --cat-2: #f26b43;
+  --cat-3: #7b6fd6;
+  --cat-4: #c2930f;
+  --cat-5: #c2417a;
+  --cat-6: #4fa3d9;
+  --cat-7: #3f8a2e;
 }
 
 .dark {
@@ -87,6 +98,13 @@ body {
   --serie-aviso: #fcd34d;
   --serie-real: #c1cbc6;
   --serie-banda: rgba(55, 230, 176, 0.18);
+  --cat-1: #5b8ad6;
+  --cat-2: #d96a48;
+  --cat-3: #8579d8;
+  --cat-4: #b08516;
+  --cat-5: #c9578a;
+  --cat-6: #3f95c8;
+  --cat-7: #4c9a3c;
 }
 
 /* El panel del selector de período: baja apenas desde el botón que lo abrió. */

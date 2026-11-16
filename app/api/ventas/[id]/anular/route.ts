@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
 import { anularFacturaDeVenta } from "@/lib/ventas/facturacion";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /** Anular una venta entera: sale de la caja y deja de sumar, con motivo y autor. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -15,8 +15,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const motivo = body?.motivo?.trim() ?? "";
   if (!motivo) return NextResponse.json({ error: "Escribí por qué se anula la venta" }, { status: 400 });
 
-  const venta = await db.venta.findUnique({ where: { id }, select: { estado: true } });
+  const venta = await db.venta.findUnique({ where: { id }, select: { estado: true, localId: true } });
   if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  if (!enLocal(ctx, venta.localId)) return fueraDeLocal();
   if (venta.estado === "ANULADA") return NextResponse.json({ error: "La venta ya está anulada" }, { status: 409 });
 
   await db.$transaction([

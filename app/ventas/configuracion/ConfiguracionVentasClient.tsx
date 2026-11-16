@@ -267,36 +267,52 @@ export default function ConfiguracionVentasClient() {
 
       {roles && (
         <Panel>
-          <PanelHeader titulo="Quién tiene cada rol" descripcion="Sin rol asignado, cada persona usa el que le toca por su rol en Pulso: encargados, Encargado; empleados, Camarero." />
-          <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
-            {empleados.map((e) => (
-              <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-2.5">
-                <span className="min-w-0">
-                  <span className="font-medium">{e.nombre}</span>
-                  <span className="text-sm text-slate-500 dark:text-[#94a19c]"> · {e.local}</span>
-                </span>
-                <Select
-                  aria-label={`Rol de ventas de ${e.nombre}`}
-                  value={e.rolVentaId ?? ""}
-                  onChange={(ev) =>
-                    void hacer(async () => {
-                      await pedir("/api/ventas/roles", "PATCH", { empleadoId: e.id, rolVentaId: ev.target.value || null });
-                      setEmpleados((lista) => lista.map((x) => (x.id === e.id ? { ...x, rolVentaId: ev.target.value || null } : x)));
-                    }, `Rol de ${e.nombre} actualizado`)
-                  }
-                  className="w-56"
-                >
-                  <option value="">Automático: {ROL_POR_DEFECTO[e.rol] ?? "—"}</option>
-                  {roles.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      {r.nombre}
-                    </option>
+          <PanelHeader
+            titulo="Quién tiene cada rol"
+            descripcion="Por local. Sin rol asignado, cada persona usa el que le toca por su rol en Pulso: encargados, Encargado; empleados, Camarero."
+          />
+          {[...new Set(empleados.map((e) => e.local))].sort().map((local) => {
+            const delLocal = empleados.filter((e) => e.local === local);
+            return (
+              <section key={local} className="border-t border-slate-100 first:border-t-0 dark:border-[#1c2521]">
+                <h3 className="flex items-center justify-between bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-600 dark:bg-[#0d1614] dark:text-[#c1cbc6]">
+                  {local}
+                  <span className="font-normal text-slate-500 dark:text-[#94a19c]">
+                    {delLocal.length} {delLocal.length === 1 ? "persona" : "personas"}
+                  </span>
+                </h3>
+                <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                  {delLocal.map((e) => (
+                    <li key={e.id} className="grid items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:grid-cols-[minmax(0,1fr)_15rem]">
+                      <span className="min-w-0 truncate font-medium">{e.nombre}</span>
+                      <Select
+                        aria-label={`Rol de ventas de ${e.nombre}`}
+                        value={e.rolVentaId ?? ""}
+                        onChange={(ev) =>
+                          void hacer(async () => {
+                            await pedir("/api/ventas/roles", "PATCH", { empleadoId: e.id, rolVentaId: ev.target.value || null });
+                            setEmpleados((lista) => lista.map((x) => (x.id === e.id ? { ...x, rolVentaId: ev.target.value || null } : x)));
+                          }, `Rol de ${e.nombre} actualizado`)
+                        }
+                      >
+                        <option value="">Automático: {ROL_POR_DEFECTO[e.rol] ?? "—"}</option>
+                        {roles.map((r) => (
+                          <option key={r.id} value={r.id}>
+                            {r.nombre}
+                          </option>
+                        ))}
+                      </Select>
+                    </li>
                   ))}
-                </Select>
-              </li>
-            ))}
-          </ul>
+                </ul>
+              </section>
+            );
+          })}
         </Panel>
+      )}
+
+      {localMedios && (
+        <Descuentos localId={localMedios} locales={locales.filter((l) => l.medios > 0)} onCambiarLocal={setLocalMedios} permisos={permisos} />
       )}
 
       {locales.some((l) => l.medios > 0) && (
@@ -338,5 +354,160 @@ export default function ConfiguracionVentasClient() {
         </Panel>
       )}
     </div>
+  );
+}
+
+type Plantilla = { id: string; nombre: string; porcentaje: number | null; monto: number | null; tope: number | null; activo: boolean };
+
+const aNumero = (t: string) => Number(t.trim().replace(/\./g, "").replace(",", ".")) || 0;
+const pesos = (n: number) => `$${Math.round(n).toLocaleString("es-AR")}`;
+
+/**
+ * La lista de descuentos del local, como en Fudo: el admin los arma una vez
+ * y el mozo los elige al cobrar, sin inventar números.
+ */
+function Descuentos({
+  localId,
+  locales,
+  onCambiarLocal,
+  permisos,
+}: {
+  localId: string;
+  locales: { id: string; nombre: string }[];
+  onCambiarLocal: (id: string) => void;
+  permisos: Record<string, boolean>;
+}) {
+  const [lista, setLista] = useState<Plantilla[]>([]);
+  const [nombre, setNombre] = useState("");
+  const [tipo, setTipo] = useState<"pct" | "monto">("pct");
+  const [valor, setValor] = useState("");
+  const [tope, setTope] = useState("");
+  const [error, setError] = useState("");
+  const puede = permisos.admin_discount_templates;
+
+  const cargar = useCallback(async () => {
+    const d = await pedir(`/api/ventas/descuentos?localId=${localId}`);
+    setLista(d.descuentos);
+  }, [localId]);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch al cambiar de local
+    cargar().catch(() => setLista([]));
+  }, [cargar]);
+
+  async function crear(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    try {
+      await pedir("/api/ventas/descuentos", "POST", {
+        localId,
+        nombre,
+        porcentaje: tipo === "pct" ? aNumero(valor) : null,
+        monto: tipo === "monto" ? aNumero(valor) : null,
+        tope: tipo === "pct" && aNumero(tope) > 0 ? aNumero(tope) : null,
+      });
+      setNombre("");
+      setValor("");
+      setTope("");
+      await cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo crear");
+    }
+  }
+
+  async function cambiar(accion: () => Promise<unknown>) {
+    setError("");
+    try {
+      await accion();
+      await cargar();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo");
+    }
+  }
+
+  return (
+    <Panel>
+      <PanelHeader
+        titulo="Descuentos"
+        descripcion="Los que el mozo elige de la lista, para la venta entera o para un producto. Un porcentaje puede tener tope."
+        action={
+          locales.length > 1 ? (
+            <Select value={localId} onChange={(e) => onCambiarLocal(e.target.value)} aria-label="Local de los descuentos">
+              {locales.map((l) => (
+                <option key={l.id} value={l.id}>
+                  {l.nombre}
+                </option>
+              ))}
+            </Select>
+          ) : undefined
+        }
+      />
+      {lista.length === 0 ? (
+        <p className="px-4 py-4 text-sm text-slate-500 dark:text-[#94a19c]">Todavía no hay descuentos en la lista de este local.</p>
+      ) : (
+        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+          {lista.map((d) => (
+            <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
+              <label className="flex min-w-0 flex-1 items-center gap-3">
+                <Checkbox
+                  checked={d.activo}
+                  disabled={!puede}
+                  onChange={() => void cambiar(() => pedir(`/api/ventas/descuentos/${d.id}`, "PATCH", { activo: !d.activo }))}
+                />
+                <span className={`font-medium ${d.activo ? "" : "text-slate-400 line-through"}`}>{d.nombre}</span>
+              </label>
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800 dark:bg-[#1d1830] dark:text-violet-200">
+                {d.porcentaje ? `${d.porcentaje}%${d.tope ? ` · tope ${pesos(d.tope)}` : ""}` : pesos(d.monto ?? 0)}
+              </span>
+              {puede && (
+                <button
+                  type="button"
+                  onClick={() => void cambiar(() => pedir(`/api/ventas/descuentos/${d.id}`, "DELETE"))}
+                  aria-label={`Borrar ${d.nombre}`}
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:hover:bg-[#241419]"
+                >
+                  <Trash2 size={15} aria-hidden />
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {puede && (
+        <form onSubmit={crear} className="flex flex-wrap items-end gap-2 border-t border-slate-100 p-4 dark:border-[#1c2521]">
+          <div className="min-w-[12rem] flex-1">
+            <Label>Nombre</Label>
+            <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Empleado, Cliente frecuente, Cortesía…" />
+          </div>
+          <div className="flex min-h-11 items-center rounded-lg border border-slate-200 p-0.5 dark:border-[#29403b]">
+            {(["pct", "monto"] as const).map((t) => (
+              <button
+                key={t}
+                type="button"
+                onClick={() => setTipo(t)}
+                aria-pressed={tipo === t}
+                className={`min-h-9 rounded-md px-3 text-sm font-semibold ${tipo === t ? "bg-violet-600 text-white" : "text-slate-500 dark:text-[#94a19c]"}`}
+              >
+                {t === "pct" ? "%" : "$"}
+              </button>
+            ))}
+          </div>
+          <div className="w-24">
+            <Label>{tipo === "pct" ? "Porcentaje" : "Monto"}</Label>
+            <Input inputMode="decimal" value={valor} onChange={(e) => setValor(e.target.value)} />
+          </div>
+          {tipo === "pct" && (
+            <div className="w-28">
+              <Label>Tope (opcional)</Label>
+              <Input inputMode="decimal" value={tope} onChange={(e) => setTope(e.target.value)} placeholder="Sin tope" />
+            </div>
+          )}
+          <Button type="submit" disabled={!nombre.trim() || !valor}>
+            <Plus size={16} aria-hidden />
+            Agregar
+          </Button>
+        </form>
+      )}
+      {error && <p className="px-4 pb-3 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+    </Panel>
   );
 }

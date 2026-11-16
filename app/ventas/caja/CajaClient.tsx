@@ -7,6 +7,7 @@ import { Button, ErrorText, Input, Label, Metrica, PageTitle, Panel, PanelHeader
 import { SelectorLocal } from "@/components/BarraContexto";
 import { plata } from "@/lib/formato";
 import { aNumero as num, NavVentas, useLocalVentas } from "../comun";
+import { BarrasHorizontales, COLOR_CAT } from "../graficos";
 
 type Caja = {
   id: string;
@@ -48,7 +49,7 @@ export default function CajaClient() {
   const [localGuardado, setLocalGuardado] = useLocalVentas();
   const [locales, setLocales] = useState<{ id: string; nombre: string }[]>([]);
   const [localId, setLocalId] = useState("");
-  const [datos, setDatos] = useState<{ abierta: Caja | null; cerradas: Cerrada[]; permisos: Record<string, boolean> } | null>(null);
+  const [datos, setDatos] = useState<{ abierta: Caja | null; cerradas: Cerrada[]; permisos: Record<string, boolean>; ordenMedios?: string[] } | null>(null);
   const [error, setError] = useState("");
   const [ocupado, setOcupado] = useState(false);
   const [fondo, setFondo] = useState("");
@@ -139,14 +140,17 @@ export default function CajaClient() {
               {abierta.porMedio.length === 0 ? (
                 <p className="px-4 py-6 text-sm text-slate-500 dark:text-[#94a19c]">Todavía no se cobró nada.</p>
               ) : (
-                <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
-                  {abierta.porMedio.map((m) => (
-                    <li key={m.medio} className="flex justify-between px-4 py-2.5 text-sm">
-                      <span>{m.medio}</span>
-                      <span className="font-semibold tabular-nums">{plata(m.monto)}</span>
-                    </li>
-                  ))}
-                </ul>
+                <div className="p-4">
+                  <BarrasHorizontales
+                    formato={plata}
+                    datos={abierta.porMedio.map((m) => ({
+                      nombre: m.medio,
+                      valor: m.monto,
+                      pct: abierta.vendido > 0 ? (m.monto / abierta.vendido) * 100 : 0,
+                      color: COLOR_CAT(Math.max(0, (datos.ordenMedios ?? []).indexOf(m.medio))),
+                    }))}
+                  />
+                </div>
               )}
             </Panel>
 

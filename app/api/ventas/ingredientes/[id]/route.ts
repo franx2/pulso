@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma, type UnidadIngrediente } from "@prisma/client";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 const UNIDADES: UnidadIngrediente[] = ["G", "ML", "U"];
 
@@ -25,6 +25,10 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     desvincular?: boolean;
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
+
+  const propio = await db.ingrediente.findUnique({ where: { id }, select: { localId: true } });
+  if (!propio) return NextResponse.json({ error: "Ingrediente no encontrado" }, { status: 404 });
+  if (!enLocal(ctx, propio.localId)) return fueraDeLocal();
 
   const data: Record<string, unknown> = {};
   if (body.nombre !== undefined) {

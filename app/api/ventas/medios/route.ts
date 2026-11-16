@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
 import { ordenarMedios } from "@/lib/ventas/importarFudo";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /** Todos los medios de pago del local, activos o no, para configurarlos. */
 export async function GET(request: Request) {
   const ctx = await contextoVentas();
   if (!ctx) return noAutenticado();
   const localId = new URL(request.url).searchParams.get("localId") ?? "";
+  if (!enLocal(ctx, localId)) return fueraDeLocal();
   const medios = await db.medioPago.findMany({
     where: { localId },
     orderBy: { orden: "asc" },

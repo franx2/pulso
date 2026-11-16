@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /**
  * Abrir una venta: una mesa o un pedido de mostrador. El número es correlativo
@@ -20,6 +20,7 @@ export async function POST(request: Request) {
   const tipo = body?.tipo === "MESA" ? "MESA" : "MOSTRADOR";
   const local = await db.local.findUnique({ where: { id: body?.localId ?? "" }, select: { id: true } });
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 400 });
+  if (!enLocal(ctx, local.id)) return fueraDeLocal();
 
   let mesaId: string | null = null;
   if (tipo === "MESA") {

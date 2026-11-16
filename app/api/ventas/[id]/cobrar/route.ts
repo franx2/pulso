@@ -4,7 +4,7 @@ import { readJsonBody } from "@/lib/http";
 import { saldoDeVenta, totalesDeVenta } from "@/lib/ventas/calculos";
 import { cajaAbierta } from "@/lib/ventas/consultas";
 import { facturarVenta, reintentarPendientes, validarReceptor } from "@/lib/ventas/facturacion";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 type PagoPedido = { medioPagoId?: string; monto?: number; propina?: number };
 
@@ -46,11 +46,12 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       localId: true,
       descuentoPct: true,
       descuentoMonto: true,
-      items: { select: { precio: true, cantidad: true, anulado: true } },
+      items: { select: { precio: true, cantidad: true, anulado: true, descuentoPct: true, descuentoMonto: true } },
       pagos: { select: { monto: true, propina: true, anulado: true } },
     },
   });
   if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
+  if (!enLocal(ctx, venta.localId)) return fueraDeLocal();
   if (venta.estado !== "EN_CURSO") return NextResponse.json({ error: "La venta ya está cerrada" }, { status: 409 });
 
   const caja = await cajaAbierta(venta.localId);

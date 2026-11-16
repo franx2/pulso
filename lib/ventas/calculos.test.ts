@@ -1,5 +1,5 @@
 import assert from "node:assert";
-import { resumenDeCaja, saldoDeVenta, totalesDeVenta } from "./calculos";
+import { montoDescuento, resumenDeCaja, saldoDeVenta, totalesDeVenta } from "./calculos";
 import { permisosDe } from "./permisos";
 import { tipoDeMedio } from "./importarFudo";
 
@@ -9,11 +9,22 @@ const items = [
   { precio: 1900, cantidad: 1, anulado: false },
   { precio: 9000, cantidad: 1, anulado: true },
 ];
-assert.deepStrictEqual(totalesDeVenta(items), { subtotal: 11900, descuento: 0, total: 11900 });
+assert.deepStrictEqual(totalesDeVenta(items), { bruto: 11900, descuentoItems: 0, subtotal: 11900, descuento: 0, total: 11900 });
 
-// El porcentaje gana sobre el monto, y ningún descuento deja el total negativo.
-assert.deepStrictEqual(totalesDeVenta(items, { pct: 10, monto: 5000 }), { subtotal: 11900, descuento: 1190, total: 10710 });
-assert.deepStrictEqual(totalesDeVenta(items, { monto: 50000 }), { subtotal: 11900, descuento: 11900, total: 0 });
+// Con porcentaje, el monto es el tope; ningún descuento deja el total negativo.
+assert.strictEqual(totalesDeVenta(items, { pct: 10, monto: 5000 }).descuento, 1190, "10% no llega al tope de 5.000");
+assert.strictEqual(totalesDeVenta(items, { pct: 50, monto: 5000 }).descuento, 5000, "50% se corta en el tope");
+assert.strictEqual(totalesDeVenta(items, { monto: 50000 }).total, 0);
+
+// Descuento por producto ("Empleado 50%" en un cortado) y después el de la venta sobre lo que queda.
+const conItem = totalesDeVenta(
+  [
+    { precio: 5000, cantidad: 2, anulado: false, descuentoPct: 50 },
+    { precio: 2000, cantidad: 1, anulado: false, descuentoMonto: 500 },
+  ],
+  { pct: 10 }
+);
+assert.deepStrictEqual(conItem, { bruto: 12000, descuentoItems: 5500, subtotal: 6500, descuento: 650, total: 5850 });
 assert.strictEqual(totalesDeVenta(items, { pct: 150 }).total, 0);
 
 // Pago dividido y vuelto; la propina no cuenta como pago de la venta.
@@ -55,10 +66,17 @@ assert.strictEqual(mozo.close_sales, false, "cannot_close_sale gana");
 assert.strictEqual(permisosDe("ADMIN", { permisos: [] }, roles).close_sales, true, "el admin de Pulso puede todo");
 assert.strictEqual(permisosDe("EMPLEADO", null, new Map()).create_additions, true, "sin roles importados, lo básico");
 assert.strictEqual(permisosDe("EMPLEADO", null, new Map()).create_payments, false);
+const cajero = permisosDe("EMPLEADO", { permisos: ["list_discounts"] }, new Map());
+assert.strictEqual(cajero.apply_discounts, true, "quien ve la lista de descuentos de Fudo puede aplicarlos");
+assert.strictEqual(cajero.create_discounts, false, "pero no inventar uno libre");
+assert.strictEqual(permisosDe("EMPLEADO", { permisos: ["create_discounts", "cannot_apply_discount"] }, new Map()).apply_discounts, false);
 
 // Los medios de Fudo se reconocen por el nombre.
 assert.strictEqual(tipoDeMedio("Tarj. Débito"), "DEBITO");
 assert.strictEqual(tipoDeMedio("Efectivo Uber Eats"), "APP_DELIVERY", "el efectivo de la app no es el del cajón");
 assert.strictEqual(tipoDeMedio("Cta. Cte."), "CUENTA_CORRIENTE");
+
+assert.strictEqual(montoDescuento(1000, { pct: 100 }), 1000, "cortesía 100%");
+assert.strictEqual(montoDescuento(1000, { monto: 5000 }), 1000, "un monto fijo no descuenta más que la base");
 
 console.log("lib/ventas/calculos.test.ts: todos los checks pasaron");

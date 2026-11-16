@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /** Un retiro o un ingreso de plata que no es una venta. */
 export async function POST(request: Request, { params }: { params: Promise<{ id: string }> }) {
@@ -16,7 +16,8 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (!(monto > 0)) return NextResponse.json({ error: "El monto tiene que ser mayor a cero" }, { status: 400 });
   if (!motivo) return NextResponse.json({ error: "Escribí el motivo" }, { status: 400 });
 
-  const caja = await db.caja.findUnique({ where: { id }, select: { cerradaEn: true } });
+  const caja = await db.caja.findUnique({ where: { id }, select: { cerradaEn: true, localId: true } });
+  if (caja && !enLocal(ctx, caja.localId)) return fueraDeLocal();
   if (!caja || caja.cerradaEn) return NextResponse.json({ error: "La caja no está abierta" }, { status: 409 });
   await db.movimientoCaja.create({
     data: {

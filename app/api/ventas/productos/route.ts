@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
 import { costoDeReceta, costoUnitario, preciosVigentes, stockDeIngredientes } from "@/lib/ventas/inventario";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /** Más de mil productos con su receta, y el stock calculado de cada ingrediente. */
 export const maxDuration = 60;
@@ -15,6 +15,7 @@ export async function GET(request: Request) {
   const ctx = await contextoVentas();
   if (!ctx) return noAutenticado();
   const localId = new URL(request.url).searchParams.get("localId") ?? "";
+  if (!enLocal(ctx, localId)) return fueraDeLocal();
 
   const [productos, categorias, cocinas, ingredientes, precios, stock] = await Promise.all([
     db.productoVenta.findMany({
@@ -90,6 +91,7 @@ export async function POST(request: Request) {
   if (!(precio >= 0)) return NextResponse.json({ error: "El precio no puede ser negativo" }, { status: 400 });
   const categoria = await db.categoriaVenta.findFirst({ where: { id: body?.categoriaId ?? "", localId: body?.localId ?? "" }, select: { id: true, localId: true } });
   if (!categoria) return NextResponse.json({ error: "Elegí una categoría de este local" }, { status: 400 });
+  if (!enLocal(ctx, categoria.localId)) return fueraDeLocal();
 
   const producto = await db.productoVenta.create({
     data: {

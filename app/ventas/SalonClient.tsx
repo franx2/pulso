@@ -132,8 +132,9 @@ export default function SalonClient() {
       )}
 
       <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
-        <Panel>
+        <Panel className="min-w-0">
           <PanelHeader titulo={salon?.nombre ?? "Salón"} descripcion="Tocá una mesa libre para abrirla, o una ocupada para ver el pedido." />
+          <Leyenda mesas={salon?.mesas ?? []} ahora={ahora} />
           {salon && salon.mesas.length > 0 ? (
             <Plano mesas={salon.mesas} ahora={ahora} onMesa={(m) => (m.venta ? router.push(`/ventas/${m.venta.id}`) : setAbriendo({ tipo: "MESA", mesa: m }))} />
           ) : (
@@ -187,31 +188,85 @@ export default function SalonClient() {
  * Libre es papel; ocupada es teal con el total y el tiempo; un punto ámbar
  * avisa que hay productos cargados sin enviar a cocina.
  */
+/** Más de esto abierta, la mesa se marca: puede estar esperando o haberse olvidado de cerrar. */
+const MINUTOS_DEMORA = 90;
+
+type EstadoMesa = "libre" | "ocupada" | "cobrando" | "demorada";
+
+function estadoMesa(m: Mesa, ahora: number): EstadoMesa {
+  const v = m.venta;
+  if (!v) return "libre";
+  if (v.cobrado > 0 && v.cobrado < v.total) return "cobrando";
+  if (ahora - new Date(v.abiertaEn).getTime() > MINUTOS_DEMORA * 60_000) return "demorada";
+  return "ocupada";
+}
+
+const ESTILO_MESA: Record<EstadoMesa, string> = {
+  libre:
+    "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#c1cbc6] dark:hover:bg-[#172724]",
+  ocupada:
+    "border-[#0f766e] bg-[#0f766e] text-white shadow-[0_6px_14px_-8px_rgba(15,118,110,0.8)] hover:bg-[#115e59] dark:border-[#37e6b0] dark:bg-[#1d4e48]",
+  cobrando:
+    "border-[#5b47b8] bg-[#5b47b8] text-white shadow-[0_6px_14px_-8px_rgba(91,71,184,0.8)] hover:bg-[#4c3aa0] dark:border-[#a99cf0] dark:bg-[#3b2f7a]",
+  demorada:
+    "border-[#b4234d] bg-[#0f766e] text-white ring-2 ring-[#e11d48] ring-offset-2 ring-offset-white hover:bg-[#115e59] dark:bg-[#1d4e48] dark:ring-offset-[#101c19]",
+};
+
+const ETIQUETA_ESTADO: Record<EstadoMesa, string> = {
+  libre: "Libre",
+  ocupada: "Ocupada",
+  cobrando: "Pagando (cobro parcial)",
+  demorada: `Abierta hace más de ${MINUTOS_DEMORA} min`,
+};
+
+/** Qué significa cada color, con cuántas mesas hay en cada estado. */
+function Leyenda({ mesas, ahora }: { mesas: Mesa[]; ahora: number }) {
+  const cuenta = (e: EstadoMesa) => mesas.filter((m) => estadoMesa(m, ahora) === e).length;
+  const sinEnviar = mesas.filter((m) => (m.venta?.sinEnviar ?? 0) > 0).length;
+  return (
+    <ul className="flex flex-wrap gap-x-4 gap-y-1.5 border-b border-slate-100 px-4 py-2.5 text-xs text-slate-600 dark:border-[#1c2521] dark:text-[#c1cbc6]">
+      {(["libre", "ocupada", "cobrando", "demorada"] as EstadoMesa[]).map((e) => (
+        <li key={e} className="inline-flex items-center gap-1.5">
+          <span className={`h-3 w-3 rounded-[3px] border ${ESTILO_MESA[e].replace(/hover:\S+|shadow-\S+|ring-offset-2|ring-offset-\S+/g, "")}`} aria-hidden />
+          {ETIQUETA_ESTADO[e]} <span className="font-semibold tabular-nums">{cuenta(e)}</span>
+        </li>
+      ))}
+      <li className="inline-flex items-center gap-1.5">
+        <span className="h-3 w-3 rounded-full bg-amber-500" aria-hidden />
+        Con pedido sin enviar <span className="font-semibold tabular-nums">{sinEnviar}</span>
+      </li>
+    </ul>
+  );
+}
+
 function Plano({ mesas, ahora, onMesa }: { mesas: Mesa[]; ahora: number; onMesa: (m: Mesa) => void }) {
-  const columnas = Math.max(...mesas.map((m) => m.columna)) + 2;
-  const filas = Math.max(...mesas.map((m) => m.fila)) + 2;
+  // Fudo guarda la grilla con huecos y con mesas grandes en filas contiguas;
+  // dibujarlas de a 2x2 casilleros las superponía. Cada fila y columna que
+  // se usa pasa a ser una celda propia: se conserva el orden del plano y
+  // ninguna mesa pisa a otra.
+  const columnasUsadas = [...new Set(mesas.map((m) => m.columna))].sort((a, b) => a - b);
+  const filasUsadas = [...new Set(mesas.map((m) => m.fila))].sort((a, b) => a - b);
+  const columnas = columnasUsadas.length;
+  const filas = filasUsadas.length;
   return (
     <div className="overflow-auto p-4">
       <div
-        className="mx-auto grid w-max gap-1.5 rounded-lg bg-[radial-gradient(circle,rgba(100,116,139,0.18)_1px,transparent_1px)] bg-[length:1.5rem_1.5rem] p-2 [--u:2.6rem] sm:[--u:3.1rem] dark:bg-[radial-gradient(circle,rgba(148,161,156,0.14)_1px,transparent_1px)]"
+        className="mx-auto grid w-max gap-1.5 rounded-lg bg-[radial-gradient(circle,rgba(100,116,139,0.18)_1px,transparent_1px)] bg-[length:1.5rem_1.5rem] p-2 [--u:4.1rem] sm:[--u:5.6rem] dark:bg-[radial-gradient(circle,rgba(148,161,156,0.14)_1px,transparent_1px)]"
         style={{ gridTemplateColumns: `repeat(${columnas}, var(--u))`, gridTemplateRows: `repeat(${filas}, var(--u))` }}
       >
         {mesas.map((m) => {
           const v = m.venta;
+          const estado = estadoMesa(m, ahora);
           return (
             <button
               key={m.id}
               type="button"
               onClick={() => onMesa(m)}
-              aria-label={v ? `Mesa ${m.numero}, ocupada, ${plata(v.total)}` : `Mesa ${m.numero}, libre`}
-              style={{ gridColumn: `${m.columna + 1} / span 2`, gridRow: `${m.fila + 1} / span 2` }}
+              aria-label={v ? `Mesa ${m.numero}, ${ETIQUETA_ESTADO[estado].toLowerCase()}, ${plata(v.total)}` : `Mesa ${m.numero}, libre`}
+              style={{ gridColumn: columnasUsadas.indexOf(m.columna) + 1, gridRow: filasUsadas.indexOf(m.fila) + 1 }}
               className={`relative flex flex-col items-center justify-center border text-center transition-[transform,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 active:scale-[0.96] dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#101c19] ${
                 m.forma === "REDONDA" ? "rounded-full" : "rounded-lg"
-              } ${
-                v
-                  ? "border-[#0f766e] bg-[#0f766e] text-white shadow-[0_6px_14px_-8px_rgba(15,118,110,0.8)] hover:bg-[#115e59] dark:border-[#37e6b0] dark:bg-[#1d4e48]"
-                  : "border-slate-300 bg-white text-slate-700 hover:border-slate-400 hover:bg-slate-50 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#c1cbc6] dark:hover:bg-[#172724]"
-              }`}
+              } ${ESTILO_MESA[estado]}`}
             >
               <span className="text-lg font-bold leading-none sm:text-xl">{m.numero}</span>
               {v ? (

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import type { TipoMovimientoStock } from "@prisma/client";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
-import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
+import { contextoVentas, enLocal, fueraDeLocal, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 const TIPOS: TipoMovimientoStock[] = ["CONTEO", "INGRESO", "EGRESO"];
 
@@ -39,8 +39,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   }
   if (tipo === "EGRESO" && !body?.motivo?.trim()) return NextResponse.json({ error: "Escribí el motivo del egreso" }, { status: 400 });
 
-  const ing = await db.ingrediente.findUnique({ where: { id }, select: { id: true } });
+  const ing = await db.ingrediente.findUnique({ where: { id }, select: { id: true, localId: true } });
   if (!ing) return NextResponse.json({ error: "Ingrediente no encontrado" }, { status: 404 });
+  if (!enLocal(ctx, ing.localId)) return fueraDeLocal();
   await db.movimientoStock.create({
     data: { ingredienteId: id, tipo, cantidad, motivo: body?.motivo?.trim().slice(0, 140) || null, autor: ctx.session.nombre ?? "—" },
   });

@@ -15,7 +15,8 @@ export const PERMISOS = [
   { codigo: "move_additions", grupo: "Pedidos", etiqueta: "Cambiar la venta de mesa" },
   { codigo: "assign_waiter", grupo: "Pedidos", etiqueta: "Asignar o cambiar el mozo" },
   { codigo: "print_control", grupo: "Pedidos", etiqueta: "Imprimir la precuenta" },
-  { codigo: "create_discounts", grupo: "Cobro", etiqueta: "Hacer descuentos" },
+  { codigo: "apply_discounts", grupo: "Cobro", etiqueta: "Aplicar descuentos de la lista" },
+  { codigo: "create_discounts", grupo: "Cobro", etiqueta: "Hacer descuentos libres (cualquier % o monto)" },
   { codigo: "create_payments", grupo: "Cobro", etiqueta: "Cobrar" },
   { codigo: "create_tips", grupo: "Cobro", etiqueta: "Registrar propinas" },
   { codigo: "close_sales", grupo: "Cobro", etiqueta: "Cerrar ventas" },
@@ -31,6 +32,7 @@ export const PERMISOS = [
   { codigo: "admin_rooms", grupo: "Configuración", etiqueta: "Configurar salones y mesas" },
   { codigo: "update_products", grupo: "Configuración", etiqueta: "Editar productos, precios y recetas" },
   { codigo: "admin_payment_types", grupo: "Configuración", etiqueta: "Configurar medios de pago" },
+  { codigo: "admin_discount_templates", grupo: "Configuración", etiqueta: "Configurar la lista de descuentos" },
   { codigo: "admin_roles", grupo: "Configuración", etiqueta: "Configurar roles y permisos" },
 ] as const;
 
@@ -39,6 +41,7 @@ export type Permiso = (typeof PERMISOS)[number]["codigo"];
 const NEGACIONES: [string, Permiso][] = [
   ["cannot_close_sale", "close_sales"],
   ["cannot_apply_discount", "create_discounts"],
+  ["cannot_apply_discount", "apply_discounts"],
   ["cannot_cancel_addition", "cancel_additions"],
 ];
 
@@ -69,6 +72,9 @@ export function permisosDe(
     BASICOS;
   const tiene = new Set(lista);
   const permisos = Object.fromEntries(PERMISOS.map((p) => [p.codigo, todos || tiene.has(p.codigo)])) as Permisos;
+  // "Aplicar descuentos de la lista" es de Pulso: en Fudo lo tiene quien puede
+  // hacer descuentos o ver la lista ("list_discounts", el Cajero).
+  if (tiene.has("create_discounts") || tiene.has("list_discounts")) permisos.apply_discounts = true;
   // Fudo también tiene permisos que NIEGAN ("cannot_close_sale"): ganan sobre
   // el permiso, salvo para el admin.
   if (!todos) for (const [niega, permiso] of NEGACIONES) if (tiene.has(niega)) permisos[permiso] = false;
