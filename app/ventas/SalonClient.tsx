@@ -3,11 +3,13 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { AlertTriangle, Minus, Plus, ShoppingBag, Users } from "lucide-react";
+import { AlertTriangle, Check, Minus, Move, Plus, ShoppingBag, Users } from "lucide-react";
 import { Button, ErrorText, Input, Label, Modal, PageTitle, Panel, PanelHeader, SelectorSegmentado } from "@/components/ui";
 import { SelectorLocal } from "@/components/BarraContexto";
 import { plata } from "@/lib/formato";
 import { NavVentas, tiempoDesde, useLocalVentas } from "./comun";
+import EditorPlano from "./EditorPlano";
+import { ancho, tamanoGrilla } from "@/lib/ventas/plano";
 
 type VentaResumen = {
   id: string;
@@ -41,6 +43,7 @@ export default function SalonClient() {
   const [error, setError] = useState("");
   const [abriendo, setAbriendo] = useState<{ tipo: "MESA"; mesa: Mesa } | { tipo: "MOSTRADOR" } | null>(null);
   const [ahora, setAhora] = useState(() => Date.now());
+  const [editando, setEditando] = useState(false);
 
   const cargar = useCallback(async () => {
     const res = await fetch(`/api/ventas/salon${localGuardado ? `?localId=${localGuardado}` : ""}`);
@@ -110,13 +113,31 @@ export default function SalonClient() {
             }))}
           />
         )}
-        <div className="ml-auto">
-          <Button onClick={() => setAbriendo({ tipo: "MOSTRADOR" })} disabled={!estado.permisos.create_additions}>
-            <ShoppingBag size={16} aria-hidden />
-            Venta en mostrador
-          </Button>
+        <div className="ml-auto flex flex-wrap gap-2">
+          {estado.permisos.admin_rooms && (
+            <Button variant={editando ? "primary" : "ghost"} onClick={() => setEditando(!editando)}>
+              {editando ? <Check size={16} aria-hidden /> : <Move size={16} aria-hidden />}
+              {editando ? "Listo" : "Editar plano"}
+            </Button>
+          )}
+          {!editando && (
+            <Button onClick={() => setAbriendo({ tipo: "MOSTRADOR" })} disabled={!estado.permisos.create_additions}>
+              <ShoppingBag size={16} aria-hidden />
+              Venta en mostrador
+            </Button>
+          )}
         </div>
       </div>
+
+      {editando && salon && (
+        <EditorPlano
+          localId={estado.localId}
+          salones={estado.salones.map((s) => ({ ...s, mesas: s.mesas.map((m) => ({ ...m, ocupada: Boolean(m.venta) })) }))}
+          salonId={salon.id}
+          onSalonId={setSalonId}
+          onCambio={cargar}
+        />
+      )}
 
       {!estado.caja && (
         <p className="flex items-start gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-[#5a4a2f] dark:bg-[#241f14] dark:text-amber-200">
@@ -131,7 +152,7 @@ export default function SalonClient() {
         </p>
       )}
 
-      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem]">
+      <div className={`grid gap-5 xl:grid-cols-[minmax(0,1fr)_20rem] ${editando ? "hidden" : ""}`}>
         <Panel className="min-w-0">
           <PanelHeader titulo={salon?.nombre ?? "Salón"} descripcion="Tocá una mesa libre para abrirla, o una ocupada para ver el pedido." />
           <Leyenda mesas={salon?.mesas ?? []} ahora={ahora} />
@@ -240,18 +261,13 @@ function Leyenda({ mesas, ahora }: { mesas: Mesa[]; ahora: number }) {
 }
 
 function Plano({ mesas, ahora, onMesa }: { mesas: Mesa[]; ahora: number; onMesa: (m: Mesa) => void }) {
-  // Fudo guarda la grilla con huecos y con mesas grandes en filas contiguas;
-  // dibujarlas de a 2x2 casilleros las superponía. Cada fila y columna que
-  // se usa pasa a ser una celda propia: se conserva el orden del plano y
-  // ninguna mesa pisa a otra.
-  const columnasUsadas = [...new Set(mesas.map((m) => m.columna))].sort((a, b) => a - b);
-  const filasUsadas = [...new Set(mesas.map((m) => m.fila))].sort((a, b) => a - b);
-  const columnas = columnasUsadas.length;
-  const filas = filasUsadas.length;
+  // La grilla real del local: cada mesa en su fila y columna, las grandes
+  // ocupan dos columnas. Se arma en "Editar plano".
+  const { columnas, filas } = tamanoGrilla(mesas);
   return (
     <div className="overflow-auto p-4">
       <div
-        className="mx-auto grid w-max gap-1.5 rounded-lg bg-[radial-gradient(circle,rgba(100,116,139,0.18)_1px,transparent_1px)] bg-[length:1.5rem_1.5rem] p-2 [--u:4.1rem] sm:[--u:5.6rem] dark:bg-[radial-gradient(circle,rgba(148,161,156,0.14)_1px,transparent_1px)]"
+        className="mx-auto grid w-max gap-1.5 rounded-lg bg-[radial-gradient(circle,rgba(100,116,139,0.18)_1px,transparent_1px)] bg-[length:1.5rem_1.5rem] p-2 [--u:3.6rem] sm:[--u:4.4rem] dark:bg-[radial-gradient(circle,rgba(148,161,156,0.14)_1px,transparent_1px)]"
         style={{ gridTemplateColumns: `repeat(${columnas}, var(--u))`, gridTemplateRows: `repeat(${filas}, var(--u))` }}
       >
         {mesas.map((m) => {
@@ -263,7 +279,7 @@ function Plano({ mesas, ahora, onMesa }: { mesas: Mesa[]; ahora: number; onMesa:
               type="button"
               onClick={() => onMesa(m)}
               aria-label={v ? `Mesa ${m.numero}, ${ETIQUETA_ESTADO[estado].toLowerCase()}, ${plata(v.total)}` : `Mesa ${m.numero}, libre`}
-              style={{ gridColumn: columnasUsadas.indexOf(m.columna) + 1, gridRow: filasUsadas.indexOf(m.fila) + 1 }}
+              style={{ gridColumn: `${m.columna + 1} / span ${ancho(m)}`, gridRow: m.fila + 1 }}
               className={`relative flex flex-col items-center justify-center border text-center transition-[transform,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 active:scale-[0.96] dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#101c19] ${
                 m.forma === "REDONDA" ? "rounded-full" : "rounded-lg"
               } ${ESTILO_MESA[estado]}`}

@@ -89,12 +89,19 @@ export async function importarDeFudo(localId: string): Promise<ResultadoImportac
     const s = await db.salon.upsert({
       where: { localId_fudoId: { localId, fudoId } },
       create: { localId, fudoId, nombre: texto(r.attributes.name) || `Salón ${k + 1}`, orden: k },
-      update: { nombre: texto(r.attributes.name) || undefined },
+      // El nombre y el plano se editan en Pulso: sincronizar ya no los pisa.
+      update: {},
     });
     salonPorFudo.set(fudoId, s.id);
   }
+  // Las mesas que ya existen (aunque se hayan movido, renumerado o pasado de
+  // salón en Pulso) no se tocan: sólo se agregan las nuevas de Fudo.
+  const yaImportadas = new Set(
+    (await db.mesa.findMany({ where: { salon: { localId }, fudoId: { not: null } }, select: { fudoId: true } })).map((m) => m.fudoId)
+  );
   let mesas = 0;
   for (const t of tables) {
+    if (yaImportadas.has(Number(t.id))) continue;
     const salonId = salonPorFudo.get(num(rel(t, "room")) ?? -1);
     if (!salonId) continue;
     const datos = {
@@ -106,11 +113,9 @@ export async function importarDeFudo(localId: string): Promise<ResultadoImportac
       fudoId: Number(t.id),
     };
     const numero = Number(t.attributes.number);
-    await db.mesa.upsert({
-      where: { salonId_numero: { salonId, numero } },
-      create: { salonId, numero, ...datos },
-      update: datos,
-    });
+    const ocupado = await db.mesa.findUnique({ where: { salonId_numero: { salonId, numero } }, select: { id: true } });
+    if (ocupado) continue;
+    await db.mesa.create({ data: { salonId, numero, ...datos } });
     mesas++;
   }
 
