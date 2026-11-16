@@ -7,6 +7,7 @@ import { IVA } from "@/lib/compras/impuestos";
 import { claveProducto } from "@/lib/compras/sectores";
 import type { GramosHelado } from "@/lib/compras/consumoHelado";
 import { costear, costoDeReventa, insumoDe, preciosDeInsumos, ultimosPrecios, type Costeo } from "@/lib/compras/recetas";
+import { costoUnitario } from "@/lib/ventas/inventario";
 
 export const maxDuration = 60;
 
@@ -46,6 +47,16 @@ export async function GET(request: Request) {
     db.local.findMany({ select: { id: true, nombre: true }, orderBy: { nombre: "asc" } }),
   ]);
 
+  // Las recetas cargadas en Ventas → Productos mandan sobre las del código:
+  // son la versión editable. Se buscan por nombre del producto.
+  const conReceta = await db.productoVenta.findMany({
+    where: { receta: { some: {} }, ...(localId ? { localId } : {}) },
+    select: {
+      nombre: true,
+      receta: { select: { cantidad: true, ingrediente: { select: { nombre: true, unidad: true, insumo: true, costo: true } } } },
+    },
+  });
+
   const ultimos = ultimosPrecios(
     lineas.map((l) => ({
       detalle: l.detalle,
@@ -56,6 +67,21 @@ export async function GET(request: Request) {
   );
   const precios = preciosDeInsumos(ultimos);
   const gramosHelado: GramosHelado = Object.fromEntries(equivalencias.map((e) => [e.formato, e.gramos]));
+
+  const recetaEditable = new Map<string, Costeo>();
+  for (const p of conReceta) {
+    const clave = claveProducto(p.nombre).replace(/[.\s]+$/, "");
+    if (recetaEditable.has(clave)) continue;
+    const componentes = p.receta
+      .map((r) => ({
+        nombre: r.ingrediente.nombre,
+        cantidad: r.cantidad,
+        unidad: r.ingrediente.unidad.toLowerCase(),
+        costo: r.cantidad * costoUnitario(r.ingrediente, precios).costo,
+      }))
+      .sort((a, b) => b.costo - a.costo);
+    recetaEditable.set(clave, { receta: "Receta de Ventas → Productos", costo: componentes.reduce((s, c) => s + c.costo, 0), componentes, faltan: [] });
+  }
 
   // El mismo producto se escribe "MEDIALUNA" en un local y "MEDIALUNA." en otro.
   const agrupadas = new Map<string, { producto: string; cantidad: number; facturacion: number; costoFudo: number }>();
@@ -74,7 +100,8 @@ export async function GET(request: Request) {
       const venta = f.facturacion / (1 + IVA);
       const precio = venta / f.cantidad;
       let fuente: "receta" | "proveedor" | "fudo" | null = null;
-      let costeo: Costeo | null = costear(f.producto, precios, gramosHelado);
+      let costeo: Costeo | null =
+        recetaEditable.get(claveProducto(f.producto).replace(/[.\s]+$/, "")) ?? costear(f.producto, precios, gramosHelado);
       if (costeo) fuente = "receta";
       else if ((costeo = costoDeReventa(f.producto, ultimos))) fuente = "proveedor";
       else if (f.costoFudo / f.cantidad >= precio * PISO_COSTO_FUDO) {

@@ -93,11 +93,11 @@ enum VerificacionRostro {
 }
 
 model Local {
-  id          String @id @default(cuid())
+  id          String     @id @default(cuid())
   nombre      String
   lat         Float?
   lng         Float?
-  radioMetros Int    @default(150)
+  radioMetros Int        @default(150)
 
   /// Si el descanso se resta de las horas trabajadas o se paga igual.
   descuentaDescanso Boolean @default(true)
@@ -107,11 +107,11 @@ model Local {
   topeSemanalHoras  Float   @default(48)
 
   /// Exigir control de rostro por cámara al fichar.
-  verificarRostro  Boolean @default(false)
+  verificarRostro   Boolean @default(false)
   /// Distancia euclídea máxima para dar por buena la cara. El estándar del
   /// modelo es 0.6; más bajo es más estricto y rechaza más caras legítimas.
   /// Es un botón de calibración: cocina con vapor y gorro necesita más margen.
-  rostroTolerancia Float   @default(0.55)
+  rostroTolerancia  Float   @default(0.55)
 
   /// Multiplicador de precio/hora en un día feriado (el calendario es único
   /// para todo el negocio, pero cada local puede pagarlo distinto).
@@ -120,27 +120,8 @@ model Local {
   /// Credenciales de la cuenta de Fudo DE ESTE LOCAL (cada sucursal es una
   /// cuenta separada). Null hasta que el admin las carga. Nunca se devuelven
   /// en una respuesta de API — sólo se usan server-side para sincronizar.
-  fudoApiKey            String?
-  fudoApiSecret         String?
-  /// Certificado (PEM) y clave privada (PEM) de ARCA para facturar con el
-  /// CUIT de este local. Mismo trato que las claves de Fudo: sólo server-side.
-  /// El certificado vence (~2 años): el Dashboard avisa un mes antes.
-  arcaCertificado       String?
-  arcaClave             String?
-  /// Punto de venta "Web Services" dado de alta en ARCA para Pulso. El CUIT
-  /// que factura es `cuitCompras`: es el del local, el mismo de los remitos.
-  arcaPuntoVenta        Int?
-  /// false = homologación (pruebas, no emite facturas reales).
-  arcaProduccion        Boolean   @default(false)
-  /// Ticket de acceso de ARCA (~12 h). ARCA no da otro mientras éste siga
-  /// vigente, así que se guarda y se reusa.
-  arcaToken             String?
-  arcaSign              String?
-  arcaTicketVence       DateTime?
-  /// Lo que la factura impresa tiene que decir del emisor y no está en otro
-  /// lado: domicilio comercial, Ingresos Brutos, inicio de actividades. Una
-  /// línea por renglón del ticket.
-  arcaDatosTicket       String?
+  fudoApiKey    String?
+  fudoApiSecret String?
   /// Último sync exitoso del mapa de calor de demanda. Null si nunca corrió.
   demandaSincronizadaEn DateTime?
   /// Último sync exitoso del resumen diario que alimenta el dashboard.
@@ -154,13 +135,13 @@ model Local {
   /// una preferencia: se elige por backtesting y da distinto en cada sucursal
   /// (45, 90 y 180 en la medición inicial). Un año nunca ganó: arrastra
   /// estacionalidad vieja que corre el nivel actual.
-  ventanaForecastDias Int   @default(90)
+  ventanaForecastDias Int @default(90)
   /// Lo que midió esa calibración: `{ wape, sesgoPct, diasEvaluados, corte,
   /// medidaEn, ranking }`. Se guarda porque calcularlo cuesta un backtest
   /// completo por ventana candidata: el cron semanal ya los corre para elegir
   /// la ventana, y sin esto la pantalla del modelo los repetía en cada carga
   /// para mostrar el mismo número.
-  ventanaCalibracion  Json?
+  ventanaCalibracion Json?
 
   /// Cómo figura ESTE local en los remitos del proveedor. El CUIT es la clave
   /// buena porque no cambia; la razón social se usa de respaldo cuando el
@@ -187,35 +168,36 @@ model Local {
   saldoInicialProveedor      Float     @default(0)
   saldoInicialProveedorFecha DateTime? @db.Date
 
-  empleados            Empleado[]           @relation("LocalPrincipal")
-  asignados            AsignacionLocal[]
-  turnos               Turno[]
-  fichajes             Fichaje[]
-  alertas              Alerta[]
-  horarios             HorarioLocal[]
-  categorias           Categoria[]
-  demandas             DemandaHoraria[]
-  resumenes            ResumenDiario[]
-  stocks               StockDiario[]
-  productosDiarios     ProductoDiario[]
-  demandaSlots         DemandaSlot[]
-  coeficientesSector   CoeficienteSector[]
-  coeficientesCanal    CoeficienteCanal[]
-  capacidades          CapacidadSector[]
-  ajustesK             AjusteK[]
-  climas               ClimaDia[]
-  pronosticos          Pronostico[]
-  compras              Compra[]
-  costosFijos          CostoFijo[]
-  pagosProveedor       PagoProveedor[]
+  empleados   Empleado[]        @relation("LocalPrincipal")
+  asignados   AsignacionLocal[]
+  turnos      Turno[]
+  fichajes    Fichaje[]
+  alertas     Alerta[]
+  horarios    HorarioLocal[]
+  categorias  Categoria[]
+  demandas    DemandaHoraria[]
+  resumenes   ResumenDiario[]
+  stocks      StockDiario[]
+  productosDiarios ProductoDiario[]
+  demandaSlots     DemandaSlot[]
+  coeficientesSector CoeficienteSector[]
+  coeficientesCanal  CoeficienteCanal[]
+  capacidades      CapacidadSector[]
+  ajustesK         AjusteK[]
+  climas           ClimaDia[]
+  pronosticos      Pronostico[]
+  compras          Compra[]
+  costosFijos      CostoFijo[]
+  pagosProveedor   PagoProveedor[]
   movimientosBancarios MovimientoBancario[]
-  salones              Salon[]
-  cocinas              Cocina[]
-  categoriasVenta      CategoriaVenta[]
-  productosVenta       ProductoVenta[]
-  mediosPago           MedioPago[]
-  cajas                Caja[]
-  ventas               Venta[]
+  salones        Salon[]
+  cocinas        Cocina[]
+  categoriasVenta CategoriaVenta[]
+  productosVenta ProductoVenta[]
+  ingredientes   Ingrediente[]
+  mediosPago     MedioPago[]
+  cajas          Caja[]
+  ventas         Venta[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -240,10 +222,10 @@ model DemandaHoraria {
 /// paginadas, imposible de esperar en pantalla; además las alertas necesitan
 /// historia para comparar contra el promedio.
 model ResumenDiario {
-  id      String   @id @default(cuid())
-  local   Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId String
-  fecha   DateTime @db.Date
+  id       String   @id @default(cuid())
+  local    Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId  String
+  fecha    DateTime @db.Date
 
   ventas      Float @default(0)
   /// Ventas cerradas del día (tickets).
@@ -264,16 +246,16 @@ model ResumenDiario {
   costoIncompleto Boolean @default(false)
 
   /// {"Efectivo": 12345, "Tarj. Débito": 6789, ...}
-  porMedioPago      Json?
+  porMedioPago Json?
   /// {"EAT-IN": 12345, "TAKEAWAY": 6789, "DELIVERY": 0}
-  porCanal          Json?
+  porCanal     Json?
   /// {"CAFETERIA": 12345, "BEBIDAS Y JUGOS": 6789, ...}
-  porCategoria      Json?
+  porCategoria Json?
   /// Descuentos por caja — en esta cuenta de Fudo cada caja es una persona,
   /// así que esto responde "quién descontó": {"Antonella": 12345}
   descuentosPorCaja Json?
   /// [{"nombre": "PROMO LAMINATO", "cantidad": 12, "facturacion": 117600}]
-  topProductos      Json?
+  topProductos Json?
 
   actualizadoEn DateTime @updatedAt
 
@@ -317,20 +299,20 @@ model ProductoDiario {
 /// en Fudo; el día que se carguen, la serie ya está y el desvío se vuelve un
 /// "debería haber vs. hay" de verdad.
 model StockDiario {
-  id      String   @id @default(cuid())
-  local   Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId String
-  fecha   DateTime @db.Date
+  id       String   @id @default(cuid())
+  local    Local    @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId  String
+  fecha    DateTime @db.Date
 
   fudoProductoId String
   /// Desnormalizado a propósito: el reporte histórico no puede depender de
   /// que el producto siga existiendo (o llamándose igual) en Fudo.
   producto       String
 
-  stock                 Float
-  stockPrevio           Float?
+  stock       Float
+  stockPrevio  Float?
   /// Unidades vendidas ese día, contadas desde los items de las ventas.
-  vendido               Float  @default(0)
+  vendido     Float @default(0)
   movimientoNoExplicado Float?
 
   actualizadoEn DateTime @updatedAt
@@ -379,15 +361,15 @@ model DemandaSlot {
 /// razonables, marcados como DEFECTO para que se vea que todavía no se
 /// aprendieron. Una fila con `localId` gana sobre la global (`localId` null).
 model CoeficienteSector {
-  id          String          @id @default(cuid())
-  local       Local?          @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId     String?
+  id        String  @id @default(cuid())
+  local     Local?  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId   String?
   /// Categoría canónica (ver lib/forecast/categorias.ts), no el nombre crudo
   /// de Fudo: los locales escriben la misma categoría de cuatro formas.
-  categoria   String
-  sector      Sector
+  categoria String
+  sector    Sector
   coeficiente Float
-  origen      OrigenParametro @default(DEFECTO)
+  origen    OrigenParametro @default(DEFECTO)
 
   @@unique([localId, categoria, sector])
   @@index([categoria])
@@ -397,8 +379,8 @@ model CoeficienteSector {
 /// (atender una mesa cuesta aunque el pedido sea chico; un delivery ocupa
 /// despacho). Separado de la matriz de productos a propósito.
 model CoeficienteCanal {
-  id          String          @id @default(cuid())
-  local       Local?          @relation(fields: [localId], references: [id], onDelete: Cascade)
+  id          String  @id @default(cuid())
+  local       Local?  @relation(fields: [localId], references: [id], onDelete: Cascade)
   localId     String?
   canal       String
   sector      Sector
@@ -420,14 +402,14 @@ model CapacidadSector {
 
   /// Puntos de SectorLoadScore por hora y por persona.
   capacidadPorEmpleado Float
-  minPersonas          Int             @default(0)
-  maxPersonas          Int             @default(10)
+  minPersonas          Int    @default(0)
+  maxPersonas          Int    @default(10)
   origen               OrigenParametro @default(DEFECTO)
   /// 0..1. Sube a medida que hay fichajes reales contra los que calibrar.
-  confianza            Float           @default(0.2)
+  confianza            Float  @default(0.2)
   /// Cuántas observaciones (franja × día con dotación conocida) respaldan el
   /// valor. Con 0, la capacidad es un supuesto declarado, no un aprendizaje.
-  observaciones        Int             @default(0)
+  observaciones        Int    @default(0)
 
   @@unique([localId, sector])
 }
@@ -436,9 +418,9 @@ model CapacidadSector {
 /// local → día de semana → fecha puntual → franja. Por defecto no existe
 /// ninguna fila y K_manual vale 1.
 model AjusteK {
-  id        String    @id @default(cuid())
-  local     Local?    @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId   String?
+  id      String  @id @default(cuid())
+  local   Local?  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String?
   /// 0..6 (domingo=0), null si no aplica.
   diaSemana Int?
   /// Fecha puntual (un evento, un corte de calle), null si no aplica.
@@ -456,17 +438,17 @@ model AjusteK {
 /// de asumir "llueve → -18%", se mide contra el histórico y se guarda con su
 /// confianza y con cuántos días la respaldan.
 model SensibilidadClima {
-  id          String          @id @default(cuid())
-  tipoLocal   TipoLocal
+  id        String    @id @default(cuid())
+  tipoLocal TipoLocal
   /// "LLUVIA", "FRIO", "CALOR"
-  condicion   String
+  condicion String
   /// Multiplicador medido sobre la demanda normal (1 = sin efecto).
-  factor      Float
-  confianza   Float           @default(0)
+  factor    Float
+  confianza Float     @default(0)
   /// Días de historia que respaldan el factor.
-  dias        Int             @default(0)
-  origen      OrigenParametro @default(DEFECTO)
-  calculadoEn DateTime        @updatedAt
+  dias      Int       @default(0)
+  origen    OrigenParametro @default(DEFECTO)
+  calculadoEn DateTime @updatedAt
 
   @@unique([tipoLocal, condicion])
 }
@@ -480,10 +462,10 @@ model ClimaDia {
   localId String
   fecha   DateTime @db.Date
 
-  tempMax      Float?
-  tempMin      Float?
-  lluviaMm     Float?
-  vientoKmh    Float?
+  tempMax  Float?
+  tempMin  Float?
+  lluviaMm Float?
+  vientoKmh Float?
   /// true cuando viene del pronóstico y todavía no del histórico.
   esPronostico Boolean @default(false)
 
@@ -505,18 +487,18 @@ model Pronostico {
   /// distintos no son el mismo pronóstico.
   emitidoEn DateTime @default(now())
 
-  demandaBase  Float
-  kAuto        Float
-  kManual      Float @default(1)
-  demandaFinal Float
+  demandaBase   Float
+  kAuto         Float
+  kManual       Float @default(1)
+  demandaFinal  Float
   /// {"K_calendar":1.18,"K_weather":1.06,...} para poder explicarlo.
-  kDetalle     Json?
+  kDetalle      Json?
 
-  ticketsPronosticados  Float
+  ticketsPronosticados Float
   unidadesPronosticadas Float
-  ventasPronosticadas   Float
+  ventasPronosticadas  Float
   /// Índice normalizado: 100 = demanda normal de ESE local en ESA franja.
-  demandIndex           Float
+  demandIndex          Float
 
   /// Intervalo de confianza sobre tickets.
   ticketsMin Float?
@@ -528,9 +510,9 @@ model Pronostico {
   dotacionPorSector Json?
 
   /// Se completan cuando llega el día.
-  ticketsReales Float?
-  ventasReales  Float?
-  errorTickets  Float?
+  ticketsReales  Float?
+  ventasReales   Float?
+  errorTickets   Float?
 
   @@unique([localId, fecha, slot, emitidoEn])
   @@index([localId, fecha])
@@ -549,13 +531,13 @@ model Feriado {
 /// Horario de atención de un local, un renglón por día de la semana (0=domingo
 /// … 6=sábado). Define los límites del diagrama de Gantt semanal.
 model HorarioLocal {
-  id        String  @id @default(cuid())
-  local     Local   @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId   String
-  diaSemana Int
-  cerrado   Boolean @default(false)
-  abre      String? // "09:00"
-  cierra    String? // "23:00"
+  id         String  @id @default(cuid())
+  local      Local   @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId    String
+  diaSemana  Int
+  cerrado    Boolean @default(false)
+  abre       String? // "09:00"
+  cierra     String? // "23:00"
 
   @@unique([localId, diaSemana])
 }
@@ -574,11 +556,11 @@ model Categoria {
 }
 
 model Empleado {
-  id      String  @id @default(cuid())
-  usuario String  @unique
-  nombre  String
+  id           String               @id @default(cuid())
+  usuario      String               @unique
+  nombre       String
   /// Sólo se usa para mandarle las alertas a admins y encargados.
-  email   String?
+  email        String?
 
   /// "scrypt:saltHex:hashHex". Null si todavía no se creó una contraseña
   /// (puede fichar sólo con passkey hasta que la registre).
@@ -586,10 +568,10 @@ model Empleado {
 
   /// Para liquidar sueldos: null hasta que el admin lo carga (individual o en
   /// masa). Un solo valor por empleado, vale en cualquier sucursal donde fiche.
-  precioHora Float?
+  precioHora   Float?
 
-  categoria   Categoria? @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
-  categoriaId String?
+  categoria    Categoria?           @relation(fields: [categoriaId], references: [id], onDelete: SetNull)
+  categoriaId  String?
 
   /// Id de usuario en Fudo (por sucursal, cada Fudo es una cuenta separada),
   /// para atribuirle sus ventas como mozo sin depender de que el nombre
@@ -603,49 +585,49 @@ model Empleado {
 
   /// Vector de 128 floats del rostro (Float32Array serializado). NO es una
   /// foto: es una huella matemática de la que no se puede reconstruir la cara.
-  rostroDescriptor         Bytes?
+  rostroDescriptor Bytes?
   /// Foto de referencia del alta, para que el encargado pueda auditar que la
   /// cara registrada es la de esta persona.
-  rostroFoto               Bytes?
-  rostroFotoTipo           String?
-  rostroRegistradoEn       DateTime?
+  rostroFoto       Bytes?
+  rostroFotoTipo   String?
+  rostroRegistradoEn DateTime?
   /// Cuándo aceptó que se procese su dato biométrico (Ley 25.326).
   consentimientoBiometrico DateTime?
-  rol                      Rol                   @default(EMPLEADO)
-  activo                   Boolean               @default(true)
+  rol          Rol                  @default(EMPLEADO)
+  activo       Boolean              @default(true)
   /// Se creó la cuenta sola desde la pantalla de ingreso y espera que un
   /// admin la active. Null para todo el resto: un desactivado no está
   /// "pendiente", es alguien que ya no trabaja.
-  pendienteDesde           DateTime?
+  pendienteDesde DateTime?
   /// Rol de ventas (permisos del módulo de ventas), configurable como en Fudo.
-  rolVenta                 RolVenta?             @relation(fields: [rolVentaId], references: [id], onDelete: SetNull)
-  rolVentaId               String?
-  cajasAbiertas            Caja[]                @relation("CajasAbiertas")
-  cajasCerradas            Caja[]                @relation("CajasCerradas")
-  movimientosCaja          MovimientoCaja[]
-  ventasComoMozo           Venta[]               @relation("VentasComoMozo")
-  ventasAbiertas           Venta[]               @relation("VentasAbiertas")
-  ventasCerradas           Venta[]               @relation("VentasCerradas")
-  ventasAnuladas           Venta[]               @relation("VentasAnuladas")
-  itemsCargados            ItemVenta[]           @relation("ItemsCargados")
-  itemsAnulados            ItemVenta[]           @relation("ItemsAnulados")
-  pagosCobrados            PagoVenta[]           @relation("PagosCobrados")
-  createdAt                DateTime              @default(now())
+  rolVenta     RolVenta? @relation(fields: [rolVentaId], references: [id], onDelete: SetNull)
+  rolVentaId   String?
+  cajasAbiertas  Caja[]           @relation("CajasAbiertas")
+  cajasCerradas  Caja[]           @relation("CajasCerradas")
+  movimientosCaja MovimientoCaja[]
+  ventasComoMozo Venta[]          @relation("VentasComoMozo")
+  ventasAbiertas Venta[]          @relation("VentasAbiertas")
+  ventasCerradas Venta[]          @relation("VentasCerradas")
+  ventasAnuladas Venta[]          @relation("VentasAnuladas")
+  itemsCargados  ItemVenta[]      @relation("ItemsCargados")
+  itemsAnulados  ItemVenta[]      @relation("ItemsAnulados")
+  pagosCobrados  PagoVenta[]      @relation("PagosCobrados")
+  createdAt    DateTime             @default(now())
   /// Sucursal por defecto: se usa al fichar si no hay turno que indique otra.
-  local                    Local                 @relation("LocalPrincipal", fields: [localId], references: [id])
-  localId                  String
-  asignaciones             AsignacionLocal[]
-  credenciales             Credential[]
-  invitaciones             RegistroInvitacion[]
-  turnos                   Turno[]
-  fichajes                 Fichaje[]
-  alertas                  Alerta[]              @relation("AlertasDelEmpleado")
-  alertasResueltas         Alerta[]              @relation("AlertasResueltas")
-  correcciones             SolicitudCorreccion[] @relation("CorreccionesDelEmpleado")
-  correccionesResueltas    SolicitudCorreccion[] @relation("CorreccionesResueltas")
-  ausencias                Ausencia[]            @relation("AusenciasDelEmpleado")
-  ausenciasResueltas       Ausencia[]            @relation("AusenciasResueltas")
-  auditorias               Auditoria[]
+  local        Local                @relation("LocalPrincipal", fields: [localId], references: [id])
+  localId      String
+  asignaciones AsignacionLocal[]
+  credenciales Credential[]
+  invitaciones RegistroInvitacion[]
+  turnos       Turno[]
+  fichajes     Fichaje[]
+  alertas      Alerta[]             @relation("AlertasDelEmpleado")
+  alertasResueltas Alerta[]         @relation("AlertasResueltas")
+  correcciones SolicitudCorreccion[] @relation("CorreccionesDelEmpleado")
+  correccionesResueltas SolicitudCorreccion[] @relation("CorreccionesResueltas")
+  ausencias    Ausencia[]           @relation("AusenciasDelEmpleado")
+  ausenciasResueltas Ausencia[]     @relation("AusenciasResueltas")
+  auditorias   Auditoria[]
 }
 
 /// Bitácora de cambios sensibles: quién tocó qué, cuándo y por qué.
@@ -671,23 +653,23 @@ model Auditoria {
 /// Pedido de un empleado para arreglar un fichaje mal cargado o faltante.
 /// Nada se aplica hasta que un encargado lo aprueba.
 model SolicitudCorreccion {
-  id            String          @id @default(cuid())
-  empleado      Empleado        @relation("CorreccionesDelEmpleado", fields: [empleadoId], references: [id], onDelete: Cascade)
-  empleadoId    String
+  id          String          @id @default(cuid())
+  empleado    Empleado        @relation("CorreccionesDelEmpleado", fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId  String
   /// Fichaje afectado. Null cuando se pide agregar uno que falta.
-  fichaje       Fichaje?        @relation(fields: [fichajeId], references: [id], onDelete: SetNull)
-  fichajeId     String?
-  tipo          TipoCorreccion
+  fichaje     Fichaje?        @relation(fields: [fichajeId], references: [id], onDelete: SetNull)
+  fichajeId   String?
+  tipo        TipoCorreccion
   /// Valores propuestos (para AGREGAR y MODIFICAR).
-  tipoFichaje   TipoFichaje?
-  fechaHora     DateTime?
-  motivo        String
-  estado        EstadoSolicitud @default(PENDIENTE)
-  resueltaPor   Empleado?       @relation("CorreccionesResueltas", fields: [resueltaPorId], references: [id])
+  tipoFichaje TipoFichaje?
+  fechaHora   DateTime?
+  motivo      String
+  estado      EstadoSolicitud @default(PENDIENTE)
+  resueltaPor Empleado?       @relation("CorreccionesResueltas", fields: [resueltaPorId], references: [id])
   resueltaPorId String?
-  resueltaEn    DateTime?
-  comentario    String?
-  createdAt     DateTime        @default(now())
+  resueltaEn  DateTime?
+  comentario  String?
+  createdAt   DateTime        @default(now())
 
   @@index([estado, createdAt])
 }
@@ -695,22 +677,22 @@ model SolicitudCorreccion {
 /// Vacaciones, francos, enfermedad y demás. Las aprobadas evitan que el
 /// sistema marque a la persona como que no fichó.
 model Ausencia {
-  id              String          @id @default(cuid())
-  empleado        Empleado        @relation("AusenciasDelEmpleado", fields: [empleadoId], references: [id], onDelete: Cascade)
-  empleadoId      String
-  tipo            TipoAusencia
-  desde           DateTime        @db.Date
-  hasta           DateTime        @db.Date
-  motivo          String?
+  id            String          @id @default(cuid())
+  empleado      Empleado        @relation("AusenciasDelEmpleado", fields: [empleadoId], references: [id], onDelete: Cascade)
+  empleadoId    String
+  tipo          TipoAusencia
+  desde         DateTime        @db.Date
+  hasta         DateTime        @db.Date
+  motivo        String?
   /// Foto del certificado, redimensionada en el navegador antes de subirla.
   certificado     Bytes?
   certificadoTipo String?
-  estado          EstadoSolicitud @default(PENDIENTE)
-  resueltaPor     Empleado?       @relation("AusenciasResueltas", fields: [resueltaPorId], references: [id])
-  resueltaPorId   String?
-  resueltaEn      DateTime?
-  comentario      String?
-  createdAt       DateTime        @default(now())
+  estado        EstadoSolicitud @default(PENDIENTE)
+  resueltaPor   Empleado?       @relation("AusenciasResueltas", fields: [resueltaPorId], references: [id])
+  resueltaPorId String?
+  resueltaEn    DateTime?
+  comentario    String?
+  createdAt     DateTime        @default(now())
 
   @@index([empleadoId, desde, hasta])
   @@index([estado])
@@ -840,40 +822,40 @@ model Fichaje {
 /// a un local quedan con `localId` en null y aparecen en la bandeja, nunca se
 /// adivina de quién son.
 model Compra {
-  id      String  @id @default(cuid())
-  local   Local?  @relation(fields: [localId], references: [id], onDelete: SetNull)
+  id     String  @id @default(cuid())
+  local  Local?  @relation(fields: [localId], references: [id], onDelete: SetNull)
   localId String?
 
   /// Punto de venta y número: "16-5004". Con el CUIT del cliente identifican
   /// al remito de forma única y evitan cargar dos veces el mismo mail.
-  numero        String
-  puntoVenta    Int
+  numero      String
+  puntoVenta  Int
   /// Día del remito, `@db.Date` como el resto del sistema.
-  fecha         DateTime @db.Date
-  proveedor     String
+  fecha       DateTime @db.Date
+  proveedor   String
   /// Razón social del cliente en el remito, que es lo que asigna el local.
-  cliente       String
-  cuit          String?
+  cliente     String
+  cuit        String?
   observaciones String?
 
   /// Suma del detalle, sin el ajuste.
-  sumaLineas Float
+  sumaLineas  Float
   /// El campo que el remito rotula "Desc. aplicado (%)" y que en realidad
   /// SUMA: el subtotal es la suma de líneas × (1 + ajustePct/100). Se guarda
   /// como viene y el signo se decide al leerlo.
-  ajustePct  Float?
-  subtotal   Float
-  total      Float
+  ajustePct   Float?
+  subtotal    Float
+  total       Float
 
   /// `MERCADERIA` o `SERVICIO`: el remito de "USO DE MARCA" es un royalty y
   /// no puede entrar al food cost junto con el café.
-  tipo TipoCompra @default(MERCADERIA)
+  tipo        TipoCompra @default(MERCADERIA)
 
   /// IVA discriminado en la Factura A: crédito fiscal. Null en los remitos
   /// ("Presupuesto X"), que no dan crédito. Con esto el Resultado toma el
   /// neto real (subtotal − IVA) y no lo estima con la alícuota general, que
   /// erra con los productos al 10,5%.
-  ivaCredito Float?
+  ivaCredito  Float?
 
   /// Un remito al que después le llegó su factura: la factura es la deuda
   /// real (decisión del 12/11/2026) y el remito deja de sumar en todos lados.
@@ -886,15 +868,15 @@ model Compra {
   /// Qué dijo la verificación contra los totales del propio remito. Un remito
   /// con problemas se guarda igual pero no se suma a los costos hasta que
   /// alguien lo mire.
-  verificado Boolean  @default(false)
-  problemas  String[]
+  verificado  Boolean @default(false)
+  problemas   String[]
 
   /// De dónde salió: el remitente y el asunto del mail, para poder rastrear.
-  origen     String?
-  textoPlano String?
+  origen      String?
+  textoPlano  String?
 
-  creadoEn DateTime     @default(now())
-  items    CompraItem[]
+  creadoEn    DateTime @default(now())
+  items       CompraItem[]
 
   @@unique([puntoVenta, numero, cuit])
   @@index([localId, fecha])
@@ -907,23 +889,23 @@ enum TipoCompra {
 
 /// Una línea del remito.
 model CompraItem {
-  id       String @id @default(cuid())
-  compra   Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
+  id      String @id @default(cuid())
+  compra  Compra @relation(fields: [compraId], references: [id], onDelete: Cascade)
   compraId String
 
   /// Código del proveedor. Es la clave estable entre remitos: el mismo café
   /// aparece como "X KG" y "x kg" con distinto precio en la misma semana.
-  codigo         String
-  detalle        String
+  codigo   String
+  detalle  String
   /// La cantidad impresa, con dos decimales.
-  cantidad       Float
+  cantidad Float
   /// La que sale de dividir total por unitario. El proveedor imprime dos
   /// decimales y factura con tres.
   cantidadExacta Float
-  unidad         String
+  unidad   String
   precioUnitario Float
   /// Lo que dice la línea, que es lo que se cobra.
-  total          Float
+  total    Float
   /// El total con el ajuste del remito prorrateado: lo que realmente se paga.
   totalConAjuste Float
 
@@ -951,7 +933,7 @@ enum SectorNegocio {
 /// diff. Acá va sólo lo que las reglas no pueden saber — "COPA DEL MUNDO" es
 /// un helado y no hay forma de deducirlo del nombre.
 model SectorProducto {
-  id       String        @id @default(cuid())
+  id String @id @default(cuid())
   /// Nombre normalizado (sin acentos, mayúsculas, espacios colapsados): el
   /// mismo producto viene escrito distinto en cada sucursal.
   producto String        @unique
@@ -960,6 +942,7 @@ model SectorProducto {
 
   @@index([sector])
 }
+
 
 /// Un costo fijo mensual de un local, cargado a mano.
 ///
@@ -970,9 +953,9 @@ model SectorProducto {
 /// Va por concepto y no en columnas fijas para que agregar contador o
 /// mantenimiento no necesite una migración.
 model CostoFijo {
-  id       String  @id @default(cuid())
-  local    Local   @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId  String
+  id      String @id @default(cuid())
+  local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
   /// 2026-08. Mensual: es la unidad en la que se pagan estas cosas.
   mes      String
   concepto String
@@ -1010,14 +993,14 @@ model MovimientoBancario {
   local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
   localId String
 
-  fecha       DateTime          @db.Date
+  fecha       DateTime @db.Date
   descripcion String
   /// La columna "Origen" del extracto: número de operación, quién transfirió.
   referencia  String?
   categoria   CategoriaBancaria
 
-  credito Float  @default(0)
-  debito  Float  @default(0)
+  credito Float @default(0)
+  debito  Float @default(0)
   /// Saldo acumulado que informa el banco después de este movimiento. Es la
   /// clave que evita cargar el mismo extracto dos veces: en un extracto real
   /// es prácticamente irrepetible fila a fila, a diferencia de la fecha o el
@@ -1211,22 +1194,25 @@ model ProductoVenta {
   cocina      Cocina?        @relation(fields: [cocinaId], references: [id], onDelete: SetNull)
   cocinaId    String?
   fudoId      Int?
+  /// Cuándo se editó en Pulso. Si tiene fecha, sincronizar con Fudo ya no lo pisa.
+  editadoEn   DateTime?
   items       ItemVenta[]
+  receta      RecetaItem[]
 
   @@unique([localId, fudoId])
   @@index([localId, activo])
 }
 
 model MedioPago {
-  id      String        @id @default(cuid())
-  local   Local         @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId String
-  nombre  String
-  tipo    TipoMedioPago
-  activo  Boolean       @default(true)
-  orden   Int           @default(0)
-  fudoId  Int?
-  pagos   PagoVenta[]
+  id          String        @id @default(cuid())
+  local       Local         @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId     String
+  nombre      String
+  tipo        TipoMedioPago
+  activo      Boolean       @default(true)
+  orden       Int           @default(0)
+  fudoId      Int?
+  pagos       PagoVenta[]
 
   @@unique([localId, fudoId])
 }
@@ -1276,42 +1262,41 @@ model MovimientoCaja {
 /// parcial que va en la migración SQL (Prisma no los declara):
 ///   CREATE UNIQUE INDEX ... ON "Venta"("mesaId") WHERE estado = 'EN_CURSO';
 model Venta {
-  id              String              @id @default(cuid())
-  local           Local               @relation(fields: [localId], references: [id], onDelete: Cascade)
-  localId         String
+  id               String      @id @default(cuid())
+  local            Local       @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId          String
   /// Número correlativo por local, el que se lee en voz alta: "la 1042".
-  numero          Int
-  tipo            TipoVenta
-  estado          EstadoVenta         @default(EN_CURSO)
-  mesa            Mesa?               @relation(fields: [mesaId], references: [id], onDelete: SetNull)
-  mesaId          String?
-  mozo            Empleado?           @relation("VentasComoMozo", fields: [mozoId], references: [id])
-  mozoId          String?
-  abiertaPor      Empleado            @relation("VentasAbiertas", fields: [abiertaPorId], references: [id])
-  abiertaPorId    String
-  abiertaEn       DateTime            @default(now())
-  comensales      Int?
+  numero           Int
+  tipo             TipoVenta
+  estado           EstadoVenta @default(EN_CURSO)
+  mesa             Mesa?       @relation(fields: [mesaId], references: [id], onDelete: SetNull)
+  mesaId           String?
+  mozo             Empleado?   @relation("VentasComoMozo", fields: [mozoId], references: [id])
+  mozoId           String?
+  abiertaPor       Empleado    @relation("VentasAbiertas", fields: [abiertaPorId], references: [id])
+  abiertaPorId     String
+  abiertaEn        DateTime    @default(now())
+  comensales       Int?
   /// Nombre para llamar en mostrador ("Juan") o el cliente de la mesa.
-  cliente         String?
-  comentario      String?
+  cliente          String?
+  comentario       String?
   /// Descuento sobre el total de la venta: porcentaje o monto fijo.
-  descuentoPct    Float?
-  descuentoMonto  Float               @default(0)
-  descuentoMotivo String?
+  descuentoPct     Float?
+  descuentoMonto   Float       @default(0)
+  descuentoMotivo  String?
   /// Se fija al cerrar; mientras está en curso se calcula de los ítems.
-  total           Float?
-  caja            Caja?               @relation(fields: [cajaId], references: [id], onDelete: SetNull)
-  cajaId          String?
-  cerradaPor      Empleado?           @relation("VentasCerradas", fields: [cerradaPorId], references: [id])
-  cerradaPorId    String?
-  cerradaEn       DateTime?
-  anuladaPor      Empleado?           @relation("VentasAnuladas", fields: [anuladaPorId], references: [id])
-  anuladaPorId    String?
-  anuladaEn       DateTime?
-  motivoAnulacion String?
-  items           ItemVenta[]
-  pagos           PagoVenta[]
-  comprobantes    ComprobanteFiscal[]
+  total            Float?
+  caja             Caja?       @relation(fields: [cajaId], references: [id], onDelete: SetNull)
+  cajaId           String?
+  cerradaPor       Empleado?   @relation("VentasCerradas", fields: [cerradaPorId], references: [id])
+  cerradaPorId     String?
+  cerradaEn        DateTime?
+  anuladaPor       Empleado?   @relation("VentasAnuladas", fields: [anuladaPorId], references: [id])
+  anuladaPorId     String?
+  anuladaEn        DateTime?
+  motivoAnulacion  String?
+  items            ItemVenta[]
+  pagos            PagoVenta[]
 
   @@unique([localId, numero])
   @@index([localId, estado])
@@ -1369,40 +1354,72 @@ model PagoVenta {
   @@index([ventaId])
 }
 
-/// Factura o nota de crédito de ARCA de una venta. Se crea antes de pedir el
-/// CAE: si ARCA no responde queda sin CAE (pendiente) y se reintenta, así la
-/// venta se cierra igual y nadie espera en el mostrador.
-model ComprobanteFiscal {
-  id                   String              @id @default(cuid())
-  venta                Venta               @relation(fields: [ventaId], references: [id], onDelete: Restrict)
-  ventaId              String
-  /// Código de ARCA: 1 Factura A, 6 Factura B, 3 Nota de crédito A, 8 Nota de crédito B.
-  tipo                 Int
-  puntoVenta           Int
-  /// false = homologación: el CAE no vale como factura real.
-  produccion           Boolean
-  /// 80 CUIT, 99 consumidor final sin identificar.
-  docTipo              Int
-  docNro               String
-  /// 1 responsable inscripto, 5 consumidor final, 6 monotributo.
-  condicionIvaReceptor Int
-  neto                 Float
-  iva                  Float
-  total                Float
-  /// La factura que anula esta nota de crédito.
-  anula                ComprobanteFiscal?  @relation("NotaDeCredito", fields: [anulaId], references: [id])
-  anulaId              String?
-  notasDeCredito       ComprobanteFiscal[] @relation("NotaDeCredito")
-  /// Lo que devolvió ARCA. Sin CAE = pendiente.
-  numero               Int?
-  cae                  String?
-  caeVence             DateTime?           @db.Date
-  emitidoEn            DateTime?
-  error                String?
-  /// Marca de quién lo está pidiendo ahora, para no pedir dos veces el mismo.
-  intentandoEn         DateTime?
-  creadoEn             DateTime            @default(now())
+// ─── Recetas y stock (ventas beta) ──────────────────────────────────────────
 
-  @@index([ventaId])
-  @@index([cae])
+enum UnidadIngrediente {
+  G
+  ML
+  U
+}
+
+enum TipoMovimientoStock {
+  /// Un conteo físico: fija el stock en lo contado.
+  CONTEO
+  /// Mercadería que entró (una compra, una transferencia de otro local).
+  INGRESO
+  /// Lo que salió sin venderse: merma, consumo del personal, rotura.
+  EGRESO
+}
+
+/// Lo que se usa para hacer los productos: café en gramos, leche en ml,
+/// medialunas en unidades. El costo es por unidad (por gramo, ml o unidad).
+model Ingrediente {
+  id          String              @id @default(cuid())
+  local       Local               @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId     String
+  nombre      String
+  unidad      UnidadIngrediente
+  /// Clave del insumo de lib/compras/recetas.ts: si está, el costo sale de la
+  /// última factura del proveedor y se actualiza solo. Si no, manda `costo`.
+  insumo      String?
+  /// Costo neto por unidad cargado a mano (se usa si no hay insumo vinculado).
+  costo       Float               @default(0)
+  stockMinimo Float?
+  activo      Boolean             @default(true)
+  recetas     RecetaItem[]
+  movimientos MovimientoStock[]
+  createdAt   DateTime            @default(now())
+
+  @@unique([localId, nombre])
+}
+
+/// Un renglón de la receta de un producto: cuánto de cada ingrediente lleva.
+model RecetaItem {
+  id            String        @id @default(cuid())
+  producto      ProductoVenta @relation(fields: [productoId], references: [id], onDelete: Cascade)
+  productoId    String
+  ingrediente   Ingrediente   @relation(fields: [ingredienteId], references: [id], onDelete: Restrict)
+  ingredienteId String
+  cantidad      Float
+
+  @@unique([productoId, ingredienteId])
+  @@index([ingredienteId])
+}
+
+/// Movimientos manuales de stock. Lo que consumen las ventas no se guarda:
+/// se calcula de las ventas cerradas y sus recetas desde el último conteo,
+/// así una venta anulada deja de descontar sola.
+model MovimientoStock {
+  id            String              @id @default(cuid())
+  ingrediente   Ingrediente         @relation(fields: [ingredienteId], references: [id], onDelete: Cascade)
+  ingredienteId String
+  tipo          TipoMovimientoStock
+  /// En la unidad del ingrediente. En un CONTEO es lo contado.
+  cantidad      Float
+  motivo        String?
+  /// Quién lo cargó (el nombre, como quedó en ese momento).
+  autor         String
+  createdAt     DateTime            @default(now())
+
+  @@index([ingredienteId, createdAt])
 }

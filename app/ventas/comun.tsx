@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { LayoutGrid, Settings, Wallet } from "lucide-react";
+import { LayoutGrid, Package, Settings, Wallet } from "lucide-react";
 
 const CLAVE_LOCAL = "pulso.ventas.local";
 
@@ -42,6 +42,7 @@ export function imprimir(url: string) {
 const SECCIONES = [
   { clave: "salon", href: "/ventas", label: "Salón", Icono: LayoutGrid },
   { clave: "caja", href: "/ventas/caja", label: "Caja", Icono: Wallet },
+  { clave: "productos", href: "/ventas/productos", label: "Productos", Icono: Package },
   { clave: "configuracion", href: "/ventas/configuracion", label: "Configuración", Icono: Settings },
 ] as const;
 

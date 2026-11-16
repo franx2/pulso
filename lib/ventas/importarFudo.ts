@@ -158,7 +158,7 @@ export async function importarDeFudo(localId: string): Promise<ResultadoImportac
     (
       await db.productoVenta.findMany({
         where: { localId, fudoId: { not: null } },
-        select: { id: true, fudoId: true, categoriaId: true, nombre: true, codigo: true, precio: true, activo: true, favorito: true, orden: true, cocinaId: true },
+        select: { id: true, fudoId: true, categoriaId: true, nombre: true, codigo: true, precio: true, activo: true, favorito: true, orden: true, cocinaId: true, editadoEn: true },
       })
     ).map((p) => [p.fudoId!, p])
   );
@@ -182,6 +182,8 @@ export async function importarDeFudo(localId: string): Promise<ResultadoImportac
     // Sólo se escribe lo que cambió: re-sincronizar una carta sin cambios no
     // toca la base.
     if (!actual) nuevos.push({ localId, fudoId, ...datos });
+    // Lo que se editó en Pulso manda: Fudo ya no lo pisa.
+    else if (actual.editadoEn) continue;
     else if (CAMPOS.some((c) => actual[c] !== datos[c])) cambios.push({ id: actual.id, datos });
   }
   if (nuevos.length) await db.productoVenta.createMany({ data: nuevos, skipDuplicates: true });

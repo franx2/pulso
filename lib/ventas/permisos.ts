@@ -26,8 +26,10 @@ export const PERMISOS = [
   { codigo: "create_cash_counts", grupo: "Caja", etiqueta: "Abrir y cerrar la caja" },
   { codigo: "create_cash_movements", grupo: "Caja", etiqueta: "Registrar retiros e ingresos de caja" },
   { codigo: "show_estimated_on_open_cash_counts", grupo: "Caja", etiqueta: "Ver cuánto debería haber en la caja" },
+  { codigo: "update_ingredients", grupo: "Stock", etiqueta: "Crear y editar ingredientes" },
+  { codigo: "update_stock", grupo: "Stock", etiqueta: "Contar stock y cargar ingresos o mermas" },
   { codigo: "admin_rooms", grupo: "Configuración", etiqueta: "Configurar salones y mesas" },
-  { codigo: "update_products", grupo: "Configuración", etiqueta: "Editar productos y precios" },
+  { codigo: "update_products", grupo: "Configuración", etiqueta: "Editar productos, precios y recetas" },
   { codigo: "admin_payment_types", grupo: "Configuración", etiqueta: "Configurar medios de pago" },
   { codigo: "admin_roles", grupo: "Configuración", etiqueta: "Configurar roles y permisos" },
 ] as const;
