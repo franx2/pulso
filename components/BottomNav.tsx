@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Landmark,
   Settings,
+  Store,
   Truck,
   PieChart,
   Scale,
@@ -37,12 +38,14 @@ export type NavActivo =
   | "sectores"
   | "resultado"
   | "banco"
-  | "carta";
+  | "carta"
+  | "ventas";
 
 type Item = { key: NavActivo; href: string; Icon: LucideIcon; label: string; minimo: Rol; grupo: string };
 
 export const ITEMS: Item[] = [
   { key: "fichar", href: "/fichar", Icon: Clock, label: "Fichar", minimo: "EMPLEADO", grupo: "" },
+  { key: "ventas", href: "/ventas", Icon: Store, label: "Ventas", minimo: "EMPLEADO", grupo: "Operación" },
   { key: "presencia", href: "/admin/presencia", Icon: Activity, label: "Presencia", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "turnos", href: "/admin/turnos", Icon: CalendarDays, label: "Turnos", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "arqueos", href: "/admin/arqueos", Icon: Wallet, label: "Arqueos", minimo: "ENCARGADO", grupo: "Operación" },

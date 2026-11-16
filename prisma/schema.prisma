@@ -190,6 +190,13 @@ model Local {
   costosFijos      CostoFijo[]
   pagosProveedor   PagoProveedor[]
   movimientosBancarios MovimientoBancario[]
+  salones        Salon[]
+  cocinas        Cocina[]
+  categoriasVenta CategoriaVenta[]
+  productosVenta ProductoVenta[]
+  mediosPago     MedioPago[]
+  cajas          Caja[]
+  ventas         Venta[]
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -591,6 +598,19 @@ model Empleado {
   /// admin la active. Null para todo el resto: un desactivado no está
   /// "pendiente", es alguien que ya no trabaja.
   pendienteDesde DateTime?
+  /// Rol de ventas (permisos del módulo de ventas), configurable como en Fudo.
+  rolVenta     RolVenta? @relation(fields: [rolVentaId], references: [id], onDelete: SetNull)
+  rolVentaId   String?
+  cajasAbiertas  Caja[]           @relation("CajasAbiertas")
+  cajasCerradas  Caja[]           @relation("CajasCerradas")
+  movimientosCaja MovimientoCaja[]
+  ventasComoMozo Venta[]          @relation("VentasComoMozo")
+  ventasAbiertas Venta[]          @relation("VentasAbiertas")
+  ventasCerradas Venta[]          @relation("VentasCerradas")
+  ventasAnuladas Venta[]          @relation("VentasAnuladas")
+  itemsCargados  ItemVenta[]      @relation("ItemsCargados")
+  itemsAnulados  ItemVenta[]      @relation("ItemsAnulados")
+  pagosCobrados  PagoVenta[]      @relation("PagosCobrados")
   createdAt    DateTime             @default(now())
   /// Sucursal por defecto: se usa al fichar si no hay turno que indique otra.
   local        Local                @relation("LocalPrincipal", fields: [localId], references: [id])
@@ -1021,4 +1041,311 @@ model PagoProveedor {
   creadoEn DateTime @default(now())
 
   @@index([localId, fecha])
+}
+
+// ─── Ventas (beta) ──────────────────────────────────────────────────────────
+// El modelo copia el de Fudo (salones, mesas, ventas, ítems, pagos, cajas,
+// roles con permisos) para que la carta y el plano se importen tal cual.
+// Ticket NO fiscal: nada de esto emite comprobantes de AFIP.
+
+enum TipoVenta {
+  MESA
+  MOSTRADOR
+  DELIVERY // reservado para PedidosYa / Uber Eats, etapa siguiente
+}
+
+enum EstadoVenta {
+  EN_CURSO
+  CERRADA
+  ANULADA
+}
+
+/// Los motivos de anulación de un ítem, los mismos que usa Fudo.
+enum MotivoAnulacionItem {
+  PEDIDO_DEL_CLIENTE
+  DEMORA_EN_COCINA
+  ERROR
+  CLIENTE_INSATISFECHO
+  CAMBIO_DE_PRODUCTO
+  SIN_STOCK
+  PRUEBA
+  OTRO
+}
+
+enum TipoMedioPago {
+  EFECTIVO
+  DEBITO
+  CREDITO
+  TRANSFERENCIA
+  QR
+  CUENTA_CORRIENTE
+  APP_DELIVERY
+  OTRO
+}
+
+enum FormaMesa {
+  CUADRADA
+  REDONDA
+}
+
+enum TamanoMesa {
+  CHICA
+  GRANDE
+}
+
+enum TipoMovimientoCaja {
+  INGRESO
+  EGRESO
+}
+
+/// Rol de ventas configurable, como en Fudo: un nombre, si es mozo, y la
+/// lista de permisos con los mismos códigos de Fudo ("cancel_additions",
+/// "close_sales"…). Es aparte de Empleado.rol, que sigue mandando sobre qué
+/// pantallas de Pulso ve cada uno.
+model RolVenta {
+  id        String     @id @default(cuid())
+  nombre    String     @unique
+  esMozo    Boolean    @default(false)
+  permisos  String[]
+  /// Id del rol en Fudo de donde se importó, para no duplicarlo al re-sincronizar.
+  fudoId    Int?       @unique
+  empleados Empleado[]
+  createdAt DateTime   @default(now())
+}
+
+/// Un salón del local: "Salón", "Terraza".
+model Salon {
+  id      String @id @default(cuid())
+  local   Local  @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId String
+  nombre  String
+  orden   Int    @default(0)
+  fudoId  Int?
+  mesas   Mesa[]
+
+  @@unique([localId, fudoId])
+}
+
+/// Una mesa en la grilla del plano (fila y columna, como en Fudo).
+model Mesa {
+  id      String     @id @default(cuid())
+  salon   Salon      @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  salonId String
+  numero  Int
+  fila    Int
+  columna Int
+  forma   FormaMesa  @default(CUADRADA)
+  tamano  TamanoMesa @default(CHICA)
+  activa  Boolean    @default(true)
+  fudoId  Int?
+  ventas  Venta[]
+
+  @@unique([salonId, numero])
+}
+
+/// Adónde va la comanda impresa: Barra, Cocina, Cafetería, Heladería.
+model Cocina {
+  id         String           @id @default(cuid())
+  local      Local            @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId    String
+  nombre     String
+  fudoId     Int?
+  categorias CategoriaVenta[]
+  productos  ProductoVenta[]
+  items      ItemVenta[]
+
+  @@unique([localId, fudoId])
+}
+
+model CategoriaVenta {
+  id        String           @id @default(cuid())
+  local     Local            @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId   String
+  nombre    String
+  orden     Int              @default(0)
+  /// Subcategorías, como en Fudo ("Cafetería" › "Cafés fríos").
+  padre     CategoriaVenta?  @relation("SubcategoriasVenta", fields: [padreId], references: [id], onDelete: SetNull)
+  padreId   String?
+  hijas     CategoriaVenta[] @relation("SubcategoriasVenta")
+  /// La cocina por defecto de sus productos.
+  cocina    Cocina?          @relation(fields: [cocinaId], references: [id], onDelete: SetNull)
+  cocinaId  String?
+  fudoId    Int?
+  productos ProductoVenta[]
+
+  @@unique([localId, fudoId])
+}
+
+model ProductoVenta {
+  id          String         @id @default(cuid())
+  local       Local          @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId     String
+  categoria   CategoriaVenta @relation(fields: [categoriaId], references: [id], onDelete: Restrict)
+  categoriaId String
+  nombre      String
+  codigo      String?
+  /// Precio de carta, con IVA.
+  precio      Float
+  activo      Boolean        @default(true)
+  favorito    Boolean        @default(false)
+  orden       Int            @default(0)
+  /// Si es otra que la de su categoría.
+  cocina      Cocina?        @relation(fields: [cocinaId], references: [id], onDelete: SetNull)
+  cocinaId    String?
+  fudoId      Int?
+  items       ItemVenta[]
+
+  @@unique([localId, fudoId])
+  @@index([localId, activo])
+}
+
+model MedioPago {
+  id          String        @id @default(cuid())
+  local       Local         @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId     String
+  nombre      String
+  tipo        TipoMedioPago
+  activo      Boolean       @default(true)
+  orden       Int           @default(0)
+  fudoId      Int?
+  pagos       PagoVenta[]
+
+  @@unique([localId, fudoId])
+}
+
+/// Una caja abierta: de la apertura con su fondo al cierre con lo contado.
+/// Las ventas que se cobran mientras está abierta quedan en ella.
+model Caja {
+  id              String           @id @default(cuid())
+  local           Local            @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId         String
+  /// "Caja principal", "Caja heladería": un local puede tener varias.
+  nombre          String           @default("Caja principal")
+  abiertaPor      Empleado         @relation("CajasAbiertas", fields: [abiertaPorId], references: [id])
+  abiertaPorId    String
+  abiertaEn       DateTime         @default(now())
+  fondoInicial    Float            @default(0)
+  cerradaPor      Empleado?        @relation("CajasCerradas", fields: [cerradaPorId], references: [id])
+  cerradaPorId    String?
+  cerradaEn       DateTime?
+  /// Lo que se contó al cerrar; lo esperado se calcula de los pagos en efectivo.
+  efectivoContado Float?
+  comentario      String?
+  ventas          Venta[]
+  pagos           PagoVenta[]
+  movimientos     MovimientoCaja[]
+
+  @@index([localId, cerradaEn])
+}
+
+/// Plata que entra o sale de la caja sin ser una venta: un retiro, un pago al
+/// proveedor de hielo.
+model MovimientoCaja {
+  id         String             @id @default(cuid())
+  caja       Caja               @relation(fields: [cajaId], references: [id], onDelete: Cascade)
+  cajaId     String
+  tipo       TipoMovimientoCaja
+  monto      Float
+  motivo     String
+  empleado   Empleado           @relation(fields: [empleadoId], references: [id])
+  empleadoId String
+  createdAt  DateTime           @default(now())
+}
+
+/// Una venta: una mesa abierta, un pedido de mostrador.
+///
+/// Una mesa no puede tener dos ventas en curso: lo garantiza un índice único
+/// parcial que va en la migración SQL (Prisma no los declara):
+///   CREATE UNIQUE INDEX ... ON "Venta"("mesaId") WHERE estado = 'EN_CURSO';
+model Venta {
+  id               String      @id @default(cuid())
+  local            Local       @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId          String
+  /// Número correlativo por local, el que se lee en voz alta: "la 1042".
+  numero           Int
+  tipo             TipoVenta
+  estado           EstadoVenta @default(EN_CURSO)
+  mesa             Mesa?       @relation(fields: [mesaId], references: [id], onDelete: SetNull)
+  mesaId           String?
+  mozo             Empleado?   @relation("VentasComoMozo", fields: [mozoId], references: [id])
+  mozoId           String?
+  abiertaPor       Empleado    @relation("VentasAbiertas", fields: [abiertaPorId], references: [id])
+  abiertaPorId     String
+  abiertaEn        DateTime    @default(now())
+  comensales       Int?
+  /// Nombre para llamar en mostrador ("Juan") o el cliente de la mesa.
+  cliente          String?
+  comentario       String?
+  /// Descuento sobre el total de la venta: porcentaje o monto fijo.
+  descuentoPct     Float?
+  descuentoMonto   Float       @default(0)
+  descuentoMotivo  String?
+  /// Se fija al cerrar; mientras está en curso se calcula de los ítems.
+  total            Float?
+  caja             Caja?       @relation(fields: [cajaId], references: [id], onDelete: SetNull)
+  cajaId           String?
+  cerradaPor       Empleado?   @relation("VentasCerradas", fields: [cerradaPorId], references: [id])
+  cerradaPorId     String?
+  cerradaEn        DateTime?
+  anuladaPor       Empleado?   @relation("VentasAnuladas", fields: [anuladaPorId], references: [id])
+  anuladaPorId     String?
+  anuladaEn        DateTime?
+  motivoAnulacion  String?
+  items            ItemVenta[]
+  pagos            PagoVenta[]
+
+  @@unique([localId, numero])
+  @@index([localId, estado])
+  @@index([localId, abiertaEn])
+}
+
+/// Un renglón del pedido. Nombre y precio se copian del producto al cargarlo:
+/// si mañana cambia la carta, la venta de hoy no cambia.
+model ItemVenta {
+  id                  String               @id @default(cuid())
+  venta               Venta                @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  ventaId             String
+  producto            ProductoVenta?       @relation(fields: [productoId], references: [id], onDelete: SetNull)
+  productoId          String?
+  nombre              String
+  precio              Float
+  cantidad            Float                @default(1)
+  /// "Sin azúcar", "bien caliente": sale impreso en la comanda.
+  comentario          String?
+  cocina              Cocina?              @relation(fields: [cocinaId], references: [id], onDelete: SetNull)
+  cocinaId            String?
+  creadoPor           Empleado             @relation("ItemsCargados", fields: [creadoPorId], references: [id])
+  creadoPorId         String
+  createdAt           DateTime             @default(now())
+  /// Cuándo se imprimió la comanda. Null = cargado pero todavía no enviado:
+  /// se puede borrar sin permiso; después, anularlo pide motivo y permiso.
+  enviadoEn           DateTime?
+  anulado             Boolean              @default(false)
+  motivoAnulacion     MotivoAnulacionItem?
+  comentarioAnulacion String?
+  anuladoPor          Empleado?            @relation("ItemsAnulados", fields: [anuladoPorId], references: [id])
+  anuladoPorId        String?
+  anuladoEn           DateTime?
+
+  @@index([ventaId])
+}
+
+/// Un cobro. Una venta se puede pagar con varios (mitad efectivo, mitad débito).
+model PagoVenta {
+  id           String    @id @default(cuid())
+  venta        Venta     @relation(fields: [ventaId], references: [id], onDelete: Cascade)
+  ventaId      String
+  medioPago    MedioPago @relation(fields: [medioPagoId], references: [id])
+  medioPagoId  String
+  monto        Float
+  /// La propina va aparte del monto: no es venta, es del personal.
+  propina      Float     @default(0)
+  caja         Caja?     @relation(fields: [cajaId], references: [id], onDelete: SetNull)
+  cajaId       String?
+  cobradoPor   Empleado  @relation("PagosCobrados", fields: [cobradoPorId], references: [id])
+  cobradoPorId String
+  createdAt    DateTime  @default(now())
+  anulado      Boolean   @default(false)
+
+  @@index([ventaId])
 }
