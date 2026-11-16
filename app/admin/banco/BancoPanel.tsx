@@ -128,17 +128,17 @@ export default function BancoPanel({
     if (sugerido) onLocalSugerido?.(sugerido);
   }, [sugerido]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (error) return <p className="text-sm text-slate-500 dark:text-[#94a19c]">{error}</p>;
+  if (error) return <p className="text-sm text-slate-500">{error}</p>;
   if (!datos) {
-    return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando" />;
+    return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando" />;
   }
 
   if (!localId) {
     return (
       <Panel>
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">Conciliación bancaria</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 text-sm text-slate-500">
             Cada sucursal tiene su propia cuenta. Elegí una arriba en el filtro de Local para
             cargar su extracto y ver la conciliación.
           </p>
@@ -243,7 +243,7 @@ function DetalleLocal({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-semibold">Extracto bancario</h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-0.5 text-sm text-slate-500">
               El CSV o el PDF que exporta el banco para {cuenta.local}. Subirlo dos veces no
               duplica nada, y el período de arriba salta solo al mes que cubre el archivo.
             </p>
@@ -265,16 +265,16 @@ function DetalleLocal({
             </Button>
           </div>
         </div>
-        {errorCarga && <p className="mt-2 text-sm text-rose-600 dark:text-rose-400">{errorCarga}</p>}
+        {errorCarga && <p className="mt-2 text-sm text-rose-600">{errorCarga}</p>}
         {resultadoCarga && (
-          <div className="mt-2 flex flex-col gap-1 text-sm text-emerald-700 dark:text-[#4ee6b0]">
+          <div className="mt-2 flex flex-col gap-1 text-sm text-emerald-700">
             <p className="flex items-center gap-1.5">
               <CheckCircle2 size={15} aria-hidden />
               {resultadoCarga.importadas} movimientos nuevos
               {resultadoCarga.yaCargadas > 0 && ` · ${resultadoCarga.yaCargadas} ya estaban cargados`}
             </p>
             {resultadoCarga.desde && resultadoCarga.hasta && (
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+              <p className="text-xs text-slate-500">
                 Período del archivo: {fechaCorta(resultadoCarga.desde)} a {fechaCorta(resultadoCarga.hasta)}
                 {resultadoCarga.mesDetectado
                   ? " · el filtro de arriba se movió a ese mes solo"
@@ -295,16 +295,16 @@ function DetalleLocal({
       ) : (
         <>
           <Panel>
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="border-b border-slate-100 px-4 py-3">
               <h2 className="font-semibold">Tarjeta y transferencia: Fudo contra el banco</h2>
-              <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">
                 El banco liquida en lotes con uno o más días de demora y ya neto de su comisión;
                 una diferencia chica es esperable. Comparación por período, no remito por remito.
               </p>
             </div>
             {/* Celular: seis columnas no entran. Cada medio es un bloque con
                 sus cinco cifras en el orden de la cuenta, y la diferencia al final. */}
-            <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+            <ul className="divide-y divide-slate-100 md:hidden">
               {[
                 ...c.filas.map((f) => ({
                   clave: f.medio,
@@ -327,20 +327,20 @@ function DetalleLocal({
                   pct: null as number | null,
                 },
               ].map((b) => (
-                <li key={b.clave} className={`px-4 py-3 ${b.clave === "total" ? "bg-slate-50 dark:bg-[#0d1614]" : ""}`}>
+                <li key={b.clave} className={`px-4 py-3 ${b.clave === "total" ? "bg-slate-50" : ""}`}>
                   <p className="font-semibold">{b.titulo}</p>
                   <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 text-sm">
-                    <dt className="text-slate-500 dark:text-[#94a19c]">Fudo (bruto)</dt>
+                    <dt className="text-slate-500">Fudo (bruto)</dt>
                     <dd className="text-right tabular-nums">{plata(b.fudoBruto)}</dd>
                     {b.comision > 0 && (
                       <>
-                        <dt className="text-slate-500 dark:text-[#94a19c]">Comisión esperada</dt>
-                        <dd className="text-right tabular-nums text-slate-500 dark:text-[#94a19c]">− {plata(b.comision)}</dd>
+                        <dt className="text-slate-500">Comisión esperada</dt>
+                        <dd className="text-right tabular-nums text-slate-500">− {plata(b.comision)}</dd>
                       </>
                     )}
-                    <dt className="text-slate-500 dark:text-[#94a19c]">Neto esperado</dt>
+                    <dt className="text-slate-500">Neto esperado</dt>
                     <dd className="text-right tabular-nums">{plata(b.neto)}</dd>
-                    <dt className="text-slate-500 dark:text-[#94a19c]">Banco</dt>
+                    <dt className="text-slate-500">Banco</dt>
                     <dd className="text-right tabular-nums">{plata(b.banco)}</dd>
                     <dt className="font-semibold">Diferencia</dt>
                     <dd
@@ -348,13 +348,13 @@ function DetalleLocal({
                         Math.abs(b.diferencia) < 1
                           ? "text-slate-500"
                           : b.diferencia > 0
-                            ? "text-emerald-700 dark:text-[#4ee6b0]"
-                            : "text-rose-600 dark:text-rose-400"
+                            ? "text-emerald-700"
+                            : "text-rose-600"
                       }`}
                     >
                       {plata(b.diferencia)}
                       {b.pct != null && (
-                        <span className="ml-1 font-normal text-slate-500 dark:text-[#94a19c]">
+                        <span className="ml-1 font-normal text-slate-500">
                           ({pct(b.pct, { signo: true })})
                         </span>
                       )}
@@ -367,7 +367,7 @@ function DetalleLocal({
             <div className="hidden overflow-x-auto md:block">
               <table className="w-full min-w-[40rem] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+                  <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                     <th className="px-4 py-2 font-semibold">Medio</th>
                     <th className="px-3 py-2 text-right font-semibold">Fudo (bruto)</th>
                     <th className="px-3 py-2 text-right font-semibold">Comisión esperada</th>
@@ -376,12 +376,12 @@ function DetalleLocal({
                     <th className="px-4 py-2 text-right font-semibold">Diferencia</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <tbody className="divide-y divide-slate-100">
                   {c.filas.map((f) => (
                     <tr key={f.medio}>
                       <td className="px-4 py-2.5 font-medium">{f.medio}</td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{plata(f.fudoBruto)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">
                         {f.comisionEsperada > 0 ? `− ${plata(f.comisionEsperada)}` : "—"}
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums">{plata(f.netoEsperado)}</td>
@@ -391,8 +391,8 @@ function DetalleLocal({
                           Math.abs(f.diferencia) < 1
                             ? "text-slate-500"
                             : f.diferencia > 0
-                              ? "text-emerald-700 dark:text-[#4ee6b0]"
-                              : "text-rose-600 dark:text-rose-400"
+                              ? "text-emerald-700"
+                              : "text-rose-600"
                         }`}
                       >
                         {plata(f.diferencia)}
@@ -404,7 +404,7 @@ function DetalleLocal({
                       </td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-slate-200 font-semibold dark:border-[#29403b]">
+                  <tr className="border-t-2 border-slate-200 font-semibold">
                     <td className="px-4 py-2.5">Total</td>
                     <td className="px-3 py-2.5 text-right tabular-nums">{plata(c.totalFudoBruto)}</td>
                     <td className="px-3 py-2.5" />
@@ -415,8 +415,8 @@ function DetalleLocal({
                         Math.abs(c.totalDiferencia) < 1
                           ? "text-slate-500"
                           : c.totalDiferencia > 0
-                            ? "text-emerald-700 dark:text-[#4ee6b0]"
-                            : "text-rose-600 dark:text-rose-400"
+                            ? "text-emerald-700"
+                            : "text-rose-600"
                       }`}
                     >
                       {plata(c.totalDiferencia)}
@@ -425,11 +425,11 @@ function DetalleLocal({
                 </tbody>
               </table>
             </div>
-            <div className="flex flex-wrap gap-x-6 gap-y-1 border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+            <div className="flex flex-wrap gap-x-6 gap-y-1 border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
               <span>Efectivo (no pasa por el banco): {plata(c.excluido.efectivo)}</span>
               <span>Pedidos Ya / Uber Eats (otra cuenta): {plata(c.excluido.delivery)}</span>
               {c.excluido.sinReconocer > 0 && (
-                <span className="text-amber-700 dark:text-amber-300">
+                <span className="text-amber-700">
                   Medio de pago sin reconocer: {plata(c.excluido.sinReconocer)}
                 </span>
               )}
@@ -442,53 +442,53 @@ function DetalleLocal({
           <section className="grid grid-cols-1 gap-5 sm:grid-cols-2">
             <Panel className="p-4">
               <h2 className="font-semibold">Ingresos Brutos del período</h2>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-0.5 text-sm text-slate-500">
                 5% sobre toda la venta neta, efectivo incluido: no se retiene solo, se declara.
               </p>
               <p className="mt-3 text-2xl font-bold tabular-nums">{plata(cuenta.iibb.sobreVentaTotal)}</p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
+              <p className="mt-1 text-xs text-slate-500">
                 Retenido aproximado en lo no efectivo: {plata(cuenta.iibb.retenidoAproximado)}
               </p>
             </Panel>
             <Panel className="p-4">
               <h2 className="font-semibold">IVA del período</h2>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-0.5 text-sm text-slate-500">
                 Débito fiscal sobre toda la venta; el crédito de compras es cero sin Factura A.
               </p>
               <p className="mt-3 text-2xl font-bold tabular-nums">{plata(cuenta.iva.aPagar)}</p>
-              <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
+              <p className="mt-1 text-xs text-slate-500">
                 {plata(cuenta.iva.debitoFiscal)} de débito − {plata(cuenta.iva.creditoFiscal)} de crédito
               </p>
             </Panel>
           </section>
 
           <Panel>
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="border-b border-slate-100 px-4 py-3">
               <h2 className="font-semibold">Movimientos del extracto</h2>
             </div>
-            <div className="scrollbar-hidden overflow-x-auto border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="scrollbar-hidden overflow-x-auto border-b border-slate-100 px-4 py-3">
               <SelectorSegmentado label="Filtrar movimientos" valor={filtro} onChange={setFiltro} opciones={FILTROS} />
             </div>
             {movimientosVisibles.length === 0 ? (
               <EmptyState>Ningún movimiento coincide con este filtro.</EmptyState>
             ) : (
               <>
-              <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+              <ul className="divide-y divide-slate-100 md:hidden">
                 {movimientosVisibles.map((m) => (
                   <li key={m.id} className="flex items-start justify-between gap-3 px-4 py-3">
                     <div className="min-w-0">
                       <p className="font-medium">{m.descripcion}</p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                         {fechaLarga(m.fecha)}
                         <Badge tone={m.categoria === "OTRO" ? "slate" : "emerald"}>{ETIQUETA_CATEGORIA[m.categoria]}</Badge>
                       </p>
                       {m.referencia && (
-                        <p className="mt-0.5 break-words text-xs text-slate-500 dark:text-[#94a19c]">{m.referencia}</p>
+                        <p className="mt-0.5 break-words text-xs text-slate-500">{m.referencia}</p>
                       )}
                     </div>
                     <p
                       className={`shrink-0 text-right font-semibold tabular-nums ${
-                        m.credito > 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : ""
+                        m.credito > 0 ? "text-emerald-700" : ""
                       }`}
                     >
                       {m.credito > 0 ? plata(m.credito) : plata(-m.debito)}
@@ -498,7 +498,7 @@ function DetalleLocal({
                       onClick={() => pedirBorrar(m)}
                       title="Borrar este movimiento"
                       aria-label="Borrar este movimiento"
-                      className="-mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
+                      className="-mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                     >
                       <Trash2 size={16} aria-hidden />
                     </button>
@@ -509,7 +509,7 @@ function DetalleLocal({
               <div className="hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[36rem] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                       <th className="px-4 py-2 font-semibold">Fecha</th>
                       <th className="px-3 py-2 font-semibold">Descripción</th>
                       <th className="px-3 py-2 font-semibold">Categoría</th>
@@ -518,16 +518,16 @@ function DetalleLocal({
                       <th className="px-4 py-2" />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                  <tbody className="divide-y divide-slate-100">
                     {movimientosVisibles.map((m) => (
                       <tr key={m.id}>
-                        <td className="px-4 py-2 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                        <td className="px-4 py-2 tabular-nums text-slate-500">
                           {fechaCorta(m.fecha)}
                         </td>
                         <td className="px-3 py-2">
                           <span className="font-medium">{m.descripcion}</span>
                           {m.referencia && (
-                            <span className="ml-1.5 text-xs text-slate-500 dark:text-[#7a8882]">
+                            <span className="ml-1.5 text-xs text-slate-500">
                               {m.referencia}
                             </span>
                           )}
@@ -537,7 +537,7 @@ function DetalleLocal({
                             {ETIQUETA_CATEGORIA[m.categoria]}
                           </Badge>
                         </td>
-                        <td className="px-3 py-2 text-right tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                        <td className="px-3 py-2 text-right tabular-nums text-emerald-700">
                           {m.credito > 0 ? plata(m.credito) : "—"}
                         </td>
                         <td className="px-3 py-2 text-right tabular-nums">{m.debito > 0 ? plata(m.debito) : "—"}</td>
@@ -547,7 +547,7 @@ function DetalleLocal({
                             onClick={() => pedirBorrar(m)}
                             title="Borrar este movimiento"
                             aria-label="Borrar este movimiento"
-                            className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
+                            className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                           >
                             <Trash2 size={14} aria-hidden />
                           </button>
@@ -564,7 +564,7 @@ function DetalleLocal({
       )}
 
       {cuenta.movimientos.length > 0 && cuenta.conciliacion.totalBanco === 0 && (
-        <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+        <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-900">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           Hay movimientos cargados pero ninguno cayó en Tarjeta ni Transferencia: revisá que el
           extracto sea del banco correcto para este período.
@@ -589,10 +589,10 @@ function ParaRevisar({ avisos, historiaSuficiente }: { avisos: Aviso[]; historia
   const revisar = avisos.filter((a) => a.gravedad === "revisar").length;
   return (
     <Panel>
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
         <div>
           <h2 className="font-semibold">Para revisar</h2>
-          <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">
             Cargos que subieron, pagos que no aparecían antes y posibles duplicados. Cada aviso dice contra qué se
             comparó; los impuestos que acompañan cada movimiento no se marcan.
           </p>
@@ -604,36 +604,36 @@ function ParaRevisar({ avisos, historiaSuficiente }: { avisos: Aviso[]; historia
         )}
       </div>
       {avisos.length === 0 ? (
-        <p className="flex items-center gap-2 px-4 py-4 text-sm text-emerald-700 dark:text-[#4ee6b0]">
+        <p className="flex items-center gap-2 px-4 py-4 text-sm text-emerald-700">
           <CheckCircle2 size={16} aria-hidden />
           Nada raro en este período.
         </p>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <ul className="divide-y divide-slate-100">
           {avisos.map((a) => (
             <li key={`${a.tipo}-${a.ids.join("-")}`} className="flex gap-3 px-4 py-3">
               {a.gravedad === "revisar" ? (
-                <AlertTriangle size={17} className="mt-0.5 shrink-0 text-amber-600 dark:text-amber-400" aria-label="Para revisar" />
+                <AlertTriangle size={17} className="mt-0.5 shrink-0 text-amber-600" aria-label="Para revisar" />
               ) : (
-                <Info size={17} className="mt-0.5 shrink-0 text-slate-400 dark:text-[#7a8882]" aria-label="Para saber" />
+                <Info size={17} className="mt-0.5 shrink-0 text-slate-400" aria-label="Para saber" />
               )}
               <div className="min-w-0 flex-1">
                 <p className="text-sm">
                   <span className="font-semibold">{a.titulo}</span>
-                  <span className="text-slate-500 dark:text-[#94a19c]"> · {a.quien}</span>
+                  <span className="text-slate-500"> · {a.quien}</span>
                 </p>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">{a.detalle}</p>
+                <p className="mt-0.5 text-sm text-slate-500">{a.detalle}</p>
               </div>
               <div className="shrink-0 text-right">
                 <p className="text-sm font-semibold tabular-nums">{plata(a.monto)}</p>
-                <p className="text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">{fechaCorta(a.fecha)}</p>
+                <p className="text-xs tabular-nums text-slate-500">{fechaCorta(a.fecha)}</p>
               </div>
             </li>
           ))}
         </ul>
       )}
       {!historiaSuficiente && (
-        <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+        <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
           Para marcar pagos nuevos hace falta al menos un mes de extracto anterior a este período. Subí el extracto
           del mes anterior y se van a ver también.
         </p>

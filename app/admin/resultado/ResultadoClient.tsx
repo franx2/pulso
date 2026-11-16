@@ -83,7 +83,7 @@ export default function ResultadoClient() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [periodo.toString(), localId]);
 
-  if (error) return <p className="text-sm text-slate-500 dark:text-[#94a19c]">{error}</p>;
+  if (error) return <p className="text-sm text-slate-500">{error}</p>;
 
   // La cadena es la suma de sus locales, no un promedio: cada sucursal tiene
   // sus propias comisiones y sus propios gastos.
@@ -109,21 +109,21 @@ export default function ResultadoClient() {
         }}
       />
 
-      <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="text-sm text-slate-500">
         El extracto bancario, la conciliación con Fudo y los movimientos para revisar están en{" "}
-        <Link href="/admin/banco" className="font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]">
+        <Link href="/admin/banco" className="font-semibold text-emerald-700 underline-offset-2 hover:underline">
           Banco
         </Link>
         .
       </p>
 
       {        (!datos || !total ? (
-        <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Calculando" />
+        <div className="h-64 animate-pulse rounded-lg bg-slate-200/70" aria-label="Calculando" />
       ) : total.ventaBruta === 0 ? (
         <EmptyState>No hay ventas sincronizadas en este período.</EmptyState>
       ) : (
         <>
-          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0 dark:divide-[#29403b] dark:border-[#29403b]">
+          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0">
             <Metrica
               label="Venta neta"
               valor={plata(total.ventaNeta)}
@@ -149,8 +149,8 @@ export default function ResultadoClient() {
           </section>
 
           {total.incompletas > 0 && (
-            <Panel className="border-amber-200 bg-amber-50/60 p-4 dark:border-amber-500/30 dark:bg-amber-500/10">
-              <p className="flex items-start gap-2 text-sm text-amber-900 dark:text-amber-100">
+            <Panel className="border-amber-200 bg-amber-50/60 p-4">
+              <p className="flex items-start gap-2 text-sm text-amber-900">
                 <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
                 <span>
                   {total.incompletas === 1
@@ -164,11 +164,11 @@ export default function ResultadoClient() {
           )}
 
           <Panel>
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="border-b border-slate-100 px-4 py-3">
               <h2 className="font-semibold">
                 {localId ? datos.locales.find((l) => l.id === localId)?.nombre : "Toda la cadena"}
               </h2>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-0.5 text-sm text-slate-500">
                 Todo en netos de IVA. El IVA no es un costo para un responsable inscripto: se
                 cobra y se paga, y va aparte.
               </p>
@@ -176,17 +176,17 @@ export default function ResultadoClient() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <tbody>
-                  <tr className="border-b border-slate-100 dark:border-[#1c2521]">
+                  <tr className="border-b border-slate-100">
                     <td className="py-3 pl-4 pr-2 font-semibold">Venta neta</td>
                     <td className="whitespace-nowrap px-2 py-3 text-right font-semibold tabular-nums">
                       {plata(total.ventaNeta)}
                     </td>
-                    <td className="whitespace-nowrap py-3 pl-2 pr-4 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    <td className="whitespace-nowrap py-3 pl-2 pr-4 text-right tabular-nums text-slate-500">
                       100,0%
                     </td>
                   </tr>
                   {total.lineas.map((l) => (
-                    <tr key={l.id} className="border-b border-slate-100 dark:border-[#1c2521]">
+                    <tr key={l.id} className="border-b border-slate-100">
                       <td className="py-3 pl-4 pr-2">
                         <p className="flex flex-wrap items-center gap-2 font-medium">
                           {l.etiqueta}
@@ -199,12 +199,12 @@ export default function ResultadoClient() {
                             </Badge>
                           )}
                         </p>
-                        <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                        <p className="mt-0.5 text-xs text-slate-500">
                           {l.falta ?? l.nota}
                           {l.falta && ARREGLO[l.id] && (
                             <Link
                               href={ARREGLO[l.id].href}
-                              className="ml-1.5 inline-flex items-center gap-0.5 font-semibold text-emerald-700 hover:underline dark:text-[#4ee6b0]"
+                              className="ml-1.5 inline-flex items-center gap-0.5 font-semibold text-emerald-700 hover:underline"
                             >
                               {ARREGLO[l.id].texto}
                               <ArrowRight size={11} aria-hidden />
@@ -213,18 +213,18 @@ export default function ResultadoClient() {
                         </p>
                       </td>
                       <td className="whitespace-nowrap px-2 py-3 text-right tabular-nums">{plata(l.monto)}</td>
-                      <td className="whitespace-nowrap py-3 pl-2 pr-4 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                      <td className="whitespace-nowrap py-3 pl-2 pr-4 text-right tabular-nums text-slate-500">
                         {pct(l.porcentaje)}
                       </td>
                     </tr>
                   ))}
-                  <tr className="border-t-2 border-slate-200 dark:border-[#29403b]">
+                  <tr className="border-t-2 border-slate-200">
                     <td className="py-3.5 pl-4 pr-2 text-base font-semibold">Resultado operativo</td>
                     <td
                       className={`whitespace-nowrap px-2 py-3.5 text-right text-base font-bold tabular-nums ${
                         total.resultado >= 0
-                          ? "text-emerald-700 dark:text-[#4ee6b0]"
-                          : "text-rose-600 dark:text-rose-400"
+                          ? "text-emerald-700"
+                          : "text-rose-600"
                       }`}
                     >
                       {plata(total.resultado)}
@@ -232,8 +232,8 @@ export default function ResultadoClient() {
                     <td
                       className={`whitespace-nowrap py-3.5 pl-2 pr-4 text-right font-semibold tabular-nums ${
                         total.resultado >= 0
-                          ? "text-emerald-700 dark:text-[#4ee6b0]"
-                          : "text-rose-600 dark:text-rose-400"
+                          ? "text-emerald-700"
+                          : "text-rose-600"
                       }`}
                     >
                       {pct(total.resultadoPct)}
@@ -242,7 +242,7 @@ export default function ResultadoClient() {
                 </tbody>
               </table>
             </div>
-            <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+            <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">
               El resultado operativo es antes de impuesto a las ganancias, amortizaciones y
               cualquier retiro de los socios. IVA del período: {plata(total.iva.debito)} de débito
               menos {plata(total.iva.credito)} de crédito ={" "}
@@ -254,23 +254,23 @@ export default function ResultadoClient() {
 
           {!localId && datos.porLocal.length > 1 && (
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Por sucursal</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+                <p className="mt-0.5 text-sm text-slate-500">
                   Cada una con sus propias comisiones y sus propios gastos.
                 </p>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                       <th className="py-2 pl-4 pr-2 font-semibold">Local</th>
                       <th className="hidden px-3 py-2 text-right font-semibold sm:table-cell">Venta neta</th>
                       <th className="px-2 py-2 text-right font-semibold sm:px-3">Resultado</th>
                       <th className="py-2 pl-2 pr-4 text-right font-semibold">Margen</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                  <tbody className="divide-y divide-slate-100">
                     {[...datos.porLocal]
                       .sort((a, b) => b.resultado - a.resultado)
                       .map((l) => (
@@ -283,7 +283,7 @@ export default function ResultadoClient() {
                               ) : (
                                 <CheckCircle2
                                   size={14}
-                                  className="text-emerald-700 dark:text-[#4ee6b0]"
+                                  className="text-emerald-700"
                                   aria-label="datos completos"
                                 />
                               )}
@@ -293,13 +293,13 @@ export default function ResultadoClient() {
                           <td
                             className={`whitespace-nowrap px-2 py-2.5 text-right font-semibold tabular-nums sm:px-3 ${
                               l.resultado >= 0
-                                ? "text-emerald-700 dark:text-[#4ee6b0]"
-                                : "text-rose-600 dark:text-rose-400"
+                                ? "text-emerald-700"
+                                : "text-rose-600"
                             }`}
                           >
                             {plata(l.resultado)}
                           </td>
-                          <td className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                          <td className="whitespace-nowrap py-2.5 pl-2 pr-4 text-right tabular-nums text-slate-500">
                             {pct(l.resultadoPct)}
                           </td>
                         </tr>

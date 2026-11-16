@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { FileCheck2, Search } from "lucide-react";
 import PeriodoSelector, { usePeriodo } from "@/components/PeriodoSelector";
@@ -8,6 +7,7 @@ import { SelectorLocal } from "@/components/BarraContexto";
 import { ErrorText, Input, PageTitle, Panel, Select, SelectorSegmentado } from "@/components/ui";
 import { fechaLarga, numero, plata } from "@/lib/formato";
 import { NavVentas, useLocalVentas } from "../comun";
+import DetalleVenta from "./DetalleVenta";
 
 type Venta = {
   id: string;
@@ -30,9 +30,9 @@ type Venta = {
 type Filtro = "todas" | "CERRADA" | "EN_CURSO" | "ANULADA";
 
 const ESTADO: Record<Venta["estado"], { texto: string; clase: string }> = {
-  CERRADA: { texto: "Cerrada", clase: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200" },
-  EN_CURSO: { texto: "En curso", clase: "bg-sky-100 text-sky-800 dark:bg-sky-900/40 dark:text-sky-200" },
-  ANULADA: { texto: "Anulada", clase: "bg-rose-100 text-rose-800 dark:bg-rose-900/40 dark:text-rose-200" },
+  CERRADA: { texto: "Cerrada", clase: "bg-emerald-100 text-emerald-800" },
+  EN_CURSO: { texto: "En curso", clase: "bg-sky-100 text-sky-800" },
+  ANULADA: { texto: "Anulada", clase: "bg-rose-100 text-rose-800" },
 };
 const TIPO_FACTURA: Record<number, string> = { 1: "Fact. A", 6: "Fact. B", 3: "NC A", 8: "NC B" };
 const fechaHora = (iso: string) => {
@@ -58,6 +58,7 @@ export default function ListadoVentasClient() {
   const [mozo, setMozo] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [error, setError] = useState("");
+  const [sel, setSel] = useState<string | null>(null);
 
   const clavePeriodo = periodo.toString();
   const cargar = useCallback(async () => {
@@ -102,12 +103,12 @@ export default function ListadoVentasClient() {
       <div className="flex flex-wrap items-center gap-3">
         {locales.length > 1 && <SelectorLocal locales={locales} valor={localId} onChange={setLocalGuardado} todos={null} />}
         <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} />
-        {datos && <p className="text-xs text-slate-500 dark:text-[#94a19c]">{fechaLarga(datos.desde)} a {fechaLarga(datos.hasta)}</p>}
+        {datos && <p className="text-xs text-slate-500">{fechaLarga(datos.desde)} a {fechaLarga(datos.hasta)}</p>}
       </div>
       <ErrorText>{error}</ErrorText>
 
       {datos && (
-        <Panel className="grid grid-cols-2 divide-slate-100 md:grid-cols-4 md:divide-x dark:divide-[#1c2521]">
+        <Panel className="grid grid-cols-2 divide-slate-100 md:grid-cols-4 md:divide-x">
           {[
             ["Ventas cerradas", numero(cerradas.length)],
             ["Total cobrado", plata(total)],
@@ -115,15 +116,16 @@ export default function ListadoVentasClient() {
             ["Promedio por venta", plata(cerradas.length ? total / cerradas.length : 0)],
           ].map(([e, v]) => (
             <div key={e} className="px-4 py-3">
-              <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">{e}</p>
-              <p className="mt-1 text-xl font-bold tabular-nums text-[var(--cat-1)]">{v}</p>
+              <p className="titulo-marca text-[0.6875rem] font-semibold text-slate-500">{e}</p>
+              <p className="mt-1 text-xl font-bold tabular-nums">{v}</p>
             </div>
           ))}
         </Panel>
       )}
 
-      <Panel>
-        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-3 dark:border-[#1c2521]">
+      <div className="grid items-start gap-4 2xl:grid-cols-[minmax(0,1fr)_26rem]">
+      <Panel className="min-w-0">
+        <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-3">
           <label className="relative min-w-[10rem] flex-1">
             <span className="sr-only">Buscar venta</span>
             <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden />
@@ -153,13 +155,13 @@ export default function ListadoVentasClient() {
         </div>
 
         {!datos ? (
-          <div className="m-4 h-48 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando ventas" />
+          <div className="m-4 h-48 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando ventas" />
         ) : visibles.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-slate-500 dark:text-[#94a19c]">No hay ventas con estos filtros en el período.</p>
+          <p className="px-4 py-10 text-center text-sm text-slate-500">No hay ventas con estos filtros en el período.</p>
         ) : (
           <>
             <div
-              className="hidden grid-cols-[4rem_6.5rem_minmax(9rem,1fr)_9rem_6.5rem_7rem_minmax(0,11rem)_6rem] gap-x-3 border-b border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-500 xl:grid dark:border-[#29403b] dark:text-[#94a19c]"
+              className="hidden grid-cols-[4rem_6.5rem_minmax(9rem,1fr)_9rem_6.5rem_7rem_minmax(0,11rem)_6rem] gap-x-3 border-b border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-500 xl:grid"
               aria-hidden
             >
               <span>Nº</span>
@@ -171,32 +173,34 @@ export default function ListadoVentasClient() {
               <span>Pago</span>
               <span>Estado</span>
             </div>
-            <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+            <ul className="divide-y divide-slate-100">
               {visibles.map((v) => (
                 <li key={v.id}>
-                  <Link
-                    href={`/ventas/${v.id}`}
-                    className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 xl:grid-cols-[4rem_6.5rem_minmax(9rem,1fr)_9rem_6.5rem_7rem_minmax(0,11rem)_6rem] dark:hover:bg-[#172724]"
+                  <button
+                    type="button"
+                    onClick={() => setSel(v.id === sel ? null : v.id)}
+                    aria-pressed={v.id === sel}
+                    className={`grid w-full text-left ${v.id === sel ? "bg-arena-50" : ""} grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 px-4 py-2.5 text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950 xl:grid-cols-[4rem_6.5rem_minmax(9rem,1fr)_9rem_6.5rem_7rem_minmax(0,11rem)_6rem]`}
                   >
                     <span className="font-semibold tabular-nums xl:order-none">
                       #{v.numero}
-                      <span className="font-normal text-slate-500 xl:hidden dark:text-[#94a19c]"> · {v.donde}</span>
+                      <span className="font-normal text-slate-500 xl:hidden"> · {v.donde}</span>
                     </span>
                     <span className="text-right font-semibold tabular-nums xl:hidden">{plata(v.total)}</span>
-                    <span className="text-xs text-slate-500 tabular-nums xl:text-sm xl:text-inherit dark:text-[#94a19c]">{fechaHora(v.abiertaEn)}</span>
+                    <span className="text-xs text-slate-500 tabular-nums xl:text-sm xl:text-inherit">{fechaHora(v.abiertaEn)}</span>
                     <span className="hidden truncate xl:block">{v.donde}</span>
-                    <span className="truncate text-xs text-slate-500 xl:text-sm xl:text-inherit dark:text-[#94a19c]">
+                    <span className="truncate text-xs text-slate-500 xl:text-sm xl:text-inherit">
                       {v.mozo}
                       <span className="xl:hidden"> · {v.productos} productos</span>
                     </span>
-                    <span className="hidden text-right tabular-nums text-slate-500 xl:block dark:text-[#94a19c]" title={v.descuentoMotivo ?? undefined}>
+                    <span className="hidden text-right tabular-nums text-slate-500 xl:block" title={v.descuentoMotivo ?? undefined}>
                       {v.descuento > 0 ? `−${plata(v.descuento)}` : "—"}
                     </span>
                     <span className="hidden text-right font-semibold tabular-nums xl:block">{plata(v.total)}</span>
-                    <span className="hidden truncate text-xs text-slate-600 xl:block dark:text-[#c1cbc6]">
+                    <span className="hidden truncate text-xs text-slate-600 xl:block">
                       {v.medios.join(" + ") || "—"}
                       {v.factura && (
-                        <span className="ml-1.5 inline-flex items-center gap-0.5 text-emerald-700 dark:text-[#4ee6b0]">
+                        <span className="ml-1.5 inline-flex items-center gap-0.5 text-emerald-700">
                           <FileCheck2 size={12} aria-hidden />
                           {TIPO_FACTURA[v.factura.tipo] ?? "Fact."} {String(v.factura.puntoVenta).padStart(4, "0")}-{String(v.factura.numero).padStart(8, "0")}
                         </span>
@@ -207,13 +211,15 @@ export default function ListadoVentasClient() {
                         {ESTADO[v.estado].texto}
                       </span>
                     </span>
-                  </Link>
+                  </button>
                 </li>
               ))}
             </ul>
           </>
         )}
       </Panel>
+      {sel && <DetalleVenta key={sel} id={sel} onClose={() => setSel(null)} />}
+      </div>
     </div>
   );
 }

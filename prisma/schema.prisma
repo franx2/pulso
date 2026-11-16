@@ -218,6 +218,11 @@ model Local {
   mediosPago           MedioPago[]
   cajas                Caja[]
   ventas               Venta[]
+  clientes             Cliente[]
+  reservas             Reserva[]
+
+  /// Propina sugerida que se imprime en la precuenta (10 = 10%). Null: no se imprime.
+  propinaSugeridaPct Float?
 }
 
 /// Patrón histórico de demanda (ventas promedio por día de semana y hora),
@@ -1148,17 +1153,18 @@ model Salon {
 
 /// Una mesa en la grilla del plano (fila y columna, como en Fudo).
 model Mesa {
-  id      String     @id @default(cuid())
-  salon   Salon      @relation(fields: [salonId], references: [id], onDelete: Cascade)
-  salonId String
-  numero  Int
-  fila    Int
-  columna Int
-  forma   FormaMesa  @default(CUADRADA)
-  tamano  TamanoMesa @default(CHICA)
-  activa  Boolean    @default(true)
-  fudoId  Int?
-  ventas  Venta[]
+  id       String     @id @default(cuid())
+  salon    Salon      @relation(fields: [salonId], references: [id], onDelete: Cascade)
+  salonId  String
+  numero   Int
+  fila     Int
+  columna  Int
+  forma    FormaMesa  @default(CUADRADA)
+  tamano   TamanoMesa @default(CHICA)
+  activa   Boolean    @default(true)
+  fudoId   Int?
+  ventas   Venta[]
+  reservas Reserva[]
 
   @@unique([salonId, numero])
 }
@@ -1298,6 +1304,9 @@ model Venta {
   comensales      Int?
   /// Nombre para llamar en mostrador ("Juan") o el cliente de la mesa.
   cliente         String?
+  /// El cliente de la libreta, si se eligió uno: habilita la cuenta corriente.
+  clienteRef      Cliente?            @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  clienteId       String?
   comentario      String?
   /// Descuento sobre el total de la venta: porcentaje o monto fijo.
   descuentoPct    Float?
@@ -1344,6 +1353,9 @@ model ItemVenta {
   /// Cuándo se imprimió la comanda. Null = cargado pero todavía no enviado:
   /// se puede borrar sin permiso; después, anularlo pide motivo y permiso.
   enviadoEn           DateTime?
+  /// Dónde está en la cocina, una vez enviado: lo mueve el monitor de cocina.
+  estadoCocina        EstadoCocina         @default(PENDIENTE)
+  listoEn             DateTime?
   /// Descuento sobre este renglón: porcentaje (con `descuentoMonto` como
   /// tope, si es > 0) o, sin porcentaje, un monto fijo. `descuentoNombre` es
   /// el descuento de la lista que se usó, o "Libre".
@@ -1438,8 +1450,8 @@ enum TipoMovimientoStock {
 /// Lo que se usa para hacer los productos: café en gramos, leche en ml,
 /// medialunas en unidades. El costo es por unidad (por gramo, ml o unidad).
 model Ingrediente {
-  id          String              @id @default(cuid())
-  local       Local               @relation(fields: [localId], references: [id], onDelete: Cascade)
+  id          String            @id @default(cuid())
+  local       Local             @relation(fields: [localId], references: [id], onDelete: Cascade)
   localId     String
   nombre      String
   unidad      UnidadIngrediente
@@ -1447,12 +1459,12 @@ model Ingrediente {
   /// última factura del proveedor y se actualiza solo. Si no, manda `costo`.
   insumo      String?
   /// Costo neto por unidad cargado a mano (se usa si no hay insumo vinculado).
-  costo       Float               @default(0)
+  costo       Float             @default(0)
   stockMinimo Float?
-  activo      Boolean             @default(true)
+  activo      Boolean           @default(true)
   recetas     RecetaItem[]
   movimientos MovimientoStock[]
-  createdAt   DateTime            @default(now())
+  createdAt   DateTime          @default(now())
 
   @@unique([localId, nombre])
 }
@@ -1505,4 +1517,74 @@ model DescuentoPlantilla {
   createdAt  DateTime @default(now())
 
   @@unique([localId, nombre])
+}
+
+enum EstadoCocina {
+  PENDIENTE
+  PREPARANDO
+  LISTO
+  ENTREGADO
+}
+
+/// La libreta de clientes del local: datos para facturar, un descuento propio
+/// y la cuenta corriente (lo que se cobró "a cuenta" menos lo que pagó).
+model Cliente {
+  id           String        @id @default(cuid())
+  local        Local         @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId      String
+  nombre       String
+  telefono     String?
+  email        String?
+  /// CUIT o DNI.
+  documento    String?
+  direccion    String?
+  descuentoPct Float?
+  notas        String?
+  activo       Boolean       @default(true)
+  creadoEn     DateTime      @default(now())
+  ventas       Venta[]
+  pagos        PagoCliente[]
+  reservas     Reserva[]
+
+  @@index([localId, nombre])
+}
+
+/// Un pago del cliente que baja su cuenta corriente.
+model PagoCliente {
+  id        String   @id @default(cuid())
+  cliente   Cliente  @relation(fields: [clienteId], references: [id], onDelete: Cascade)
+  clienteId String
+  monto     Float
+  nota      String?
+  creadoEn  DateTime @default(now())
+
+  @@index([clienteId])
+}
+
+enum EstadoReserva {
+  PENDIENTE
+  CONFIRMADA
+  SENTADA
+  CANCELADA
+  NO_VINO
+}
+
+model Reserva {
+  id         String        @id @default(cuid())
+  local      Local         @relation(fields: [localId], references: [id], onDelete: Cascade)
+  localId    String
+  /// Día y hora de llegada.
+  fecha      DateTime
+  personas   Int
+  nombre     String
+  telefono   String?
+  cliente    Cliente?      @relation(fields: [clienteId], references: [id], onDelete: SetNull)
+  clienteId  String?
+  mesa       Mesa?         @relation(fields: [mesaId], references: [id], onDelete: SetNull)
+  mesaId     String?
+  comentario String?
+  estado     EstadoReserva @default(PENDIENTE)
+  creadaEn   DateTime      @default(now())
+
+  @@index([localId, fecha])
 }

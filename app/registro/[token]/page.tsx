@@ -67,17 +67,17 @@ export default function RegistroPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-slate-50 px-6 text-center dark:bg-[#0b0e0d]">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-slate-50 px-6 text-center">
       <Brand centered />
       <Card className="w-full max-w-sm">
-        <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-emerald-100 text-emerald-700 dark:bg-[#173e32] dark:text-[#4ee6b0]">
+        <div className="mx-auto mb-3 grid h-14 w-14 place-items-center rounded-full bg-emerald-100 text-emerald-700">
           {modo === "passkey" ? <Fingerprint size={28} /> : <KeyRound size={28} />}
         </div>
 
         {modo === "passkey" ? (
           <>
             <h1 className="text-lg font-bold">Registrá este dispositivo</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-1 text-sm text-slate-500">
               Vas a usar Face ID, huella o el bloqueo de tu celular para fichar. Tocá el botón y
               seguí las instrucciones del teléfono.
             </p>
@@ -88,7 +88,7 @@ export default function RegistroPage() {
         ) : (
           <form onSubmit={registrarPassword} className="text-left">
             <h1 className="text-center text-lg font-bold">Creá tu contraseña</h1>
-            <p className="mt-1 text-center text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-1 text-center text-sm text-slate-500">
               Al menos 8 caracteres. Vas a usarla junto con tu usuario para fichar.
             </p>
             <div className="mt-4">
@@ -116,7 +116,7 @@ export default function RegistroPage() {
             setModo(modo === "passkey" ? "password" : "passkey");
             setError("");
           }}
-          className="mt-3 w-full text-center text-sm text-slate-500 underline dark:text-[#94a19c]"
+          className="mt-3 w-full text-center text-sm text-slate-500 underline"
         >
           {modo === "passkey" ? "Prefiero crear una contraseña" : "Prefiero usar Face ID / huella"}
         </button>

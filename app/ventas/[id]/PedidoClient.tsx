@@ -25,6 +25,7 @@ import { plata } from "@/lib/formato";
 import { montoDescuento, saldoDeVenta, totalDeLinea, totalesDeVenta } from "@/lib/ventas/calculos";
 import type { VentaCompleta } from "@/lib/ventas/consultas";
 import { aNumero, ETIQUETA_MOTIVO, imprimir, tiempoDesde } from "../comun";
+import { ElegirCliente, type ClienteElegido } from "../ElegirCliente";
 import { COLOR_CAT } from "../graficos";
 
 type Item = VentaCompleta["items"][number];
@@ -55,7 +56,13 @@ async function pedir(url: string, method: string, body?: unknown) {
   return data;
 }
 
-export default function PedidoClient({ id }: { id: string }) {
+const ETIQUETA_COCINA: Record<string, string> = { PENDIENTE: "en cola", PREPARANDO: "preparando", LISTO: "listo", ENTREGADO: "entregado" };
+
+/**
+ * `express`: Mostrador express, una venta de pasada sin abrir mesa. Se cargan
+ * productos, se cobra (lo pendiente sale a cocina solo) y se arranca otra.
+ */
+export default function PedidoClient({ id, express = false, cobrarAlAbrir = false }: { id: string; express?: boolean; cobrarAlAbrir?: boolean }) {
   const router = useRouter();
   const [datos, setDatos] = useState<Datos | null>(null);
   const [carta, setCarta] = useState<{ categorias: Categoria[]; productos: Producto[]; medios: Medio[]; cocinas: Cocina[] } | null>(null);
@@ -81,6 +88,15 @@ export default function PedidoClient({ id }: { id: string }) {
     setDatos(data);
     return data;
   }, [id]);
+
+  // "Cobrar" desde el panel de la mesa en el salón: llega acá con el cobro abierto.
+  const [cobroPendiente, setCobroPendiente] = useState(cobrarAlAbrir);
+  useEffect(() => {
+    if (!cobroPendiente || !datos) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- abrir el cobro una vez, cuando la venta ya cargó
+    setCobroPendiente(false);
+    if (datos.venta.estado === "EN_CURSO" && datos.venta.total > 0) setModal({ tipo: "cobrar" });
+  }, [cobroPendiente, datos]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch al montar, sin librería de datos
@@ -163,6 +179,7 @@ export default function PedidoClient({ id }: { id: string }) {
           creadoPor: "",
           createdAt: new Date().toISOString(),
           enviadoEn: null,
+          estadoCocina: "PENDIENTE",
           anulado: false,
           motivoAnulacion: null,
           comentarioAnulacion: null,
@@ -198,19 +215,36 @@ export default function PedidoClient({ id }: { id: string }) {
     if (ok && enviadoEn) imprimir(`/ventas/${id}/imprimir?tipo=comanda&enviadoEn=${encodeURIComponent(enviadoEn)}`);
   }
 
+  /** En express no hay paso de "enviar": lo pendiente sale a cocina al cobrar. */
+  async function abrirCobro() {
+    if (express && sinEnviar.length > 0) await enviar();
+    setModal({ tipo: "cobrar" });
+  }
+
+  async function nuevaExpress() {
+    try {
+      const r = await pedir("/api/ventas", "POST", { localId: venta!.local.id, tipo: "MOSTRADOR" });
+      router.push(`/ventas/${r.id}?express=1`);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo abrir otra venta");
+    }
+  }
+
   if (error && !datos) {
     return (
       <div className="flex flex-col items-start gap-3">
         <ErrorText>{error}</ErrorText>
-        <Link href="/ventas" className="font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]">
+        <Link href="/ventas" className="font-semibold text-emerald-700 underline-offset-2 hover:underline">
           Volver al salón
         </Link>
       </div>
     );
   }
-  if (!venta || !carta) return <div className="h-96 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando el pedido" />;
+  if (!venta || !carta) return <div className="h-96 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando el pedido" />;
 
-  const titulo = venta.mesa ? `Mesa ${venta.mesa.numero}` : venta.cliente ? `Mostrador · ${venta.cliente}` : "Mostrador";
+  const titulo = venta.mesa
+    ? `Mesa ${venta.mesa.numero}`
+    : `${express ? "Mostrador express" : "Mostrador"}${venta.cliente ? ` · ${venta.cliente}` : ""}`;
   const puedeDescontar = Boolean(permisos.apply_discounts || permisos.create_discounts);
   // El color de cada cocina sale de su lugar fijo en la lista del local.
   const colorCocina = (cocinaId: string | null | undefined) => {
@@ -220,7 +254,7 @@ export default function PedidoClient({ id }: { id: string }) {
 
   const panelCarta = (
     <Panel className="flex min-h-0 flex-col">
-      <div className="flex flex-col gap-3 border-b border-slate-100 p-3 dark:border-[#1c2521]">
+      <div className="flex flex-col gap-3 border-b border-slate-100 p-3">
         <label className="relative block">
           <span className="sr-only">Buscar producto</span>
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden />
@@ -255,7 +289,7 @@ export default function PedidoClient({ id }: { id: string }) {
         )}
       </div>
       {carta.cocinas.length > 1 && (
-        <p className="flex flex-wrap gap-x-3 gap-y-1 border-b border-slate-100 px-3 py-2 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+        <p className="flex flex-wrap gap-x-3 gap-y-1 border-b border-slate-100 px-3 py-2 text-xs text-slate-500">
           <span className="font-medium">Va a:</span>
           {carta.cocinas.map((c, k) => (
             <span key={c.id} className="inline-flex items-center gap-1.5">
@@ -266,7 +300,7 @@ export default function PedidoClient({ id }: { id: string }) {
         </p>
       )}
       {productos.length === 0 ? (
-        <p className="px-4 py-10 text-center text-sm text-slate-500 dark:text-[#94a19c]">{busqueda ? "No hay productos con ese nombre." : "Sin productos en esta categoría."}</p>
+        <p className="px-4 py-10 text-center text-sm text-slate-500">{busqueda ? "No hay productos con ese nombre." : "Sin productos en esta categoría."}</p>
       ) : (
         <div className="grid grid-cols-2 gap-2 overflow-y-auto p-3 sm:grid-cols-3 2xl:grid-cols-4">
           {productos.map((p) => {
@@ -277,13 +311,13 @@ export default function PedidoClient({ id }: { id: string }) {
                 type="button"
                 onClick={() => agregar(p)}
                 disabled={!abierta || !permisos.create_additions}
-                className="relative flex min-h-[4.5rem] flex-col justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left transition-[transform,border-color,background-color] duration-100 ease-out hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 active:scale-[0.97] disabled:opacity-50 dark:border-[#29403b] dark:bg-[#101c19] dark:hover:bg-[#172724]"
+                className="relative flex min-h-[4.5rem] flex-col justify-between rounded-lg border border-slate-200 bg-white p-2.5 text-left transition-[transform,border-color,background-color] duration-100 ease-out hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 active:scale-[0.97] disabled:opacity-50"
               >
                 <span className="line-clamp-2 text-sm font-medium leading-snug">
                   <span className="mr-1.5 inline-block h-2 w-2 rounded-full align-middle" style={{ background: colorCocina(p.cocinaId) }} aria-hidden />
                   {p.nombre}
                 </span>
-                <span className="mt-1 text-sm font-semibold tabular-nums text-slate-600 dark:text-[#c1cbc6]">{plata(p.precio)}</span>
+                <span className="mt-1 text-sm font-semibold tabular-nums text-slate-600">{plata(p.precio)}</span>
                 {cuantos && (
                   <span className="absolute right-1.5 top-1.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-amber-500 px-1 text-[0.6875rem] font-bold text-[#241703]">
                     {cuantos}
@@ -299,16 +333,16 @@ export default function PedidoClient({ id }: { id: string }) {
 
   const panelPedido = (
     <Panel className="flex flex-col">
-      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <div className="flex items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
         <div className="min-w-0">
-          <p className="text-xs font-semibold text-slate-500 dark:text-[#94a19c]">
+          <p className="text-xs font-semibold text-slate-500">
             #{venta.numero} · {venta.mesa?.salon ?? "Mostrador"} · hace {tiempoDesde(venta.abiertaEn)}
           </p>
-          <p className="truncate text-sm text-slate-600 dark:text-[#c1cbc6]">
+          <p className="truncate text-sm text-slate-600">
             {[venta.comensales && `${venta.comensales} comensales`, venta.mozo && `Mozo: ${venta.mozo.nombre}`].filter(Boolean).join(" · ") ||
               `Abrió ${venta.abiertaPor}`}
           </p>
-          {venta.comentario && <p className="mt-0.5 text-xs italic text-slate-500 dark:text-[#94a19c]">“{venta.comentario}”</p>}
+          {venta.comentario && <p className="mt-0.5 text-xs italic text-slate-500">“{venta.comentario}”</p>}
         </div>
         {abierta && (
           <Button variant="ghost" onClick={() => setModal({ tipo: "opciones" })} aria-label="Opciones de la venta" className="px-3">
@@ -319,7 +353,7 @@ export default function PedidoClient({ id }: { id: string }) {
 
       <div className="flex-1 overflow-y-auto">
         {venta.items.length === 0 && (
-          <p className="px-4 py-10 text-center text-sm text-slate-500 dark:text-[#94a19c]">Tocá productos de la carta para cargarlos.</p>
+          <p className="px-4 py-10 text-center text-sm text-slate-500">Tocá productos de la carta para cargarlos.</p>
         )}
         {sinEnviar.length > 0 && (
           <Grupo titulo="Sin enviar a cocina" tono="ambar">
@@ -327,7 +361,7 @@ export default function PedidoClient({ id }: { id: string }) {
               <li key={i.id} className="flex items-start gap-2 px-4 py-2">
                 <div className="min-w-0 flex-1">
                   <p className="text-sm font-medium">{i.nombre}</p>
-                  {i.comentario && <p className="text-xs italic text-slate-500 dark:text-[#94a19c]">{i.comentario}</p>}
+                  {i.comentario && <p className="text-xs italic text-slate-500">{i.comentario}</p>}
                   <div className="mt-1.5 flex items-center gap-1">
                     <Paso onClick={() => cambiarCantidad(i, -1)} disabled={ocupado} etiqueta={i.cantidad === 1 ? `Sacar ${i.nombre}` : `Uno menos de ${i.nombre}`}>
                       {i.cantidad === 1 ? <Trash2 size={14} aria-hidden /> : <Minus size={14} aria-hidden />}
@@ -356,12 +390,12 @@ export default function PedidoClient({ id }: { id: string }) {
           <Grupo titulo="En cocina">
             {enCocina.map((i) => (
               <li key={i.id} className="flex items-start gap-2 px-4 py-2">
-                <span className="w-7 pt-0.5 text-sm font-semibold tabular-nums text-slate-500 dark:text-[#94a19c]">{i.cantidad}×</span>
+                <span className="w-7 pt-0.5 text-sm font-semibold tabular-nums text-slate-500">{i.cantidad}×</span>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">{i.nombre}</p>
-                  <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="flex items-center gap-1.5 text-xs text-slate-500">
                     <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: colorCocina(i.cocina?.id) }} aria-hidden />
-                    {i.cocina?.nombre ?? "Sin cocina"} · {hora(i.enviadoEn!)}
+                    {i.cocina?.nombre ?? "Sin cocina"} · {hora(i.enviadoEn!)} · {ETIQUETA_COCINA[i.estadoCocina]}
                     {i.comentario && ` · ${i.comentario}`}
                   </p>
                   <DescuentoDeLinea item={i} />
@@ -372,7 +406,7 @@ export default function PedidoClient({ id }: { id: string }) {
                     type="button"
                     onClick={() => setModal({ tipo: "descuento", item: i })}
                     aria-label={`Descuento para ${i.nombre}`}
-                    className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 dark:hover:bg-[#1d1830] dark:hover:text-violet-300"
+                    className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-violet-50 hover:text-violet-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600"
                   >
                     <Percent size={15} aria-hidden />
                   </button>
@@ -382,7 +416,7 @@ export default function PedidoClient({ id }: { id: string }) {
                     type="button"
                     onClick={() => setModal({ tipo: "anular", item: i })}
                     aria-label={`Anular ${i.nombre}`}
-                    className="-mr-2 flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:hover:bg-[#241419] dark:hover:text-rose-300"
+                    className="-mr-2 flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
                   >
                     <Ban size={15} aria-hidden />
                   </button>
@@ -394,7 +428,7 @@ export default function PedidoClient({ id }: { id: string }) {
         {anulados.length > 0 && (
           <Grupo titulo={`Anulados (${anulados.length})`}>
             {anulados.map((i) => (
-              <li key={i.id} className="flex items-start gap-2 px-4 py-1.5 text-sm text-slate-400 dark:text-[#5f6d67]">
+              <li key={i.id} className="flex items-start gap-2 px-4 py-1.5 text-sm text-slate-400">
                 <span className="w-7 tabular-nums">{i.cantidad}×</span>
                 <span className="min-w-0 flex-1 line-through">{i.nombre}</span>
                 <span className="text-xs">{ETIQUETA_MOTIVO[i.motivoAnulacion ?? ""] ?? ""}</span>
@@ -404,34 +438,34 @@ export default function PedidoClient({ id }: { id: string }) {
         )}
       </div>
 
-      <div className="border-t border-slate-200 px-4 py-3 dark:border-[#29403b]">
+      <div className="border-t border-slate-200 px-4 py-3">
         <dl className="grid grid-cols-[1fr_auto] gap-y-0.5 text-sm">
           {(venta.descuento > 0 || venta.descuentoItems > 0) && (
             <>
-              <dt className="text-slate-500 dark:text-[#94a19c]">Subtotal</dt>
+              <dt className="text-slate-500">Subtotal</dt>
               <dd className="text-right tabular-nums">{plata(venta.bruto)}</dd>
             </>
           )}
           {venta.descuentoItems > 0 && (
             <>
-              <dt className="text-violet-700 dark:text-violet-300">Descuentos en productos</dt>
-              <dd className="text-right tabular-nums text-violet-700 dark:text-violet-300">−{plata(venta.descuentoItems)}</dd>
+              <dt className="text-violet-700">Descuentos en productos</dt>
+              <dd className="text-right tabular-nums text-violet-700">−{plata(venta.descuentoItems)}</dd>
             </>
           )}
           {venta.descuento > 0 && (
             <>
-              <dt className="text-violet-700 dark:text-violet-300">
+              <dt className="text-violet-700">
                 {venta.descuentoMotivo ?? "Descuento"}
                 {venta.descuentoPct ? ` ${venta.descuentoPct}%` : ""}
               </dt>
-              <dd className="text-right tabular-nums text-violet-700 dark:text-violet-300">−{plata(venta.descuento)}</dd>
+              <dd className="text-right tabular-nums text-violet-700">−{plata(venta.descuento)}</dd>
             </>
           )}
           <dt className="pt-1 text-base font-semibold">Total</dt>
           <dd className="pt-1 text-right text-2xl font-bold tabular-nums">{plata(venta.total)}</dd>
           {venta.pagado > 0 && (
             <>
-              <dt className="text-slate-500 dark:text-[#94a19c]">Cobrado</dt>
+              <dt className="text-slate-500">Cobrado</dt>
               <dd className="text-right tabular-nums">{plata(venta.pagado)}</dd>
               <dt className="font-medium">Falta</dt>
               <dd className="text-right font-semibold tabular-nums">{plata(venta.falta)}</dd>
@@ -443,7 +477,7 @@ export default function PedidoClient({ id }: { id: string }) {
           <button
             type="button"
             onClick={() => setModal({ tipo: "descuento" })}
-            className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-violet-700 underline-offset-2 hover:underline dark:text-violet-300"
+            className="mt-2 inline-flex items-center gap-1.5 text-sm font-semibold text-violet-700 underline-offset-2 hover:underline"
           >
             <Percent size={14} aria-hidden />
             {venta.descuento > 0 ? "Cambiar el descuento de la venta" : "Descuento a toda la venta"}
@@ -452,7 +486,7 @@ export default function PedidoClient({ id }: { id: string }) {
 
         {abierta ? (
           <div className="mt-3 grid grid-cols-2 gap-2">
-            {sinEnviar.length > 0 ? (
+            {sinEnviar.length > 0 && !express ? (
               <Button className="col-span-2" onClick={enviar} disabled={ocupado}>
                 <ChefHat size={16} aria-hidden />
                 Enviar a cocina ({sinEnviar.reduce((s, i) => s + i.cantidad, 0)})
@@ -467,8 +501,8 @@ export default function PedidoClient({ id }: { id: string }) {
               Precuenta
             </Button>
             <Button
-              variant={sinEnviar.length > 0 ? "ghost" : "primary"}
-              onClick={() => setModal({ tipo: "cobrar" })}
+              variant={sinEnviar.length > 0 && !express ? "ghost" : "primary"}
+              onClick={abrirCobro}
               disabled={!permisos.create_payments || venta.total <= 0}
             >
               <Wallet size={16} aria-hidden />
@@ -477,7 +511,7 @@ export default function PedidoClient({ id }: { id: string }) {
           </div>
         ) : (
           <div className="mt-3 flex flex-col gap-2">
-            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700 dark:bg-[#172724] dark:text-[#c1cbc6]">
+            <p className="rounded-lg bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700">
               {venta.estado === "CERRADA" ? `Venta cerrada a las ${hora(venta.cerradaEn!)}` : `Venta anulada: ${venta.motivoAnulacion ?? ""}`}
             </p>
             {venta.estado === "CERRADA" && (
@@ -499,7 +533,7 @@ export default function PedidoClient({ id }: { id: string }) {
           <Link
             href="/ventas"
             aria-label="Volver al salón"
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#c1cbc6]"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
           >
             <ArrowLeft size={18} aria-hidden />
           </Link>
@@ -521,7 +555,7 @@ export default function PedidoClient({ id }: { id: string }) {
       <div aria-live="polite" className="min-h-0">
         <ErrorText>{error}</ErrorText>
         {aviso && !error && (
-          <p key={aviso + venta.items.length} className="text-sm font-medium text-emerald-700 motion-safe:animate-[aparecer_180ms_ease-out] dark:text-[#4ee6b0]">
+          <p key={aviso + venta.items.length} className="text-sm font-medium text-emerald-700 motion-safe:animate-[aparecer_180ms_ease-out]">
             {aviso}
           </p>
         )}
@@ -546,18 +580,22 @@ export default function PedidoClient({ id }: { id: string }) {
         />
       )}
       {modal?.tipo === "cerrada" && (
-        <Modal title="Venta cerrada" onClose={() => router.push("/ventas")} maxWidth="max-w-sm">
+        <Modal title="Venta cerrada" onClose={() => (express ? nuevaExpress() : router.push("/ventas"))} maxWidth="max-w-sm">
           <div className="flex flex-col items-center gap-3 text-center">
-            <CheckCircle2 size={40} className="text-emerald-600 dark:text-[#37e6b0]" aria-hidden />
+            <CheckCircle2 size={40} className="text-emerald-600" aria-hidden />
             <p className="text-lg font-semibold">{plata(venta.total)} cobrados</p>
             {modal.vuelto > 0 && <p className="text-2xl font-bold tabular-nums">Vuelto: {plata(modal.vuelto)}</p>}
-            {modal.factura && <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">{modal.factura}</p>}
+            {modal.factura && <p className="text-sm text-slate-600">{modal.factura}</p>}
             <div className="mt-2 grid w-full grid-cols-2 gap-2">
               <Button variant="ghost" onClick={() => imprimir(`/ventas/${id}/imprimir?tipo=ticket`)}>
                 <Printer size={16} aria-hidden />
                 Ticket
               </Button>
-              <Button onClick={() => router.push("/ventas")}>Volver al salón</Button>
+              {express ? (
+                <Button onClick={nuevaExpress}>Nueva venta</Button>
+              ) : (
+                <Button onClick={() => router.push("/ventas")}>Volver al salón</Button>
+              )}
             </div>
           </div>
         </Modal>
@@ -634,12 +672,12 @@ function Chip({ activo, chico, onClick, children }: { activo: boolean; chico?: b
       type="button"
       onClick={onClick}
       aria-pressed={activo}
-      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+      className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${
         chico ? "min-h-8 px-2.5 text-xs" : "min-h-9 px-3 text-sm"
       } ${
         activo
-          ? "border-[#0f766e] bg-[#0f766e] text-white dark:border-[#37e6b0] dark:bg-[#1d4e48]"
-          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#c1cbc6]"
+          ? "border-[#4A6244] bg-[#4A6244] text-white"
+          : "border-slate-200 bg-white text-slate-600 hover:border-slate-300"
       }`}
     >
       {children}
@@ -651,11 +689,11 @@ function Grupo({ titulo, tono, children }: { titulo: string; tono?: "ambar"; chi
   return (
     <section>
       <h2
-        className={`px-4 pb-1 pt-3 text-xs font-semibold ${tono === "ambar" ? "text-amber-700 dark:text-amber-300" : "text-slate-500 dark:text-[#94a19c]"}`}
+        className={`px-4 pb-1 pt-3 text-xs font-semibold ${tono === "ambar" ? "text-amber-700" : "text-slate-500"}`}
       >
         {titulo}
       </h2>
-      <ul className={`divide-y divide-slate-100 dark:divide-[#1c2521] ${tono === "ambar" ? "bg-amber-50/50 dark:bg-[#211c12]" : ""}`}>{children}</ul>
+      <ul className={`divide-y divide-slate-100 ${tono === "ambar" ? "bg-amber-50/50" : ""}`}>{children}</ul>
     </section>
   );
 }
@@ -667,7 +705,7 @@ function Paso({ onClick, disabled, etiqueta, children }: { onClick: () => void; 
       onClick={onClick}
       disabled={disabled}
       aria-label={etiqueta}
-      className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-40 dark:border-[#29403b] dark:text-[#c1cbc6] dark:hover:bg-[#172724]"
+      className="flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 text-slate-600 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:opacity-40"
     >
       {children}
     </button>
@@ -730,7 +768,7 @@ function ModalCobrar({
     <Modal title={`Cobrar ${plata(venta.falta)}`} onClose={() => (cobrando ? undefined : onClose())} maxWidth="max-w-lg">
       <div className="flex flex-col gap-4">
         {lineas.map((l, k) => (
-          <fieldset key={k} className="rounded-lg border border-slate-200 p-3 dark:border-[#29403b]">
+          <fieldset key={k} className="rounded-lg border border-slate-200 p-3">
             <legend className="sr-only">Pago {k + 1}</legend>
             <div className="flex flex-wrap gap-1.5">
               {medios.map((m) => (
@@ -769,7 +807,7 @@ function ModalCobrar({
           Pagar una parte con otro medio
         </Button>
 
-        <dl className="grid grid-cols-[1fr_auto] gap-y-1 rounded-lg bg-slate-50 px-3 py-2.5 text-sm dark:bg-[#0d1614]">
+        <dl className="grid grid-cols-[1fr_auto] gap-y-1 rounded-lg bg-slate-50 px-3 py-2.5 text-sm">
           <dt>Total de la venta</dt>
           <dd className="text-right tabular-nums">{plata(venta.total)}</dd>
           {venta.pagado > 0 && (
@@ -779,12 +817,12 @@ function ModalCobrar({
             </>
           )}
           <dt className="font-semibold">{saldo.vuelto > 0 ? "Vuelto" : "Falta"}</dt>
-          <dd className={`text-right text-lg font-bold tabular-nums ${saldo.vuelto > 0 && !hayEfectivo ? "text-rose-600 dark:text-rose-400" : ""}`}>
+          <dd className={`text-right text-lg font-bold tabular-nums ${saldo.vuelto > 0 && !hayEfectivo ? "text-rose-600" : ""}`}>
             {plata(saldo.vuelto > 0 ? saldo.vuelto : saldo.falta)}
           </dd>
         </dl>
         {saldo.vuelto > 0 && !hayEfectivo && (
-          <p className="text-sm text-rose-700 dark:text-rose-300">Con tarjeta, QR o transferencia no puede haber vuelto: bajá el monto.</p>
+          <p className="text-sm text-rose-700">Con tarjeta, QR o transferencia no puede haber vuelto: bajá el monto.</p>
         )}
 
         {venta.factura.habilitada && (
@@ -823,7 +861,7 @@ function ModalCobrar({
             {cobrando ? "Cobrando…" : "Cobrar y cerrar"}
           </Button>
         </div>
-        {!permisos.close_sales && <p className="text-xs text-slate-500 dark:text-[#94a19c]">Tu rol puede cobrar pero no cerrar ventas: pedile a un encargado que la cierre.</p>}
+        {!permisos.close_sales && <p className="text-xs text-slate-500">Tu rol puede cobrar pero no cerrar ventas: pedile a un encargado que la cierre.</p>}
       </div>
     </Modal>
   );
@@ -852,7 +890,7 @@ function ModalAnularItem({
           }}
           className="flex flex-col gap-3"
         >
-          <p className="text-sm text-slate-500 dark:text-[#94a19c]">Ya se envió a cocina: queda registrado quién lo anuló y por qué.</p>
+          <p className="text-sm text-slate-500">Ya se envió a cocina: queda registrado quién lo anuló y por qué.</p>
           <div>
             <Label>Motivo</Label>
             <Select value={motivo} onChange={(e) => setMotivo(e.target.value)}>
@@ -918,7 +956,7 @@ function ModalOpciones({
 }) {
   const { venta, mozos, mesasLibres, permisos } = datos;
   const [comensales, setComensales] = useState(String(venta.comensales ?? ""));
-  const [cliente, setCliente] = useState(venta.cliente ?? "");
+  const [cliente, setCliente] = useState<ClienteElegido>({ id: venta.clienteId, nombre: venta.cliente ?? "" });
   const [comentario, setComentario] = useState(venta.comentario ?? "");
   const [mozoId, setMozoId] = useState(venta.mozo?.id ?? "");
   const [mesaId, setMesaId] = useState("");
@@ -933,7 +971,7 @@ function ModalOpciones({
             onGuardar(
               {
                 comensales: comensales ? Number(comensales) : null,
-                cliente,
+                ...(cliente.id ? { clienteId: cliente.id } : { cliente: cliente.nombre, ...(venta.clienteId ? { clienteId: null } : {}) }),
                 comentario,
                 ...(permisos.assign_waiter && mozoId !== (venta.mozo?.id ?? "") ? { mozoId: mozoId || null } : {}),
                 ...(permisos.move_additions && mesaId ? { mesaId } : {}),
@@ -947,10 +985,7 @@ function ModalOpciones({
             <Label>Comensales</Label>
             <Input inputMode="numeric" value={comensales} onChange={(e) => setComensales(e.target.value.replace(/\D/g, ""))} />
           </div>
-          <div>
-            <Label>Cliente</Label>
-            <Input value={cliente} onChange={(e) => setCliente(e.target.value)} placeholder="Nombre" />
-          </div>
+          <ElegirCliente localId={venta.local.id} valor={cliente} onChange={setCliente} />
           <div className="sm:col-span-2">
             <Label>Comentario de la venta</Label>
             <Textarea value={comentario} onChange={(e) => setComentario(e.target.value)} rows={2} />
@@ -992,9 +1027,9 @@ function ModalOpciones({
               e.preventDefault();
               onAnularVenta(motivoAnular);
             }}
-            className="flex flex-col gap-2 border-t border-slate-100 pt-4 dark:border-[#1c2521]"
+            className="flex flex-col gap-2 border-t border-slate-100 pt-4"
           >
-            <h3 className="font-semibold text-rose-700 dark:text-rose-300">Anular la venta entera</h3>
+            <h3 className="font-semibold text-rose-700">Anular la venta entera</h3>
             <Input value={motivoAnular} onChange={(e) => setMotivoAnular(e.target.value)} placeholder="Por qué se anula" aria-label="Motivo de la anulación" required />
             <Button type="submit" variant="danger" disabled={!motivoAnular.trim()}>
               <Ban size={16} aria-hidden />
@@ -1020,7 +1055,7 @@ function DescuentoDeLinea({ item }: { item: Item }) {
   const monto = bruto - totalDeLinea(item);
   if (monto <= 0) return null;
   return (
-    <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800 dark:bg-[#1d1830] dark:text-violet-200">
+    <p className="mt-0.5 inline-flex items-center gap-1 rounded-full bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-800">
       <Percent size={11} aria-hidden />
       {item.descuentoNombre ?? "Descuento"}
       {item.descuentoPct ? ` ${item.descuentoPct}%` : ""} · −{plata(monto)}
@@ -1034,7 +1069,7 @@ function PrecioDeLinea({ item }: { item: Item }) {
   const neto = totalDeLinea(item);
   return (
     <span className="pt-0.5 text-right text-sm font-semibold tabular-nums">
-      {neto < bruto && <span className="block text-xs font-normal text-slate-400 line-through dark:text-[#5f6d67]">{plata(bruto)}</span>}
+      {neto < bruto && <span className="block text-xs font-normal text-slate-400 line-through">{plata(bruto)}</span>}
       {plata(neto)}
     </span>
   );
@@ -1071,11 +1106,11 @@ function ModalDescuento({
   return (
     <Modal title={item ? `Descuento en ${item.nombre}` : "Descuento a toda la venta"} onClose={onClose} maxWidth="max-w-lg">
       <div className="flex flex-col gap-5">
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           Sobre {plata(base)}
           {actual && (
             <>
-              {" "}· ahora tiene <strong className="text-violet-700 dark:text-violet-300">{actual}</strong>
+              {" "}· ahora tiene <strong className="text-violet-700">{actual}</strong>
             </>
           )}
         </p>
@@ -1090,10 +1125,10 @@ function ModalDescuento({
                     key={p.id}
                     type="button"
                     onClick={() => onAplicar({ plantillaId: p.id }, `${p.nombre} aplicado`)}
-                    className="flex min-h-14 flex-col items-start justify-center rounded-lg border border-violet-200 bg-violet-50/60 px-3 py-2 text-left transition-colors hover:border-violet-400 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600 dark:border-[#3a2f5c] dark:bg-[#1d1830] dark:hover:bg-[#261f40]"
+                    className="flex min-h-14 flex-col items-start justify-center rounded-lg border border-violet-200 bg-violet-50/60 px-3 py-2 text-left transition-colors hover:border-violet-400 hover:bg-violet-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-violet-600"
                   >
-                    <span className="text-sm font-semibold text-violet-900 dark:text-violet-100">{p.nombre}</span>
-                    <span className="text-xs text-violet-800/80 dark:text-violet-200/80">
+                    <span className="text-sm font-semibold text-violet-900">{p.nombre}</span>
+                    <span className="text-xs text-violet-800/80">
                       {p.porcentaje ? `${p.porcentaje}%${p.tope ? ` hasta ${plata(p.tope)}` : ""}` : plata(p.monto ?? 0)} · −{plata(monto)}
                     </span>
                   </button>
@@ -1101,7 +1136,7 @@ function ModalDescuento({
               })}
             </div>
           ) : (
-            <p className="rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+            <p className="rounded-lg border border-dashed border-slate-300 px-3 py-3 text-sm text-slate-500">
               El local todavía no tiene descuentos en la lista. Se cargan en Ventas → Configuración.
             </p>
           ))}
@@ -1112,7 +1147,7 @@ function ModalDescuento({
               e.preventDefault();
               onAplicar(tipo === "pct" ? { pct: n } : { monto: n }, "Descuento aplicado");
             }}
-            className="flex flex-col gap-2 border-t border-slate-100 pt-4 dark:border-[#1c2521]"
+            className="flex flex-col gap-2 border-t border-slate-100 pt-4"
           >
             <h3 className="text-sm font-semibold">Descuento libre</h3>
             <div className="flex items-end gap-2">

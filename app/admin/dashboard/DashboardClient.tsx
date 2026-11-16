@@ -147,22 +147,22 @@ const variacion = (actual: number, previo: number) => (previo > 0 ? ((actual - p
 function Reparto({ titulo, datos, etiquetas }: { titulo: string; datos: Mapa; etiquetas?: Record<string, string> }) {
   const filas = Object.entries(datos).sort((a, b) => b[1] - a[1]);
   const total = filas.reduce((s, [, valor]) => s + valor, 0);
-  if (total <= 0) return <p className="text-sm text-slate-500 dark:text-[#7a8882]">Sin datos para este período.</p>;
+  if (total <= 0) return <p className="text-sm text-slate-500">Sin datos para este período.</p>;
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-800 dark:text-[#e0e7e3]">{titulo}</h3>
+      <h3 className="text-sm font-semibold text-slate-800">{titulo}</h3>
       <div className="mt-3 space-y-3">
         {filas.slice(0, 8).map(([nombre, valor]) => {
           const porcentaje = (valor / total) * 100;
           return (
             <div key={nombre}>
               <div className="flex items-baseline justify-between gap-3 text-sm">
-                <span className="truncate text-slate-600 dark:text-[#c1cbc6]">{etiquetas?.[nombre] ?? nombre}</span>
-                <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">{porcentaje.toFixed(0)}% · {plata(valor)}</span>
+                <span className="truncate text-slate-600">{etiquetas?.[nombre] ?? nombre}</span>
+                <span className="shrink-0 tabular-nums text-slate-500">{porcentaje.toFixed(0)}% · {plata(valor)}</span>
               </div>
-              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100 dark:bg-[#18201d]">
-                <div className="h-full rounded-full bg-emerald-700 dark:bg-[#37e6b0]" style={{ width: `${Math.max(porcentaje, 1)}%` }} />
+              <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-slate-100">
+                <div className="h-full rounded-full bg-emerald-700" style={{ width: `${Math.max(porcentaje, 1)}%` }} />
               </div>
             </div>
           );
@@ -215,16 +215,16 @@ function SerieStock({ desde, hasta, localId }: { desde: string; hasta: string; l
   }, [desde, hasta, localId, intento]);
 
   const encabezado = (
-    <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+    <div className="border-b border-slate-100 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Movimientos de stock sin explicar</h2>
         {stock && stock.productosSeguidos > 0 && (
-          <span className="text-xs text-slate-500 dark:text-[#94a19c]">
+          <span className="text-xs text-slate-500">
             {stock.productosSeguidos} productos · {stock.diasEnSerie} {stock.diasEnSerie === 1 ? "día" : "días"} con foto
           </span>
         )}
       </div>
-      <p className="mt-1 max-w-3xl text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="mt-1 max-w-3xl text-sm text-slate-500">
         Diferencia entre el stock esperado por ventas y la foto diaria, del período elegido. Un valor negativo puede ser
         faltante o ajuste manual.
       </p>
@@ -233,11 +233,11 @@ function SerieStock({ desde, hasta, localId }: { desde: string; hasta: string; l
 
   let cuerpo: React.ReactNode;
   if (cargando && !stock) {
-    cuerpo = <div className="my-4 h-16 animate-pulse rounded-lg bg-slate-100 dark:bg-[#172724]" aria-label="Cargando stock" />;
+    cuerpo = <div className="my-4 h-16 animate-pulse rounded-lg bg-slate-100" aria-label="Cargando stock" />;
   } else if (error) {
     cuerpo = (
       <div className="flex flex-wrap items-center justify-between gap-3 py-4 text-sm">
-        <span className="text-rose-600 dark:text-rose-400">No pudimos cargar el stock. Revisá la conexión.</span>
+        <span className="text-rose-600">No pudimos cargar el stock. Revisá la conexión.</span>
         <Button type="button" variant="ghost" onClick={() => setIntento((v) => v + 1)}>
           Reintentar
         </Button>
@@ -245,15 +245,15 @@ function SerieStock({ desde, hasta, localId }: { desde: string; hasta: string; l
     );
   } else if (!stock || stock.productosSeguidos === 0) {
     cuerpo = (
-      <p className="py-5 text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="py-5 text-sm text-slate-500">
         Todavía no hay fotos de stock en este período. La foto se toma sola a las 3 de la mañana: si el rango es anterior
         a que se empezara a tomar, no hay nada que comparar.
       </p>
     );
   } else if (stock.movimientos.length === 0) {
     cuerpo = (
-      <p className="flex items-start gap-2 py-5 text-sm text-slate-600 dark:text-[#c1cbc6]">
-        <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+      <p className="flex items-start gap-2 py-5 text-sm text-slate-600">
+        <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden />
         Hay fotos de stock y todas coinciden con lo vendido: no hay movimientos para revisar.
       </p>
     );
@@ -265,15 +265,15 @@ function SerieStock({ desde, hasta, localId }: { desde: string; hasta: string; l
             key={`${movimiento.fecha}-${movimiento.local}-${movimiento.producto}`}
             className="flex items-baseline justify-between gap-3 py-3 text-sm"
           >
-            <span className="min-w-0 text-slate-700 dark:text-[#c1cbc6]">
+            <span className="min-w-0 text-slate-700">
               <span className="block truncate">{movimiento.producto}</span>
-              <span className="text-xs text-slate-500 dark:text-[#94a19c]">
+              <span className="text-xs text-slate-500">
                 {movimiento.local} · {fechaLarga(movimiento.fecha)}
               </span>
             </span>
             <span
               className={`shrink-0 font-semibold tabular-nums ${
-                movimiento.movimiento < 0 ? "text-rose-600 dark:text-rose-400" : "text-slate-600 dark:text-[#c1cbc6]"
+                movimiento.movimiento < 0 ? "text-rose-600" : "text-slate-600"
               }`}
             >
               {movimiento.movimiento > 0 ? "+" : ""}
@@ -288,7 +288,7 @@ function SerieStock({ desde, hasta, localId }: { desde: string; hasta: string; l
   return (
     <Panel>
       {encabezado}
-      <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">{cuerpo}</div>
+      <div className="divide-y divide-slate-100 px-4">{cuerpo}</div>
     </Panel>
   );
 }
@@ -347,7 +347,7 @@ function DetalleDiario({
     return (
       <Panel>
         <EmptyState>
-          <strong className="block text-slate-800 dark:text-[#f2f7f4]">Sin ventas registradas</strong>
+          <strong className="block text-slate-800">Sin ventas registradas</strong>
           <span className="mt-1 block">No hay un cierre de Fudo sincronizado para {local.nombre} el {fechaLarga(fecha)}.</span>
         </EmptyState>
       </Panel>
@@ -357,14 +357,14 @@ function DetalleDiario({
   return (
     <div className="space-y-5">
       <Panel>
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <div>
             <h2 className="font-semibold">{fmtFechaLarga(fecha)}</h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Ventas registradas en {local.nombre}.</p>
+            <p className="mt-0.5 text-sm text-slate-500">Ventas registradas en {local.nombre}.</p>
           </div>
           <Badge tone="emerald">Día sincronizado</Badge>
         </div>
-        <section className="grid grid-cols-2 divide-x divide-y divide-slate-200 md:grid-cols-4 md:divide-y-0 dark:divide-[#29403b]">
+        <section className="grid grid-cols-2 divide-x divide-y divide-slate-200 md:grid-cols-4 md:divide-y-0">
           <Metrica
             label="Ventas del día"
             valor={plataCompacta(local.ventas)}
@@ -394,7 +394,7 @@ function DetalleDiario({
             tono={local.resultado < 0 ? "negativo" : "normal"}
           />
         </section>
-        <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="flex flex-wrap gap-2 border-t border-slate-100 px-4 py-3">
           <Badge tone="slate">Referencia: {fechaLarga(referencia)}</Badge>
           <Badge tone="slate">{numero(local.personas)} comensales</Badge>
           <Badge tone={local.porcentajeDescuentos >= 5 ? "amber" : "slate"}>
@@ -406,9 +406,9 @@ function DetalleDiario({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1.45fr)_minmax(20rem,0.55fr)]">
         <Panel>
-          <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <div className="border-b border-slate-100 px-4 py-3">
             <h2 className="font-semibold">Cómo se vendió</h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Canales, cobros y categorías de la fecha elegida.</p>
+            <p className="mt-0.5 text-sm text-slate-500">Canales, cobros y categorías de la fecha elegida.</p>
           </div>
           <div className="grid gap-8 p-4 lg:grid-cols-3">
             <Reparto titulo="Canal" datos={local.porCanal} etiquetas={ETIQUETA_CANAL} />
@@ -418,19 +418,19 @@ function DetalleDiario({
         </Panel>
 
         <Panel>
-          <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <div className="border-b border-slate-100 px-4 py-3">
             <h2 className="font-semibold">Productos con más facturación</h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Ranking del día según el cierre de Fudo.</p>
+            <p className="mt-0.5 text-sm text-slate-500">Ranking del día según el cierre de Fudo.</p>
           </div>
           {local.topProductos.length === 0 ? (
-            <p className="px-4 py-5 text-sm text-slate-500 dark:text-[#94a19c]">No hay detalle por producto para esta fecha.</p>
+            <p className="px-4 py-5 text-sm text-slate-500">No hay detalle por producto para esta fecha.</p>
           ) : (
-            <ol className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+            <ol className="divide-y divide-slate-100 px-4">
               {local.topProductos.slice(0, 8).map((producto, indice) => (
                 <li key={producto.nombre} className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-baseline gap-2 py-3 text-sm">
-                  <span className="text-xs tabular-nums text-slate-500 dark:text-[#7a8882]">{indice + 1}</span>
-                  <span className="truncate font-medium text-slate-700 dark:text-[#c1cbc6]" title={producto.nombre}>{producto.nombre}</span>
-                  <span className="font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{plata(producto.valor)}</span>
+                  <span className="text-xs tabular-nums text-slate-500">{indice + 1}</span>
+                  <span className="truncate font-medium text-slate-700" title={producto.nombre}>{producto.nombre}</span>
+                  <span className="font-semibold tabular-nums text-slate-900">{plata(producto.valor)}</span>
                 </li>
               ))}
             </ol>
@@ -444,11 +444,11 @@ function DetalleDiario({
 function DashboardSkeleton() {
   return (
     <div className="animate-pulse space-y-5" aria-label="Cargando tablero">
-      <div className="h-28 rounded-lg bg-slate-200/70 dark:bg-[#172724]" />
+      <div className="h-28 rounded-lg bg-slate-200/70" />
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-        {Array.from({ length: 4 }, (_, i) => <div key={i} className="h-24 rounded-lg bg-slate-200/70 dark:bg-[#172724]" />)}
+        {Array.from({ length: 4 }, (_, i) => <div key={i} className="h-24 rounded-lg bg-slate-200/70" />)}
       </div>
-      <div className="h-80 rounded-lg bg-slate-200/70 dark:bg-[#172724]" />
+      <div className="h-80 rounded-lg bg-slate-200/70" />
     </div>
   );
 }
@@ -616,7 +616,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
             </Button>
             <Link
               href={`/admin/pronostico${alcance ? `?localId=${alcance}` : ""}`}
-              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:bg-[#37e6b0] dark:text-[#062419] dark:hover:bg-[#7bf0ca]"
+              className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-emerald-700 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-emerald-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
             >
               <BrainCircuit size={16} aria-hidden />
               <span className="hidden sm:inline">Abrir pronóstico</span>
@@ -647,11 +647,11 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                 etiqueta: "Día",
                 contenido: (
               <div className="scrollbar-hidden flex min-w-0 items-center gap-2 overflow-x-auto pb-1 xl:pb-0">
-                <div className="flex min-w-max items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1 dark:border-[#29403b] dark:bg-[#0b1412]">
+                <div className="flex min-w-max items-center gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
                   <button
                     type="button"
                     onClick={() => setFechaLocal((fecha) => sumarDias(fecha, -1))}
-                    className="grid h-9 w-9 place-items-center rounded-md text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#94a19c] dark:hover:bg-[#1d4e48] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0]"
+                    className="grid h-9 w-9 place-items-center rounded-md text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
                     aria-label="Día anterior"
                     title="Día anterior"
                   >
@@ -666,13 +666,13 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                     }}
                     aria-label="Fecha de ventas"
                     required
-                    className="h-9 w-[10.5rem] rounded-md border-0 bg-white px-2 py-1 text-sm shadow-sm dark:bg-[#1d4e48]"
+                    className="h-9 w-[10.5rem] rounded-md border-0 bg-white px-2 py-1 text-sm shadow-sm"
                   />
                   <button
                     type="button"
                     onClick={() => setFechaLocal((fecha) => sumarDias(fecha, 1))}
                     disabled={fechaLocal >= hoy}
-                    className="grid h-9 w-9 place-items-center rounded-md text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:cursor-not-allowed disabled:opacity-35 dark:text-[#94a19c] dark:hover:bg-[#1d4e48] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0]"
+                    className="grid h-9 w-9 place-items-center rounded-md text-slate-500 transition-colors hover:bg-white hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:cursor-not-allowed disabled:opacity-35"
                     aria-label="Día siguiente"
                     title="Día siguiente"
                   >
@@ -682,7 +682,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                     <button
                       type="button"
                       onClick={() => setFechaLocal(hoy)}
-                      className="h-9 rounded-md px-3 text-xs font-semibold text-emerald-700 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#4ee6b0] dark:hover:bg-[#1d4e48] dark:focus-visible:ring-[#37e6b0]"
+                      className="h-9 rounded-md px-3 text-xs font-semibold text-emerald-700 transition-colors hover:bg-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
                     >
                       Hoy
                     </button>
@@ -712,7 +712,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
         <SelectorSegmentado opciones={VISTAS} valor={vista} onChange={setVista} label="Vista del centro de comando" />
       </div>
 
-      {avisoSync && <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">{avisoSync}</p>}
+      {avisoSync && <p className="text-sm font-medium text-emerald-700">{avisoSync}</p>}
       {error ? (
         <EmptyState>
           <span>{error}</span>
@@ -724,7 +724,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
         <div className={cargando ? "opacity-60" : ""} aria-busy={cargando}>
           {vista === "rendimiento" && (
             <div className="space-y-5">
-              <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 md:grid-cols-4 md:divide-y-0 dark:border-[#29403b] dark:divide-[#29403b]">
+              <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 md:grid-cols-4 md:divide-y-0">
                 <Metrica label="Facturación" valor={plataCompacta(ventas)} valorCompleto={plata(ventas)} delta={localActivo ? localActivo.variacionVentas : datos.cadena.variacionVentas} />
                 <Metrica label="Tickets" valor={numero(tickets)} delta={comparacionValida ? variacion(tickets, ticketsPrevio) : null} />
                 <Metrica label="Ticket promedio" valor={plata(ticketPromedio)} delta={comparacionValida ? variacion(ticketPromedio, ticketPromedioPrevio) : null} />
@@ -740,10 +740,10 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
 
               <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(17rem,0.72fr)]">
                 <Panel>
-                  <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between dark:border-[#1c2521]">
+                  <div className="flex flex-col gap-3 border-b border-slate-100 px-4 py-3 md:flex-row md:items-center md:justify-between">
                     <div>
                       <h2 className="font-semibold">Evolución de {etiquetaAlcance}</h2>
-                      <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">La línea punteada alinea la forma del período anterior como referencia.</p>
+                      <p className="mt-0.5 text-sm text-slate-500">La línea punteada alinea la forma del período anterior como referencia.</p>
                     </div>
                     <div className="scrollbar-hidden overflow-x-auto">
                       <SelectorSegmentado opciones={METRICAS_GRAFICO} valor={metricaGrafico} onChange={setMetricaGrafico} label="Métrica del gráfico" />
@@ -756,7 +756,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                       formato={formatoGrafico}
                     />
                     {diasCompletos < datos.dias && (
-                      <p className="mt-3 flex items-start gap-2 text-xs text-amber-700 dark:text-amber-300">
+                      <p className="mt-3 flex items-start gap-2 text-xs text-amber-700">
                         <AlertTriangle size={14} className="mt-0.5 shrink-0" aria-hidden />
                         Los puntos ámbar son parciales. La facturación los incluye, pero las variaciones excluyen bases incompletas.
                       </p>
@@ -765,17 +765,17 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                 </Panel>
 
                 <Panel>
-                  <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                  <div className="border-b border-slate-100 px-4 py-3">
                     <div className="flex items-center justify-between gap-3">
                       <h2 className="font-semibold">Requiere atención</h2>
                       <Badge tone={totalAlertas > 0 ? "amber" : "emerald"}>{totalAlertas}</Badge>
                     </div>
-                    <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Sólo excepciones del alcance elegido.</p>
+                    <p className="mt-0.5 text-sm text-slate-500">Sólo excepciones del alcance elegido.</p>
                   </div>
-                  <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+                  <div className="divide-y divide-slate-100 px-4">
                     {totalAlertas === 0 ? (
-                      <div className="flex items-start gap-2 py-5 text-sm text-slate-600 dark:text-[#c1cbc6]">
-                        <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+                      <div className="flex items-start gap-2 py-5 text-sm text-slate-600">
+                        <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden />
                         No hay excepciones relevantes en este período.
                       </div>
                     ) : (
@@ -786,15 +786,15 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                             personal, el panel mostraba "2" y ninguna fila. */}
                         {resumenAlertas.slice(0, 4).map((alerta) => (
                           <div key={alerta.clave} className="flex items-start gap-2 py-3 text-sm">
-                            <AlertTriangle size={15} className={`mt-0.5 shrink-0 ${alerta.tono === "rose" ? "text-rose-600 dark:text-rose-400" : "text-amber-600 dark:text-amber-400"}`} aria-hidden />
-                            <span className="text-slate-700 dark:text-[#c1cbc6]">{alerta.texto}</span>
+                            <AlertTriangle size={15} className={`mt-0.5 shrink-0 ${alerta.tono === "rose" ? "text-rose-600" : "text-amber-600"}`} aria-hidden />
+                            <span className="text-slate-700">{alerta.texto}</span>
                           </div>
                         ))}
                         {(totalAlertas > 4 || alertasPersonal.length > 0) && (
                           <button
                             type="button"
                             onClick={() => setVista("alertas")}
-                            className="w-full py-3 text-left text-sm font-semibold text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#4ee6b0] dark:focus-visible:ring-[#37e6b0]"
+                            className="w-full py-3 text-left text-sm font-semibold text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
                           >
                             {totalAlertas > 4 ? `Ver las ${totalAlertas} en Alertas` : "Revisar y dar por vistas en Alertas"}
                           </button>
@@ -806,7 +806,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
               </div>
 
               {!alcance && datos.cadena.localesSinBase.length > 0 && (
-                <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+                <p className="text-xs text-slate-500">
                   La variación de cadena deja afuera a {datos.cadena.localesSinBase.join(", ")} porque su período de referencia está incompleto. Sus ventas sí están incluidas en el total.
                 </p>
               )}
@@ -819,11 +819,11 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                 <EmptyState>Ningún local tiene Fudo configurado todavía.</EmptyState>
               ) : !localActivo ? (
                 <Panel>
-                    <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                    <div className="border-b border-slate-100 px-4 py-3">
                       <h2 className="font-semibold">Comparación entre locales</h2>
-                      <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Mismo período y misma referencia para todas las sucursales.</p>
+                      <p className="mt-0.5 text-sm text-slate-500">Mismo período y misma referencia para todas las sucursales.</p>
                     </div>
-                    <div className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+                    <div className="divide-y divide-slate-100 md:hidden">
                       {localesOrdenados.map((local) => {
                         const participacion = datos.cadena.ventas > 0 ? `${((local.ventas / datos.cadena.ventas) * 100).toFixed(0)}% de la cadena` : "Sin participación calculable";
                         const variacionLocal = local.variacionVentas == null ? "—" : `${local.variacionVentas >= 0 ? "+" : ""}${local.variacionVentas.toFixed(1)}%`;
@@ -832,29 +832,29 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                             key={local.localId}
                             type="button"
                             onClick={() => setAlcance(local.localId)}
-                            className={`w-full px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${alcance === local.localId ? "bg-emerald-50/70 dark:bg-[#132a25]" : "hover:bg-slate-50 dark:hover:bg-[#13201d]"}`}
+                            className={`w-full px-4 py-4 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950 ${alcance === local.localId ? "bg-emerald-50/70" : "hover:bg-slate-50"}`}
                           >
                             <span className="flex items-start justify-between gap-3">
-                              <span className="inline-flex items-center gap-1.5 font-semibold text-slate-900 dark:text-[#f2f7f4]">{local.nombre}<ArrowRight size={14} aria-hidden /></span>
-                              <span className="text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">{local.diasConDatos}/{datos.dias} días</span>
+                              <span className="inline-flex items-center gap-1.5 font-semibold text-slate-900">{local.nombre}<ArrowRight size={14} aria-hidden /></span>
+                              <span className="text-xs tabular-nums text-slate-500">{local.diasConDatos}/{datos.dias} días</span>
                             </span>
                             <span className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3">
                               <span>
-                                <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Facturación</span>
+                                <span className="block text-xs text-slate-500">Facturación</span>
                                 <span className="mt-0.5 block font-semibold tabular-nums">{plata(local.ventas)}</span>
-                                <span className="block text-xs text-slate-500 dark:text-[#7a8882]">{participacion}</span>
+                                <span className="block text-xs text-slate-500">{participacion}</span>
                               </span>
                               <span>
-                                <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Variación</span>
-                                <span className={`mt-0.5 block font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-500" : local.variacionVentas >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>{variacionLocal}</span>
+                                <span className="block text-xs text-slate-500">Variación</span>
+                                <span className={`mt-0.5 block font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-500" : local.variacionVentas >= 0 ? "text-emerald-700" : "text-rose-600"}`}>{variacionLocal}</span>
                               </span>
                               <span>
-                                <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Tickets · promedio</span>
+                                <span className="block text-xs text-slate-500">Tickets · promedio</span>
                                 <span className="mt-0.5 block font-semibold tabular-nums">{numero(local.tickets)} · {plata(local.ticketPromedio)}</span>
                               </span>
                               <span>
-                                <span className="block text-xs text-slate-500 dark:text-[#94a19c]">Resultado · descuentos</span>
-                                <span className={`mt-0.5 block font-semibold tabular-nums ${local.resultado < 0 ? "text-rose-600 dark:text-rose-300" : ""}`}>{plata(local.resultado)} · {local.porcentajeDescuentos.toFixed(1)}%</span>
+                                <span className="block text-xs text-slate-500">Resultado · descuentos</span>
+                                <span className={`mt-0.5 block font-semibold tabular-nums ${local.resultado < 0 ? "text-rose-600" : ""}`}>{plata(local.resultado)} · {local.porcentajeDescuentos.toFixed(1)}%</span>
                               </span>
                             </span>
                           </button>
@@ -864,7 +864,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                     <div className="hidden overflow-x-auto md:flex">
                       <table className="w-full min-w-[58rem] text-sm">
                         <thead>
-                          <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+                          <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                             <th className="px-4 py-3 font-semibold">Local</th>
                             <th className="px-3 py-3 text-right font-semibold">Facturación</th>
                             <th className="px-3 py-3 text-right font-semibold">Participación</th>
@@ -876,26 +876,26 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                             <th className="px-4 py-3 text-right font-semibold">Cobertura</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                        <tbody className="divide-y divide-slate-100">
                           {localesOrdenados.map((local) => (
-                            <tr key={local.localId} className={alcance === local.localId ? "bg-emerald-50/70 dark:bg-[#132a25]" : "hover:bg-slate-50 dark:hover:bg-[#13201d]"}>
+                            <tr key={local.localId} className={alcance === local.localId ? "bg-emerald-50/70" : "hover:bg-slate-50"}>
                               <td className="px-4 py-3">
-                                <button type="button" onClick={() => setAlcance(local.localId)} className="inline-flex items-center gap-1.5 font-semibold text-slate-900 underline-offset-4 hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#f2f7f4] dark:hover:text-[#4ee6b0]">
+                                <button type="button" onClick={() => setAlcance(local.localId)} className="inline-flex items-center gap-1.5 font-semibold text-slate-900 underline-offset-4 hover:text-emerald-700 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
                                   {local.nombre}<ArrowRight size={13} aria-hidden />
                                 </button>
                               </td>
                               <td className="px-3 py-3 text-right font-semibold tabular-nums">{plata(local.ventas)}</td>
-                              <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{ventas > 0 ? `${((local.ventas / datos.cadena.ventas) * 100).toFixed(0)}%` : "—"}</td>
-                              <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-500" : local.variacionVentas >= 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
+                              <td className="px-3 py-3 text-right tabular-nums text-slate-500">{ventas > 0 ? `${((local.ventas / datos.cadena.ventas) * 100).toFixed(0)}%` : "—"}</td>
+                              <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.variacionVentas == null ? "text-slate-500" : local.variacionVentas >= 0 ? "text-emerald-700" : "text-rose-600"}`}>
                                 {local.variacionVentas == null ? "—" : `${local.variacionVentas >= 0 ? "+" : ""}${local.variacionVentas.toFixed(1)}%`}
                               </td>
                               <td className="px-3 py-3 text-right tabular-nums">{numero(local.tickets)}</td>
                               <td className="px-3 py-3 text-right tabular-nums">{plata(local.ticketPromedio)}</td>
-                              <td className={`px-3 py-3 text-right tabular-nums ${local.porcentajeDescuentos >= 5 ? "text-amber-700 dark:text-amber-300" : ""}`}>{local.porcentajeDescuentos.toFixed(1)}%</td>
-                              <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.resultado < 0 ? "text-rose-600 dark:text-rose-300" : ""}`}>
+                              <td className={`px-3 py-3 text-right tabular-nums ${local.porcentajeDescuentos >= 5 ? "text-amber-700" : ""}`}>{local.porcentajeDescuentos.toFixed(1)}%</td>
+                              <td className={`px-3 py-3 text-right font-semibold tabular-nums ${local.resultado < 0 ? "text-rose-600" : ""}`}>
                                 {plata(local.resultado)}
                               </td>
-                              <td className="px-4 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{local.diasConDatos}/{datos.dias} días</td>
+                              <td className="px-4 py-3 text-right tabular-nums text-slate-500">{local.diasConDatos}/{datos.dias} días</td>
                             </tr>
                           ))}
                         </tbody>
@@ -921,7 +921,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
               <SerieStock desde={datos.rango.desde} hasta={datos.rango.hasta} localId={alcance} />
               {datos.cadena.localesSinFudo.length > 0 && (
                 <Panel className="p-4">
-                  <p className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300">
+                  <p className="flex items-start gap-2 text-sm text-amber-700">
                     <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
                     Sin datos de Fudo: {datos.cadena.localesSinFudo.join(", ")}. Configurá esas credenciales para incluirlos en el tablero.
                   </p>
@@ -933,10 +933,10 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
           {vista === "alertas" && (
             <div className="space-y-5">
               <Panel>
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
                   <div>
                     <h2 className="font-semibold">Qué está fuera de lugar</h2>
-                    <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+                    <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">
                       Del negocio, sobre {etiquetaAlcance.toLowerCase()} en el período elegido. Estas
                       no se marcan como vistas: aparecen mientras el número esté fuera de rango y se
                       van solas cuando vuelve.
@@ -945,24 +945,24 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                   <Badge tone={alertas.length > 0 ? "amber" : "emerald"}>{alertas.length}</Badge>
                 </div>
                 {alertas.length === 0 ? (
-                  <p className="flex items-start gap-2 px-4 py-6 text-sm text-slate-600 dark:text-[#c1cbc6]">
-                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+                  <p className="flex items-start gap-2 px-4 py-6 text-sm text-slate-600">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden />
                     Ningún indicador del negocio está fuera de rango en este período.
                   </p>
                 ) : (
-                  <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+                  <div className="divide-y divide-slate-100 px-4">
                     {alertasOrdenadas.map((alerta) => (
                       <div key={alerta.texto} className="flex items-start gap-2.5 py-3 text-sm">
                         <AlertTriangle
                           size={16}
                           className={`mt-0.5 shrink-0 ${
                             alerta.tono === "rose"
-                              ? "text-rose-600 dark:text-rose-400"
-                              : "text-amber-600 dark:text-amber-400"
+                              ? "text-rose-600"
+                              : "text-amber-600"
                           }`}
                           aria-hidden
                         />
-                        <span className="text-slate-700 dark:text-[#c1cbc6]">{alerta.texto}</span>
+                        <span className="text-slate-700">{alerta.texto}</span>
                       </div>
                     ))}
                   </div>
@@ -970,10 +970,10 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
               </Panel>
 
               <Panel>
-                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
                   <div>
                     <h2 className="font-semibold">Personal</h2>
-                    <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+                    <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">
                       Fichajes que no cierran. Estas sí se resuelven: alguien las mira, decide qué
                       pasó y las da por vistas.
                     </p>
@@ -983,12 +983,12 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                   </Badge>
                 </div>
                 {alertasPersonal.length === 0 ? (
-                  <p className="flex items-start gap-2 px-4 py-6 text-sm text-slate-600 dark:text-[#c1cbc6]">
-                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+                  <p className="flex items-start gap-2 px-4 py-6 text-sm text-slate-600">
+                    <CheckCircle2 size={17} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden />
                     No quedan alertas de personal sin resolver en este período.
                   </p>
                 ) : (
-                  <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+                  <div className="divide-y divide-slate-100 px-4">
                     {alertasPersonal.map((alerta) => (
                       <div key={alerta.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
                         <div className="min-w-0">
@@ -996,7 +996,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
                             {alerta.empleado}
                             <Badge tone="amber">{TIPO_ALERTA[alerta.tipo] ?? alerta.tipo}</Badge>
                           </p>
-                          <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                          <p className="mt-0.5 text-xs text-slate-500">
                             {fechaLarga(alerta.fecha)} · {alerta.local}
                             {alerta.detalle && ` · ${alerta.detalle}`}
                           </p>

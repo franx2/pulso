@@ -87,14 +87,14 @@ export default function LocalesClient() {
           <div className="flex flex-col gap-2">
             {locales.map((l) => (
               <Link key={l.id} href={`/admin/configuracion/${l.id}`}>
-                <Card className="flex items-center justify-between gap-3 transition hover:border-emerald-300 dark:hover:border-[#2f6b55]">
+                <Card className="flex items-center justify-between gap-3 transition hover:border-emerald-300">
                   <div className="flex min-w-0 items-center gap-3">
-                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700 dark:bg-[#122620] dark:text-[#4ee6b0]">
+                    <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-50 text-emerald-700">
                       <Store size={18} />
                     </span>
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{l.nombre}</p>
-                      <p className="flex items-center gap-1 text-sm text-slate-500 dark:text-[#94a19c]">
+                      <p className="flex items-center gap-1 text-sm text-slate-500">
                         <Users size={12} />
                         {l._count.empleados} {l._count.empleados === 1 ? "empleado" : "empleados"}
                       </p>
@@ -107,7 +107,7 @@ export default function LocalesClient() {
                           : [];
                         if (faltan.length === 0) return null;
                         return (
-                          <p className="mt-1 flex items-start gap-1 text-xs text-amber-700 dark:text-amber-300">
+                          <p className="mt-1 flex items-start gap-1 text-xs text-amber-700">
                             <AlertTriangle size={12} className="mt-0.5 shrink-0" aria-hidden />
                             <span>Falta {faltan.join(", ")}</span>
                           </p>

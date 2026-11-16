@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { BarChart3, LayoutGrid, Package, ReceiptText, Settings, Wallet } from "lucide-react";
+import { BarChart3, CalendarClock, ChefHat, Contact, LayoutGrid, Package, ReceiptText, Settings, Wallet } from "lucide-react";
 
 const CLAVE_LOCAL = "pulso.ventas.local";
 
@@ -42,6 +42,9 @@ export function imprimir(url: string) {
 const SECCIONES = [
   { clave: "salon", href: "/ventas", label: "Salón", Icono: LayoutGrid },
   { clave: "listado", href: "/ventas/listado", label: "Ventas", Icono: ReceiptText },
+  { clave: "cocina", href: "/ventas/cocina", label: "Cocina", Icono: ChefHat },
+  { clave: "reservas", href: "/ventas/reservas", label: "Reservas", Icono: CalendarClock },
+  { clave: "clientes", href: "/ventas/clientes", label: "Clientes", Icono: Contact },
   { clave: "caja", href: "/ventas/caja", label: "Caja", Icono: Wallet },
   { clave: "reportes", href: "/ventas/reportes", label: "Reportes", Icono: BarChart3 },
   { clave: "productos", href: "/ventas/productos", label: "Productos", Icono: Package },
@@ -50,16 +53,16 @@ const SECCIONES = [
 
 export function NavVentas({ activo }: { activo: (typeof SECCIONES)[number]["clave"] }) {
   return (
-    <nav aria-label="Secciones de ventas" className="scrollbar-hidden inline-flex max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-[#29403b] dark:bg-[#0b1412]">
+    <nav aria-label="Secciones de ventas" className="scrollbar-hidden inline-flex max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-[#FDFDFC] p-0.5">
       {SECCIONES.map(({ clave, href, label, Icono }) => (
         <Link
           key={clave}
           href={href}
           aria-current={clave === activo ? "page" : undefined}
-          className={`inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${
+          className={`inline-flex min-h-9 items-center gap-1.5 rounded-md px-3 text-sm font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${
             clave === activo
-              ? "bg-white text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-              : "text-slate-500 hover:text-slate-900 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+              ? "bg-slate-950 text-[#FDFDFC]"
+              : "text-slate-500 hover:text-slate-900"
           }`}
         >
           <Icono size={15} aria-hidden />

@@ -88,9 +88,9 @@ export default function CuentaCorrientePanel({
     return () => controlador.abort();
   }, [revision]);
 
-  if (error) return <p className="text-sm text-slate-500 dark:text-[#94a19c]">{error}</p>;
+  if (error) return <p className="text-sm text-slate-500">{error}</p>;
   if (!datos) {
-    return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando" />;
+    return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando" />;
   }
 
   const actual = localId ? datos.porLocal.find((l) => l.localId === localId) : null;
@@ -98,29 +98,29 @@ export default function CuentaCorrientePanel({
   return (
     <div className="space-y-5">
       <Panel>
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">Saldo por sucursal</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 text-sm text-slate-500">
             Con Bianconero. Incluye mercadería y royalty: es la misma empresa, la misma deuda.
           </p>
         </div>
-        <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <div className="divide-y divide-slate-100">
           {datos.porLocal.map((l) => (
             <button
               key={l.localId}
               type="button"
               onClick={() => setLocalId(l.localId === localId ? "" : l.localId)}
-              className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 dark:hover:bg-[#172724] ${
-                l.localId === localId ? "bg-emerald-50/60 dark:bg-[#122620]" : ""
+              className={`flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors hover:bg-slate-50 ${
+                l.localId === localId ? "bg-emerald-50/60" : ""
               }`}
             >
               <span className="font-medium">{l.local}</span>
               <span
                 className={`font-semibold tabular-nums ${
                   l.saldo > 0
-                    ? "text-rose-600 dark:text-rose-400"
+                    ? "text-rose-600"
                     : l.saldo < 0
-                      ? "text-emerald-700 dark:text-[#4ee6b0]"
+                      ? "text-emerald-700"
                       : "text-slate-500"
                 }`}
               >
@@ -128,7 +128,7 @@ export default function CuentaCorrientePanel({
               </span>
             </button>
           ))}
-          <div className="flex items-center justify-between gap-3 bg-slate-50 px-4 py-3 font-semibold dark:bg-[#0d1614]">
+          <div className="flex items-center justify-between gap-3 bg-slate-50 px-4 py-3 font-semibold">
             <span>Total cadena</span>
             <span className="tabular-nums">{plata(datos.saldoCadena)}</span>
           </div>
@@ -237,47 +237,47 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
 
   return (
     <>
-      <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 sm:grid-cols-4 sm:divide-y-0 dark:divide-[#29403b] dark:border-[#29403b]">
+      <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 sm:grid-cols-4 sm:divide-y-0">
         <div className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">Saldo actual</p>
+          <p className="text-xs font-medium text-slate-500">Saldo actual</p>
           <p
             className={`mt-1 text-xl font-bold tabular-nums md:text-2xl ${
               cuenta.saldo > 0
-                ? "text-rose-600 dark:text-rose-400"
+                ? "text-rose-600"
                 : cuenta.saldo < 0
-                  ? "text-emerald-700 dark:text-[#4ee6b0]"
-                  : "text-slate-950 dark:text-[#f2f7f4]"
+                  ? "text-emerald-700"
+                  : "text-slate-950"
             }`}
           >
             {plata(cuenta.saldo)}
           </p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
+          <p className="mt-1 text-xs text-slate-500">
             {cuenta.saldo > 0 ? "le debemos a la fábrica" : cuenta.saldo < 0 ? "a favor nuestro" : "al día"}
           </p>
         </div>
         <div className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">Saldo inicial</p>
+          <p className="text-xs font-medium text-slate-500">Saldo inicial</p>
           <p className="mt-1 text-xl font-bold tabular-nums md:text-2xl">{plata(cuenta.saldoInicial)}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
+          <p className="mt-1 text-xs text-slate-500">
             {cuenta.fechaInicial ? `al ${fechaCorta(cuenta.fechaInicial)}` : "sin fecha de corte"}
           </p>
         </div>
         <div className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">Remitos posteriores</p>
+          <p className="text-xs font-medium text-slate-500">Remitos posteriores</p>
           <p className="mt-1 text-xl font-bold tabular-nums md:text-2xl">{plata(cuenta.totalRemitos)}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">mercadería y royalty</p>
+          <p className="mt-1 text-xs text-slate-500">mercadería y royalty</p>
         </div>
         <div className="p-4">
-          <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">Pagos cargados</p>
+          <p className="text-xs font-medium text-slate-500">Pagos cargados</p>
           <p className="mt-1 text-xl font-bold tabular-nums md:text-2xl">{plata(cuenta.totalPagos)}</p>
-          <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">
+          <p className="mt-1 text-xs text-slate-500">
             {cuenta.movimientos.filter((m) => m.tipo === "PAGO").length} pagos
           </p>
         </div>
       </section>
 
       {!cuenta.fechaInicial && cuenta.movimientos.length > 0 && (
-        <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100">
+        <p className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/60 p-3 text-sm text-amber-900">
           <AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />
           No hay saldo inicial cargado: el saldo de abajo sólo cuenta los remitos que ya están en
           el sistema, no lo que se debía antes.
@@ -312,17 +312,17 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
             <Button type="submit" disabled={guardandoSaldo}>
               {guardandoSaldo ? "Guardando…" : "Guardar"}
             </Button>
-            {errorSaldo && <p className="w-full text-sm text-rose-600 dark:text-rose-400">{errorSaldo}</p>}
+            {errorSaldo && <p className="w-full text-sm text-rose-600">{errorSaldo}</p>}
           </form>
         )}
-        <p className="mt-2 text-xs text-slate-500 dark:text-[#94a19c]">
+        <p className="mt-2 text-xs text-slate-500">
           Lo que este local le debía a la fábrica antes de empezar a llevar la cuenta acá. Los
           remitos y pagos posteriores a esta fecha se suman solos.
         </p>
       </Panel>
 
       <Panel>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">Movimientos</h2>
           <Button type="button" onClick={() => setMostrarForm((v) => !v)}>
             <Plus size={16} />
@@ -331,13 +331,13 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
         </div>
 
         {cuenta.movimientos.length > 0 && (
-          <div className="scrollbar-hidden overflow-x-auto border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <div className="scrollbar-hidden overflow-x-auto border-b border-slate-100 px-4 py-3">
             <SelectorSegmentado label="Filtrar movimientos" valor={filtro} onChange={setFiltro} opciones={FILTROS} />
           </div>
         )}
 
         {mostrarForm && (
-          <form onSubmit={agregarPago} className="flex flex-wrap items-end gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <form onSubmit={agregarPago} className="flex flex-wrap items-end gap-3 border-b border-slate-100 px-4 py-3">
             <div className="w-36">
               <Label>Fecha</Label>
               <Input type="date" value={fecha} onChange={(e) => setFecha(e.target.value)} max={hoyAR()} required />
@@ -365,7 +365,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
             <Button type="submit" disabled={guardandoPago}>
               {guardandoPago ? "Guardando…" : "Cargar"}
             </Button>
-            {errorPago && <p className="w-full text-sm text-rose-600 dark:text-rose-400">{errorPago}</p>}
+            {errorPago && <p className="w-full text-sm text-rose-600">{errorPago}</p>}
           </form>
         )}
 
@@ -377,7 +377,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
           <>
           {/* Celular: una fila por movimiento, completa. Seis columnas no
               entran en 375px y obligaban a deslizar de costado para ver el saldo. */}
-          <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+          <ul className="divide-y divide-slate-100 md:hidden">
             {movimientosVisibles.map((m, i) => (
               <li key={`${m.tipo}-${m.fecha}-${i}`} className="flex items-start justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
@@ -392,17 +392,17 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                       <IconoConvalidacion convalidacion={convalidacionPorPago.get(m.pagoId)} />
                     )}
                   </p>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">{fechaLarga(m.fecha)}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{fechaLarga(m.fecha)}</p>
                 </div>
                 <div className="shrink-0 text-right">
                   <p
                     className={`font-semibold tabular-nums ${
-                      m.haber > 0 ? "text-emerald-700 dark:text-[#4ee6b0]" : ""
+                      m.haber > 0 ? "text-emerald-700" : ""
                     }`}
                   >
                     {m.haber > 0 ? plata(-m.haber) : plata(m.debe)}
                   </p>
-                  <p className="mt-0.5 text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">saldo {plata(m.saldo)}</p>
+                  <p className="mt-0.5 text-xs tabular-nums text-slate-500">saldo {plata(m.saldo)}</p>
                 </div>
                 {m.pagoId && (
                   <button
@@ -410,7 +410,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                     onClick={() => pedirBorrarPago(m)}
                     title="Borrar este pago"
                     aria-label="Borrar este pago"
-                    className="-mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
+                    className="-mr-2 grid h-11 w-11 shrink-0 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                   >
                     <Trash2 size={16} aria-hidden />
                   </button>
@@ -422,7 +422,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[36rem] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+                <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                   <th className="px-4 py-2 font-semibold">Fecha</th>
                   <th className="px-3 py-2 font-semibold">Movimiento</th>
                   <th className="px-3 py-2 text-right font-semibold">Debe</th>
@@ -431,10 +431,10 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                   <th className="px-4 py-2" />
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <tbody className="divide-y divide-slate-100">
                 {movimientosVisibles.map((m, i) => (
                   <tr key={`${m.tipo}-${m.fecha}-${i}`}>
-                    <td className="px-4 py-2 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    <td className="px-4 py-2 tabular-nums text-slate-500">
                       {fechaCorta(m.fecha)}
                     </td>
                     <td className="px-3 py-2">
@@ -449,7 +449,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                       )}
                     </td>
                     <td className="px-3 py-2 text-right tabular-nums">{m.debe > 0 ? plata(m.debe) : "—"}</td>
-                    <td className="px-3 py-2 text-right tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                    <td className="px-3 py-2 text-right tabular-nums text-emerald-700">
                       {m.haber > 0 ? plata(m.haber) : "—"}
                     </td>
                     <td className="px-3 py-2 text-right font-semibold tabular-nums">{plata(m.saldo)}</td>
@@ -460,7 +460,7 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
                           onClick={() => pedirBorrarPago(m)}
                           title="Borrar este pago"
                           aria-label="Borrar este pago"
-                          className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:hover:text-rose-400"
+                          className="grid h-8 w-8 place-items-center rounded-lg text-slate-500 transition-colors hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                         >
                           <Trash2 size={14} aria-hidden />
                         </button>
@@ -477,25 +477,25 @@ function DetalleLocal({ cuenta, onCambio }: { cuenta: CuentaLocal; onCambio: () 
       {dialog}
 
       {cuenta.convalidacion.sinRegistrar.length > 0 && (
-        <Panel className="border-amber-200 dark:border-amber-500/30">
-          <div className="border-b border-amber-100 px-4 py-3 dark:border-amber-500/20">
-            <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200">
+        <Panel className="border-amber-200">
+          <div className="border-b border-amber-100 px-4 py-3">
+            <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900">
               <AlertTriangle size={16} aria-hidden />
               Transferencias a proveedor sin cargar
             </h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-0.5 text-sm text-slate-500">
               El banco tiene salidas marcadas como pago a proveedor que ningún pago cargado acá
               reclama. Puede ser este pago, sin registrar todavía.
             </p>
           </div>
-          <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+          <div className="divide-y divide-slate-100">
             {cuenta.convalidacion.sinRegistrar.map((m) => (
               <div key={m.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="font-medium">
                     {fechaCorta(m.fecha)} · {plata(m.debito)}
                   </p>
-                  <p className="truncate text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="truncate text-xs text-slate-500">
                     {m.descripcion}
                     {m.referencia && ` · ${m.referencia}`}
                   </p>
@@ -526,7 +526,7 @@ function IconoConvalidacion({ convalidacion }: { convalidacion: PagoConvalidado 
     const dias = convalidacion.diferenciaDias ?? 0;
     return (
       <span
-        className="ml-1.5 inline-flex translate-y-[-1px] items-center text-emerald-600 dark:text-[#4ee6b0]"
+        className="ml-1.5 inline-flex translate-y-[-1px] items-center text-emerald-600"
         title={`Respaldado por el banco: ${convalidacion.movimiento.descripcion}${
           convalidacion.movimiento.referencia ? ` · ${convalidacion.movimiento.referencia}` : ""
         }${dias !== 0 ? ` (${Math.abs(dias)} día${Math.abs(dias) === 1 ? "" : "s"} de diferencia)` : ""}`}
@@ -537,7 +537,7 @@ function IconoConvalidacion({ convalidacion }: { convalidacion: PagoConvalidado 
   }
   return (
     <span
-      className="ml-1.5 inline-flex translate-y-[-1px] items-center text-amber-600 dark:text-amber-400"
+      className="ml-1.5 inline-flex translate-y-[-1px] items-center text-amber-600"
       title="No encontramos ninguna transferencia parecida en el extracto. Puede ser efectivo, cheque, o falta cargar el banco de esta fecha."
     >
       <HelpCircle size={14} aria-label="Sin respaldo en el banco" />

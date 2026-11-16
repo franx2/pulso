@@ -74,10 +74,10 @@ const sinAcentos = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toU
 const costoPct = (p: { costo: number | null; precio: number }) => (p.costo != null && p.precio > 0 ? (p.costo / (p.precio / (1 + IVA))) * 100 : null);
 
 function tonoCosto(pct: number | null) {
-  if (pct == null) return "text-slate-400 dark:text-[#5f6d67]";
-  if (pct >= 55) return "text-rose-600 dark:text-rose-400";
-  if (pct >= COSTO_ALTO) return "text-amber-700 dark:text-amber-300";
-  return "text-emerald-700 dark:text-[#4ee6b0]";
+  if (pct == null) return "text-slate-400";
+  if (pct >= 55) return "text-rose-600";
+  if (pct >= COSTO_ALTO) return "text-amber-700";
+  return "text-emerald-700";
 }
 
 export default function ProductosClient() {
@@ -122,7 +122,7 @@ export default function ProductosClient() {
     }
   }
 
-  if (!datos) return error ? <ErrorText>{error}</ErrorText> : <div className="h-96 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando productos" />;
+  if (!datos) return error ? <ErrorText>{error}</ErrorText> : <div className="h-96 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando productos" />;
 
   const bajoMinimo = datos.ingredientes.filter((i) => i.activo && i.stockMinimo != null && i.stock < i.stockMinimo).length;
 
@@ -147,14 +147,14 @@ export default function ProductosClient() {
 
       <div aria-live="polite">
         <ErrorText>{error}</ErrorText>
-        {aviso && !error && <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">{aviso}</p>}
+        {aviso && !error && <p className="text-sm font-medium text-emerald-700">{aviso}</p>}
       </div>
 
       {datos.ingredientes.length === 0 && (
         <Panel className="flex flex-wrap items-center justify-between gap-3 p-4">
           <div>
             <p className="font-semibold">Este local todavía no tiene ingredientes.</p>
-            <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="text-sm text-slate-500">
               Se pueden cargar los insumos de las compras al proveedor y las recetas que ya usa la Carta.
             </p>
           </div>
@@ -234,7 +234,7 @@ function ListaProductos({
 
   return (
     <Panel>
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-3 dark:border-[#1c2521]">
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-3">
         <label className="relative min-w-[12rem] flex-1">
           <span className="sr-only">Buscar producto</span>
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden />
@@ -275,16 +275,16 @@ function ListaProductos({
         </div>
       </div>
 
-      <div className="hidden grid-cols-[minmax(0,1fr)_7rem_7rem_5rem] gap-x-3 border-b border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-500 md:grid dark:border-[#29403b] dark:text-[#94a19c]" aria-hidden>
+      <div className="hidden grid-cols-[minmax(0,1fr)_7rem_7rem_5rem] gap-x-3 border-b border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-500 md:grid" aria-hidden>
         <span>Producto</span>
         <span className="text-right">Precio</span>
         <span className="text-right">Costo</span>
         <span className="text-right">Costo %</span>
       </div>
       {lista.length === 0 ? (
-        <p className="px-4 py-10 text-center text-sm text-slate-500 dark:text-[#94a19c]">Ningún producto coincide.</p>
+        <p className="px-4 py-10 text-center text-sm text-slate-500">Ningún producto coincide.</p>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <ul className="divide-y divide-slate-100">
           {lista.map((p) => {
             const pct = costoPct(p);
             return (
@@ -292,14 +292,14 @@ function ListaProductos({
                 <button
                   type="button"
                   onClick={() => onEditar(p)}
-                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 md:grid-cols-[minmax(0,1fr)_7rem_7rem_5rem] dark:hover:bg-[#172724]"
+                  className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950 md:grid-cols-[minmax(0,1fr)_7rem_7rem_5rem]"
                 >
                   <span className="min-w-0">
-                    <span className={`flex items-center gap-1.5 font-medium ${p.activo ? "" : "text-slate-400 line-through dark:text-[#5f6d67]"}`}>
+                    <span className={`flex items-center gap-1.5 font-medium ${p.activo ? "" : "text-slate-400 line-through"}`}>
                       {p.favorito && <Star size={13} className="shrink-0 fill-amber-400 text-amber-500" aria-label="Favorito" />}
                       <span className="truncate">{p.nombre}</span>
                     </span>
-                    <span className="block truncate text-xs text-slate-500 dark:text-[#94a19c]">
+                    <span className="block truncate text-xs text-slate-500">
                       {nombreCategoria.get(p.categoriaId)}
                       {p.receta.length > 0 ? ` · ${p.receta.length} ingredientes` : " · sin receta"}
                       <span className="md:hidden"> · {plata(p.precio)} · costo {p.costo != null ? plata(p.costo) : "—"}</span>
@@ -315,13 +315,13 @@ function ListaProductos({
         </ul>
       )}
       {!todos && !busqueda && visibles.length > POR_PAGINA && (
-        <div className="border-t border-slate-100 px-4 py-3 text-center dark:border-[#1c2521]">
-          <button type="button" onClick={() => setTodos(true)} className="text-sm font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]">
+        <div className="border-t border-slate-100 px-4 py-3 text-center">
+          <button type="button" onClick={() => setTodos(true)} className="text-sm font-semibold text-emerald-700 underline-offset-2 hover:underline">
             Ver los {visibles.length} productos
           </button>
         </div>
       )}
-      <p className="border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+      <p className="border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500">
         El costo % es contra el precio sin IVA, como en la Carta. Lo que se edita acá ya no lo pisa la sincronización con Fudo.
       </p>
     </Panel>
@@ -444,8 +444,8 @@ function EditorProducto({
           </div>
         </fieldset>
 
-        <section className="rounded-lg border border-slate-200 dark:border-[#29403b]">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <section className="rounded-lg border border-slate-200">
+          <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-4 py-3">
             <h3 className="flex items-center gap-2 font-semibold">
               <ChefHat size={16} aria-hidden />
               Receta
@@ -456,9 +456,9 @@ function EditorProducto({
             </p>
           </div>
           {receta.length === 0 ? (
-            <p className="px-4 py-4 text-sm text-slate-500 dark:text-[#94a19c]">Sin receta: no tiene costo y no descuenta stock.</p>
+            <p className="px-4 py-4 text-sm text-slate-500">Sin receta: no tiene costo y no descuenta stock.</p>
           ) : (
-            <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+            <ul className="divide-y divide-slate-100">
               {receta.map((r, k) => {
                 const ing = porId.get(r.ingredienteId);
                 const unidad = ing?.unidad ?? "U";
@@ -476,13 +476,13 @@ function EditorProducto({
                       />
                       <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400">{CORTA[unidad]}</span>
                     </label>
-                    <span className="text-right text-sm tabular-nums text-slate-600 dark:text-[#c1cbc6]">{plata(aNumero(r.cantidad) * (ing?.costo ?? 0))}</span>
+                    <span className="text-right text-sm tabular-nums text-slate-600">{plata(aNumero(r.cantidad) * (ing?.costo ?? 0))}</span>
                     <button
                       type="button"
                       onClick={() => setReceta((rs) => rs.filter((_, j) => j !== k))}
                       disabled={!puede}
                       aria-label={`Sacar ${ing?.nombre} de la receta`}
-                      className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 disabled:opacity-40 dark:hover:bg-[#241419]"
+                      className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 disabled:opacity-40"
                     >
                       <Trash2 size={15} aria-hidden />
                     </button>
@@ -492,7 +492,7 @@ function EditorProducto({
             </ul>
           )}
           {puede && (
-            <div className="flex gap-2 border-t border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="flex gap-2 border-t border-slate-100 p-3">
               <Select value={agregar} onChange={(e) => setAgregar(e.target.value)} aria-label="Ingrediente para agregar">
                 <option value="">Agregar un ingrediente…</option>
                 {disponibles.map((i) => (
@@ -518,7 +518,7 @@ function EditorProducto({
         </section>
 
         {producto?.fudoId && !producto.editadoEn && (
-          <p className="text-xs text-slate-500 dark:text-[#94a19c]">Viene de Fudo. Al guardar queda como editado en Pulso y la sincronización ya no lo cambia.</p>
+          <p className="text-xs text-slate-500">Viene de Fudo. Al guardar queda como editado en Pulso y la sincronización ya no lo cambia.</p>
         )}
         <ErrorText>{error}</ErrorText>
         <div className="flex justify-end gap-2">
@@ -545,7 +545,7 @@ function ListaIngredientes({ datos, onEditar }: { datos: Datos; onEditar: (i: In
 
   return (
     <Panel>
-      <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-3 dark:border-[#1c2521]">
+      <div className="flex flex-wrap items-center gap-3 border-b border-slate-100 p-3">
         <label className="relative min-w-[12rem] flex-1">
           <span className="sr-only">Buscar ingrediente</span>
           <Search size={15} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden />
@@ -560,13 +560,13 @@ function ListaIngredientes({ datos, onEditar }: { datos: Datos; onEditar: (i: In
           Nuevo ingrediente
         </Button>
       </div>
-      <div className="hidden grid-cols-[minmax(0,1fr)_9rem_8rem_6rem] gap-x-3 border-b border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-500 md:grid dark:border-[#29403b] dark:text-[#94a19c]" aria-hidden>
+      <div className="hidden grid-cols-[minmax(0,1fr)_9rem_8rem_6rem] gap-x-3 border-b border-slate-200 px-4 py-2.5 text-xs font-semibold text-slate-500 md:grid" aria-hidden>
         <span>Ingrediente</span>
         <span className="text-right">Costo</span>
         <span className="text-right">Stock</span>
         <span className="text-right">Recetas</span>
       </div>
-      <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+      <ul className="divide-y divide-slate-100">
         {visibles.map((i) => {
           const bajo = i.stockMinimo != null && i.stock < i.stockMinimo;
           return (
@@ -574,30 +574,30 @@ function ListaIngredientes({ datos, onEditar }: { datos: Datos; onEditar: (i: In
               <button
                 type="button"
                 onClick={() => onEditar(i)}
-                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 md:grid-cols-[minmax(0,1fr)_9rem_8rem_6rem] dark:hover:bg-[#172724]"
+                className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 px-4 py-2.5 text-left text-sm transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950 md:grid-cols-[minmax(0,1fr)_9rem_8rem_6rem]"
               >
                 <span className="min-w-0">
                   <span className={`block truncate font-medium ${i.activo ? "" : "text-slate-400 line-through"}`}>{i.nombre}</span>
-                  <span className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <span className="flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                     {i.automatico ? "precio de la última factura" : "costo manual"}
                     {!i.contadoEn && " · sin contar"}
                   </span>
                 </span>
                 <span className="hidden text-right tabular-nums md:block">
                   {plata(i.costo * FACTOR[i.unidad])}
-                  <span className="text-xs text-slate-500 dark:text-[#94a19c]">/{POR[i.unidad]}</span>
+                  <span className="text-xs text-slate-500">/{POR[i.unidad]}</span>
                 </span>
-                <span className={`text-right font-semibold tabular-nums ${bajo ? "text-rose-600 dark:text-rose-400" : i.stock < 0 ? "text-amber-700 dark:text-amber-300" : ""}`}>
+                <span className={`text-right font-semibold tabular-nums ${bajo ? "text-rose-600" : i.stock < 0 ? "text-amber-700" : ""}`}>
                   {bajo && <AlertTriangle size={13} className="mr-1 inline" aria-label="Bajo el mínimo" />}
                   {cantidad(i.stock, i.unidad)}
                 </span>
-                <span className="hidden text-right tabular-nums text-slate-500 md:block dark:text-[#94a19c]">{i.enRecetas}</span>
+                <span className="hidden text-right tabular-nums text-slate-500 md:block">{i.enRecetas}</span>
               </button>
             </li>
           );
         })}
       </ul>
-      <p className="border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+      <p className="border-t border-slate-100 px-4 py-2.5 text-xs text-slate-500">
         El stock es el último conteo, más ingresos, menos mermas, menos lo que usaron las ventas cerradas según sus recetas. Un stock negativo
         quiere decir que todavía no se contó o que entró mercadería sin cargarla.
       </p>
@@ -707,12 +707,12 @@ function EditorIngrediente({
           <div>
             <Label>Costo por {POR[unidad]} (neto)</Label>
             {ingrediente?.automatico ? (
-              <div className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 text-sm dark:border-[#29403b]">
+              <div className="flex min-h-11 items-center justify-between gap-2 rounded-xl border border-slate-200 px-3 text-sm">
                 <span className="tabular-nums">
                   {plata(ingrediente.costo * FACTOR[unidad])} <Badge tone="emerald">de facturas</Badge>
                 </span>
                 {puede && (
-                  <button type="button" onClick={desvincular} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900 dark:text-[#94a19c]">
+                  <button type="button" onClick={desvincular} className="inline-flex items-center gap-1 text-xs font-semibold text-slate-500 hover:text-slate-900">
                     <Link2Off size={13} aria-hidden />
                     Pasar a manual
                   </button>
@@ -739,18 +739,18 @@ function EditorIngrediente({
         </form>
 
         {ingrediente && (
-          <section className="rounded-lg border border-slate-200 dark:border-[#29403b]">
-            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+          <section className="rounded-lg border border-slate-200">
+            <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-slate-100 px-4 py-3">
               <h3 className="font-semibold">Stock</h3>
               <p className="text-sm">
                 Hay <strong className="tabular-nums">{cantidad(ingrediente.stock, ingrediente.unidad)}</strong>
-                <span className="text-slate-500 dark:text-[#94a19c]">
+                <span className="text-slate-500">
                   {ingrediente.contadoEn ? ` · contado el ${new Date(ingrediente.contadoEn).toLocaleDateString("es-AR")}` : " · nunca se contó"}
                 </span>
               </p>
             </div>
             {permisos.update_stock && (
-              <form onSubmit={moverStock} className="flex flex-wrap items-end gap-2 border-b border-slate-100 p-4 dark:border-[#1c2521]">
+              <form onSubmit={moverStock} className="flex flex-wrap items-end gap-2 border-b border-slate-100 p-4">
                 <SelectorSegmentado
                   label="Tipo de movimiento"
                   valor={mov.tipo}
@@ -775,13 +775,13 @@ function EditorIngrediente({
               </form>
             )}
             {movimientos.length > 0 && (
-              <ul className="max-h-48 divide-y divide-slate-100 overflow-y-auto dark:divide-[#1c2521]">
+              <ul className="max-h-48 divide-y divide-slate-100 overflow-y-auto">
                 {movimientos.map((m) => (
                   <li key={m.id} className="flex justify-between gap-3 px-4 py-2 text-sm">
                     <span className="min-w-0 truncate">
                       {m.tipo === "CONTEO" ? "Conteo" : m.tipo === "INGRESO" ? "Ingreso" : "Merma"}
                       {m.motivo && ` · ${m.motivo}`}
-                      <span className="text-slate-500 dark:text-[#94a19c]"> · {m.autor} · {new Date(m.createdAt).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
+                      <span className="text-slate-500"> · {m.autor} · {new Date(m.createdAt).toLocaleString("es-AR", { day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" })}</span>
                     </span>
                     <span className="shrink-0 tabular-nums">
                       {m.tipo === "EGRESO" ? "−" : m.tipo === "INGRESO" ? "+" : "="}
@@ -795,7 +795,7 @@ function EditorIngrediente({
         )}
 
         {usadoEn.length > 0 && (
-          <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="text-sm text-slate-500">
             Se usa en {usadoEn.length} productos: {usadoEn.slice(0, 6).map((p) => p.nombre).join(", ")}
             {usadoEn.length > 6 ? "…" : ""}
           </p>

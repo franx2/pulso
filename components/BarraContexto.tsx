@@ -39,7 +39,7 @@ export function BarraContexto({
           <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
             {visibles.map((c) => (
               <div key={c.etiqueta} className={`min-w-0 ${c.className ?? ""}`}>
-                <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">{c.etiqueta}</p>
+                <p className="mb-2 text-xs font-semibold text-slate-500">{c.etiqueta}</p>
                 {c.contenido}
               </div>
             ))}
@@ -47,14 +47,14 @@ export function BarraContexto({
         )}
         {derecha && (
           <div className={`min-w-0 ${derecha.className ?? ""}`}>
-            <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">{derecha.etiqueta}</p>
+            <p className="mb-2 text-xs font-semibold text-slate-500">{derecha.etiqueta}</p>
             {derecha.contenido}
           </div>
         )}
       </div>
       {pie && (
-        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
-          <span className="inline-flex items-center gap-1.5 font-medium text-slate-700 dark:text-[#dbe5e0]">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+          <span className="inline-flex items-center gap-1.5 font-medium text-slate-700">
             <Store size={14} aria-hidden />
             {pie.alcance}
           </span>

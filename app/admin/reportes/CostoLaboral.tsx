@@ -84,7 +84,7 @@ export default function CostoLaboral({
 
       {ventas == null && !cargando && (
         <>
-          <p className="mb-3 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mb-3 text-sm text-slate-500">
             Compara lo que pagás en horas contra lo que vendiste según Fudo, en este mismo rango.
             Un restaurante sano se mueve entre 25% y 35%.
           </p>
@@ -95,23 +95,23 @@ export default function CostoLaboral({
         </>
       )}
 
-      {cargando && <p className="text-sm text-slate-500 dark:text-[#7a8882]">Consultando Fudo…</p>}
+      {cargando && <p className="text-sm text-slate-500">Consultando Fudo…</p>}
       <ErrorText>{error}</ErrorText>
 
       {ventas != null && !cargando && (
         <div className="flex flex-col gap-3">
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3">
               <p className="text-lg font-bold">${ventas.toFixed(2)}</p>
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Ventas</p>
+              <p className="text-xs text-slate-500">Ventas</p>
             </div>
-            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3">
               <p className="text-lg font-bold">${costoLaboral.toFixed(2)}</p>
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Costo laboral</p>
+              <p className="text-xs text-slate-500">Costo laboral</p>
             </div>
-            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3">
               <p className="text-lg font-bold">{porcentaje != null ? `${porcentaje.toFixed(1)}%` : "—"}</p>
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Sobre ventas</p>
+              <p className="text-xs text-slate-500">Sobre ventas</p>
             </div>
           </div>
 

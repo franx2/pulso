@@ -116,10 +116,10 @@ const ETIQUETA_AUSENCIA: Record<string, string> = {
 };
 
 const GRUPOS: { estado: Estado; titulo: string; Icono: typeof LogIn; tono: string }[] = [
-  { estado: "TRABAJANDO", titulo: "Trabajando", Icono: LogIn, tono: "text-emerald-600 dark:text-[#4ee6b0]" },
-  { estado: "EN_DESCANSO", titulo: "En descanso", Icono: Coffee, tono: "text-amber-600 dark:text-amber-400" },
-  { estado: "FALTA", titulo: "Sin fichar", Icono: AlertTriangle, tono: "text-red-600 dark:text-red-400" },
-  { estado: "AUSENTE", titulo: "De licencia", Icono: Palmtree, tono: "text-sky-600 dark:text-sky-400" },
+  { estado: "TRABAJANDO", titulo: "Trabajando", Icono: LogIn, tono: "text-emerald-600" },
+  { estado: "EN_DESCANSO", titulo: "En descanso", Icono: Coffee, tono: "text-amber-600" },
+  { estado: "FALTA", titulo: "Sin fichar", Icono: AlertTriangle, tono: "text-red-600" },
+  { estado: "AUSENTE", titulo: "De licencia", Icono: Palmtree, tono: "text-sky-600" },
   { estado: "TERMINO", titulo: "Jornada terminada", Icono: LogOut, tono: "text-slate-500" },
   { estado: "SIN_TURNO", titulo: "Sin turno hoy", Icono: CircleSlash, tono: "text-slate-500" },
 ];
@@ -283,13 +283,13 @@ export default function PresenciaClient() {
             {alertas.map((a) => (
               <Card
                 key={a.id}
-                className="flex items-center justify-between gap-3 border-amber-200 bg-amber-50 dark:border-[#5a4a2f] dark:bg-[#241f14]"
+                className="flex items-center justify-between gap-3 border-amber-200 bg-amber-50"
               >
                 <div className="min-w-0">
                   <p className="truncate font-semibold">
                     {a.empleado} · {ETIQUETA_ALERTA[a.tipo] ?? a.tipo}
                   </p>
-                  <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">{a.detalle}</p>
+                  <p className="text-sm text-slate-600">{a.detalle}</p>
                 </div>
                 <Button variant="ghost" onClick={() => resolverAlerta(a.id)} className="shrink-0">
                   <Check size={15} />
@@ -308,14 +308,14 @@ export default function PresenciaClient() {
             {rostros.map((r) => (
               <Card
                 key={r.id}
-                className="flex items-start justify-between gap-3 border-amber-200 bg-amber-50 dark:border-[#5a4a2f] dark:bg-[#241f14]"
+                className="flex items-start justify-between gap-3 border-amber-200 bg-amber-50"
               >
                 <div className="min-w-0">
                   <p className="flex items-center gap-1.5 font-semibold">
-                    <ScanFace size={15} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                    <ScanFace size={15} className="shrink-0 text-amber-600" />
                     {r.empleado}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-[#c1cbc6]">
+                  <p className="mt-1 text-sm text-slate-600">
                     {ETIQUETA_FICHAJE[r.tipo] ?? r.tipo} de {hora(r.timestamp)} ·{" "}
                     {MOTIVO_ROSTRO[r.rostro]}
                     {r.distancia !== null && ` (distancia ${r.distancia})`}
@@ -323,7 +323,7 @@ export default function PresenciaClient() {
                   <button
                     type="button"
                     onClick={() => setJornada({ empleadoId: r.empleadoId, nombre: r.empleado })}
-                    className="mt-1 text-sm font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]"
+                    className="mt-1 text-sm font-semibold text-emerald-700 underline-offset-2 hover:underline"
                   >
                     Ver jornada
                   </button>
@@ -355,7 +355,7 @@ export default function PresenciaClient() {
                     <PencilLine size={15} className="shrink-0 text-slate-500" />
                     {c.empleado}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-[#c1cbc6]">
+                  <p className="mt-1 text-sm text-slate-600">
                     {c.tipo === "AGREGAR" && (
                       <>
                         Pide agregar una <strong>{ETIQUETA_FICHAJE[c.tipoFichaje ?? ""]}</strong> el{" "}
@@ -377,8 +377,8 @@ export default function PresenciaClient() {
                       </>
                     )}
                   </p>
-                  <p className="mt-1 text-sm italic text-slate-500 dark:text-[#94a19c]">“{c.motivo}”</p>
-                  <p className="mt-2 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-1 text-sm italic text-slate-500">“{c.motivo}”</p>
+                  <p className="mt-2 text-xs text-slate-500">
                     Ese día fichó:{" "}
                     {c.delDia.length === 0
                       ? "nada"
@@ -393,7 +393,7 @@ export default function PresenciaClient() {
                           dia: claveDiaAR(c.fechaHora ?? c.actual?.timestamp ?? new Date().toISOString()),
                         })
                       }
-                      className="font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]"
+                      className="font-semibold text-emerald-700 underline-offset-2 hover:underline"
                     >
                       Ver jornada
                     </button>
@@ -434,20 +434,20 @@ export default function PresenciaClient() {
                     <Palmtree size={15} className="shrink-0 text-slate-500" />
                     {a.empleado}
                   </p>
-                  <p className="mt-1 text-sm text-slate-600 dark:text-[#c1cbc6]">
+                  <p className="mt-1 text-sm text-slate-600">
                     <strong>{ETIQUETA_AUSENCIA[a.tipo] ?? a.tipo}</strong> ·{" "}
                     {formatearFechaSql(a.desde)}
                     {a.desde !== a.hasta && ` al ${formatearFechaSql(a.hasta)}`}
                   </p>
                   {a.motivo && (
-                    <p className="mt-1 text-sm italic text-slate-500 dark:text-[#94a19c]">“{a.motivo}”</p>
+                    <p className="mt-1 text-sm italic text-slate-500">“{a.motivo}”</p>
                   )}
                   {a.tieneCertificado && (
                     <a
                       href={`/api/ausencias/${a.id}/certificado`}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 underline dark:text-[#4ee6b0]"
+                      className="mt-2 inline-flex items-center gap-1.5 text-sm font-medium text-emerald-700 underline"
                     >
                       <FileText size={14} />
                       Ver certificado
@@ -499,11 +499,11 @@ export default function PresenciaClient() {
                     key={f.empleadoId}
                     onClick={() => setJornada({ empleadoId: f.empleadoId, nombre: f.nombre })}
                     aria-label={`Ver y corregir la jornada de ${f.nombre}`}
-                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 md:p-3 dark:border-[#29403b] dark:bg-[#101c19] dark:hover:bg-[#172724] dark:focus-visible:ring-[#37e6b0]"
+                    className="flex w-full items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 text-left transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 md:p-3"
                   >
                     <div className="min-w-0">
                       <p className="truncate font-semibold">{f.nombre}</p>
-                      <p className="truncate text-sm text-slate-500 dark:text-[#94a19c]">
+                      <p className="truncate text-sm text-slate-500">
                         {f.ausencia
                           ? (ETIQUETA_AUSENCIA[f.ausencia] ?? f.ausencia)
                           : f.turno
@@ -518,9 +518,9 @@ export default function PresenciaClient() {
                         </div>
                       )}
                     </div>
-                    <span className="flex shrink-0 items-center gap-2 text-sm font-semibold tabular-nums text-slate-600 dark:text-[#c1cbc6]">
+                    <span className="flex shrink-0 items-center gap-2 text-sm font-semibold tabular-nums text-slate-600">
                       {f.horasTrabajadas > 0 ? duracion(f.horasTrabajadas) : "—"}
-                      <PencilLine size={14} className="text-slate-400 dark:text-[#5f6d67]" aria-hidden />
+                      <PencilLine size={14} className="text-slate-400" aria-hidden />
                     </span>
                   </button>
                 ))}
@@ -542,7 +542,7 @@ export default function PresenciaClient() {
       {rechazo && (
         <Modal title="Rechazar solicitud" onClose={() => (resolviendoId ? undefined : setRechazo(null))}>
           <form onSubmit={confirmarRechazo} className="flex flex-col gap-4">
-            <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">
+            <p className="text-sm text-slate-600">
               El motivo es opcional, pero si lo escribís {rechazo.empleado} lo va a ver en sus
               solicitudes.
             </p>
@@ -588,12 +588,12 @@ function StatPill({
 }) {
   const estilos = {
     emerald:
-      "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-[#1d4e48] dark:bg-[#0f2620] dark:text-[#6ff5c9]",
+      "border-emerald-200 bg-emerald-50 text-emerald-800",
     amber:
-      "border-amber-200 bg-amber-50 text-amber-800 dark:border-[#5a4a2f] dark:bg-[#241f14] dark:text-amber-200",
-    red: "border-red-200 bg-red-50 text-red-800 dark:border-[#5a2f35] dark:bg-[#241419] dark:text-red-200",
+      "border-amber-200 bg-amber-50 text-amber-800",
+    red: "border-red-200 bg-red-50 text-red-800",
     slate:
-      "border-slate-200 bg-slate-50 text-slate-700 dark:border-[#26312d] dark:bg-[#131816] dark:text-[#c1cbc6]",
+      "border-slate-200 bg-slate-50 text-slate-700",
   };
   return (
     <span

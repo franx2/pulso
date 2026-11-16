@@ -182,8 +182,8 @@ const observacionVisible = (texto: string | null) =>
 function ComparacionHelado({ resumen }: { resumen: ResumenHelado }) {
   const maximo = Math.max(resumen.compradoKg, resumen.vendidoKgEstimado, 1);
   const filas = [
-    { label: "Recibido", valor: resumen.compradoKg, color: "bg-emerald-700 dark:bg-[#37e6b0]" },
-    { label: "Vendido estimado", valor: resumen.vendidoKgEstimado, color: "bg-slate-500 dark:bg-[#7f908a]" },
+    { label: "Recibido", valor: resumen.compradoKg, color: "bg-emerald-700" },
+    { label: "Vendido estimado", valor: resumen.vendidoKgEstimado, color: "bg-slate-500" },
   ];
 
   return (
@@ -191,10 +191,10 @@ function ComparacionHelado({ resumen }: { resumen: ResumenHelado }) {
       {filas.map((fila) => (
         <div key={fila.label}>
           <div className="flex items-baseline justify-between gap-4 text-sm">
-            <span className="font-medium text-slate-700 dark:text-[#dbe5e0]">{fila.label}</span>
+            <span className="font-medium text-slate-700">{fila.label}</span>
             <span className="font-semibold tabular-nums">{kilos(fila.valor)}</span>
           </div>
-          <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-[#18201d]">
+          <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
             <div className={`h-full rounded-full ${fila.color}`} style={{ width: `${(fila.valor / maximo) * 100}%` }} />
           </div>
         </div>
@@ -221,19 +221,19 @@ function CompraDetalle({
         type="button"
         aria-expanded={abierto}
         onClick={alternar}
-        className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 dark:hover:bg-[#13201d]"
+        className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950"
       >
         {abierto ? <ChevronDown size={16} aria-hidden /> : <ChevronRight size={16} aria-hidden />}
         <span className="min-w-0 flex-1">
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
             <span className="font-semibold">{compra.numero}</span>
-            <span className="text-sm text-slate-500 dark:text-[#94a19c]">{fechaCorta(compra.fecha)}</span>
+            <span className="text-sm text-slate-500">{fechaCorta(compra.fecha)}</span>
             <Badge tone={compra.tipo === "SERVICIO" ? "slate" : "emerald"}>
               {compra.tipo === "SERVICIO" ? "Servicio" : "Mercadería"}
             </Badge>
             {!compra.verificado && <Badge tone="amber">Revisar</Badge>}
           </span>
-          <span className="mt-0.5 block truncate text-xs text-slate-500 dark:text-[#7a8882]">
+          <span className="mt-0.5 block truncate text-xs text-slate-500">
             {compra.items.length} {compra.items.length === 1 ? "línea" : "líneas"}
             {observacion && ` · ${observacion}`}
           </span>
@@ -241,7 +241,7 @@ function CompraDetalle({
         <span className="shrink-0 text-right">
           <span className="block font-semibold tabular-nums">{plata(compra.subtotal)}</span>
           {compra.ajustePct != null && (
-            <span className="hidden text-xs text-slate-500 sm:block dark:text-[#7a8882]">
+            <span className="hidden text-xs text-slate-500 sm:block">
               lista {plata(compra.sumaLineas)} +{compra.ajustePct}%
             </span>
           )}
@@ -249,11 +249,11 @@ function CompraDetalle({
       </button>
 
       {abierto && (
-        <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3 dark:border-[#1c2521] dark:bg-[#0d1614]">
+        <div className="border-t border-slate-100 bg-slate-50/60 px-4 py-3">
           {compra.problemas.length > 0 && (
             <ul className="mb-3 space-y-1">
               {compra.problemas.map((problema) => (
-                <li key={problema} className="text-xs text-amber-700 dark:text-amber-300">
+                <li key={problema} className="text-xs text-amber-700">
                   {problema}
                 </li>
               ))}
@@ -263,7 +263,7 @@ function CompraDetalle({
           <div className="hidden overflow-x-auto md:block">
             <table className="w-full min-w-[38rem] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#26312d] dark:text-[#94a19c]">
+                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                   <th className="py-2 pr-3 font-semibold">Cód.</th>
                   <th className="py-2 pr-3 font-semibold">Producto</th>
                   <th className="py-2 pr-3 font-semibold">Sector</th>
@@ -275,8 +275,8 @@ function CompraDetalle({
               </thead>
               <tbody>
                 {compra.items.map((item) => (
-                  <tr key={`${item.codigo}-${item.detalle}`} className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]">
-                    <td className="py-2 pr-3 tabular-nums text-slate-500 dark:text-[#7a8882]">{item.codigo}</td>
+                  <tr key={`${item.codigo}-${item.detalle}`} className="border-b border-slate-100 last:border-0">
+                    <td className="py-2 pr-3 tabular-nums text-slate-500">{item.codigo}</td>
                     <td className="py-2 pr-3">{item.detalle}</td>
                     <td className="py-2 pr-3">
                       <SectorChip producto={item.detalle} sector={item.sector} onCambio={alCambiarSector} />
@@ -285,7 +285,7 @@ function CompraDetalle({
                       {numero(item.cantidad, 2)} <span className="text-xs text-slate-500">{item.unidad.slice(0, 3).toLowerCase()}</span>
                     </td>
                     <td className="py-2 pr-3 text-right tabular-nums">{plata(item.precioUnitario)}</td>
-                    <td className="py-2 pr-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{plata(item.total)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums text-slate-500">{plata(item.total)}</td>
                     <td className="py-2 text-right font-semibold tabular-nums">{plata(item.totalConAjuste)}</td>
                   </tr>
                 ))}
@@ -293,14 +293,14 @@ function CompraDetalle({
             </table>
           </div>
 
-          <div className="divide-y divide-slate-200 md:hidden dark:divide-[#26312d]">
+          <div className="divide-y divide-slate-200 md:hidden">
             {compra.items.map((item) => (
               <div key={`${item.codigo}-${item.detalle}`} className="py-3 first:pt-0 last:pb-0">
                 <div className="flex items-start justify-between gap-3">
                   <p className="font-medium">{item.detalle}</p>
                   <p className="shrink-0 font-semibold tabular-nums">{plata(item.totalConAjuste)}</p>
                 </div>
-                <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                <p className="mt-1 text-xs text-slate-500">
                   Cód. {item.codigo} · {numero(item.cantidad, 2)} {item.unidad.toLowerCase()} · {plata(item.precioUnitario)} c/u
                 </p>
                 <div className="mt-1">
@@ -310,7 +310,7 @@ function CompraDetalle({
             ))}
           </div>
 
-          {compra.origen && <p className="mt-3 text-xs text-slate-500 dark:text-[#7a8882]">Origen: {compra.origen}</p>}
+          {compra.origen && <p className="mt-3 text-xs text-slate-500">Origen: {compra.origen}</p>}
         </div>
       )}
     </div>
@@ -435,9 +435,9 @@ export default function ComprasClient() {
   if (!datos && cargando) {
     return (
       <div className="space-y-5" aria-label="Cargando compras">
-        <div className="h-16 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" />
-        <div className="h-28 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" />
-        <div className="h-72 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" />
+        <div className="h-16 animate-pulse rounded-lg bg-slate-200/70" />
+        <div className="h-28 animate-pulse rounded-lg bg-slate-200/70" />
+        <div className="h-72 animate-pulse rounded-lg bg-slate-200/70" />
       </div>
     );
   }
@@ -446,7 +446,7 @@ export default function ComprasClient() {
     return (
       <Panel className="p-6">
         <p className="font-semibold">No pudimos abrir Compras</p>
-        <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">{error || "La respuesta llegó vacía."}</p>
+        <p className="mt-1 text-sm text-slate-500">{error || "La respuesta llegó vacía."}</p>
         <Button className="mt-4" onClick={() => setRevision((actual) => actual + 1)}>
           <RefreshCw size={16} aria-hidden />
           Reintentar
@@ -485,32 +485,32 @@ export default function ComprasClient() {
       />
 
       {!localId && sinAsignar.length > 0 && (
-        <section className="rounded-lg border border-amber-300 bg-amber-50/60 dark:border-amber-500/40 dark:bg-amber-500/10">
-          <div className="border-b border-amber-200 px-4 py-3 dark:border-amber-500/30">
-            <h2 className="inline-flex items-center gap-2 font-semibold text-amber-950 dark:text-amber-200">
+        <section className="rounded-lg border border-amber-300 bg-amber-50/60">
+          <div className="border-b border-amber-200 px-4 py-3">
+            <h2 className="inline-flex items-center gap-2 font-semibold text-amber-950">
               <AlertTriangle size={16} aria-hidden />
               {sinAsignar.length} {sinAsignar.length === 1 ? "remito necesita local" : "remitos necesitan local"}
             </h2>
-            <p className="mt-0.5 text-sm text-amber-800 dark:text-amber-300/90">
+            <p className="mt-0.5 text-sm text-amber-800">
               Quedan fuera de los totales por sucursal hasta que los asignes.
             </p>
-            {errorAccion && <p className="mt-2 text-sm font-medium text-rose-700 dark:text-rose-300">{errorAccion}</p>}
+            {errorAccion && <p className="mt-2 text-sm font-medium text-rose-700">{errorAccion}</p>}
           </div>
-          <div className="divide-y divide-amber-200 dark:divide-amber-500/20">
+          <div className="divide-y divide-amber-200">
             {sinAsignar.map((compra) => (
               <div key={compra.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="font-semibold tabular-nums">
                     {compra.numero} · {fechaCorta(compra.fecha)} · {plata(compra.subtotal)}
                   </p>
-                  <p className="truncate text-sm text-amber-900/80 dark:text-amber-200/80">{compra.cliente}</p>
+                  <p className="truncate text-sm text-amber-900/80">{compra.cliente}</p>
                 </div>
                 <Select
                   aria-label={`Asignar remito ${compra.numero}`}
                   defaultValue=""
                   disabled={guardando === compra.id}
                   onChange={(evento) => asignar(compra.id, evento.target.value)}
-                  className="w-auto min-h-11 border-amber-300 disabled:opacity-60 dark:border-amber-500/40"
+                  className="w-auto min-h-11 border-amber-300 disabled:opacity-60"
                 >
                   <option value="">Asignar a...</option>
                   {datos.locales.map((local) => (
@@ -525,7 +525,7 @@ export default function ComprasClient() {
         </section>
       )}
 
-      <div className="border-b border-slate-200 dark:border-[#29403b]">
+      <div className="border-b border-slate-200">
         <div className="grid grid-cols-2 gap-1 sm:grid-cols-4" role="tablist" aria-label="Secciones de compras">
           {VISTAS.map((opcion) => (
             <button
@@ -536,10 +536,10 @@ export default function ComprasClient() {
               aria-selected={vista === opcion.clave}
               aria-controls={`compras-panel-${opcion.clave}`}
               onClick={() => setVista(opcion.clave)}
-              className={`min-h-11 min-w-0 border-b-2 px-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 sm:px-4 sm:text-sm dark:focus-visible:ring-[#37e6b0] ${
+              className={`min-h-11 min-w-0 border-b-2 px-1 text-xs font-semibold focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 sm:px-4 sm:text-sm ${
                 vista === opcion.clave
-                  ? "border-emerald-700 text-emerald-800 dark:border-[#37e6b0] dark:text-[#37e6b0]"
-                  : "border-transparent text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+                  ? "border-emerald-700 text-emerald-800"
+                  : "border-transparent text-slate-500 hover:text-slate-800"
               }`}
             >
               {opcion.label}
@@ -550,7 +550,7 @@ export default function ComprasClient() {
 
       {vista === "resumen" && (
         <div id="compras-panel-resumen" role="tabpanel" aria-labelledby="compras-tab-resumen" className="space-y-5">
-          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0 dark:border-[#29403b] dark:divide-[#29403b]">
+          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0">
             <Metrica label="Mercadería" valor={plata(resumenAlcance.mercaderia)} nota="insumos y productos" />
             <Metrica label="Servicios" valor={plata(resumenAlcance.servicios)} nota="fuera del food cost" />
             <Metrica label="Remitos" valor={numero(resumenAlcance.remitos, 0)} nota={`${resumenAlcance.conProblemas} para revisar`} />
@@ -563,16 +563,16 @@ export default function ComprasClient() {
 
           {!localId ? (
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Comparación entre locales</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+                <p className="mt-0.5 text-sm text-slate-500">
                   Mismo período para todas las sucursales; elegí una para abrir su detalle.
                 </p>
               </div>
               <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[56rem] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-100 text-left text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+                    <tr className="border-b border-slate-100 text-left text-xs text-slate-500">
                       <th className="px-4 py-2.5 font-semibold">Local</th>
                       <th className="px-3 py-2.5 text-right font-semibold">Mercadería</th>
                       <th className="px-3 py-2.5 text-right font-semibold">Servicios</th>
@@ -586,19 +586,19 @@ export default function ComprasClient() {
                     {datos.porLocal.map((local) => {
                       const helado = heladoPorLocal.get(local.localId);
                       return (
-                        <tr key={local.localId} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 dark:border-[#1c2521] dark:hover:bg-[#13201d]">
+                        <tr key={local.localId} className="border-b border-slate-100 last:border-0 hover:bg-slate-50">
                           <td className="px-4 py-3">
                             <button
                               type="button"
                               onClick={() => setLocalId(local.localId)}
-                              className="inline-flex items-center gap-1.5 font-semibold text-slate-900 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#f2f7f4] dark:hover:text-[#37e6b0]"
+                              className="inline-flex items-center gap-1.5 font-semibold text-slate-900 hover:text-emerald-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
                             >
                               {local.local}
                               <ArrowRight size={14} aria-hidden />
                             </button>
                           </td>
                           <td className="px-3 py-3 text-right tabular-nums">{plata(local.mercaderia)}</td>
-                          <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{plata(local.servicios)}</td>
+                          <td className="px-3 py-3 text-right tabular-nums text-slate-500">{plata(local.servicios)}</td>
                           <td className="px-3 py-3 text-right tabular-nums">{local.remitos}</td>
                           <td className="px-3 py-3 text-right tabular-nums">{kilos(helado?.compradoKg ?? 0)}</td>
                           <td className="px-3 py-3 text-right tabular-nums">{helado?.desdeComparacion ? kilos(helado.vendidoKgEstimado) : "Sin base"}</td>
@@ -609,7 +609,7 @@ export default function ComprasClient() {
                   </tbody>
                 </table>
               </div>
-              <div className="divide-y divide-slate-100 lg:hidden dark:divide-[#1c2521]">
+              <div className="divide-y divide-slate-100 lg:hidden">
                 {datos.porLocal.map((local) => {
                   const helado = heladoPorLocal.get(local.localId);
                   return (
@@ -617,17 +617,17 @@ export default function ComprasClient() {
                       key={local.localId}
                       type="button"
                       onClick={() => setLocalId(local.localId)}
-                      className="block w-full px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 dark:hover:bg-[#13201d]"
+                      className="block w-full px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950"
                     >
                       <span className="flex items-center justify-between gap-3">
                         <span className="font-semibold">{local.local}</span>
                         <ArrowRight size={16} aria-hidden />
                       </span>
-                      <span className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-500 dark:text-[#94a19c]">
-                        <span>Mercadería <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{plata(local.mercaderia)}</strong></span>
-                        <span>Remitos <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{local.remitos}</strong></span>
-                        <span>Helado recibido <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{kilos(helado?.compradoKg ?? 0)}</strong></span>
-                        <span>Balance <strong className="block text-sm font-semibold text-slate-900 dark:text-[#f2f7f4]">{kilosOSinBase(helado?.balanceKg)}</strong></span>
+                      <span className="mt-2 grid grid-cols-2 gap-x-4 gap-y-2 text-xs text-slate-500">
+                        <span>Mercadería <strong className="block text-sm font-semibold text-slate-900">{plata(local.mercaderia)}</strong></span>
+                        <span>Remitos <strong className="block text-sm font-semibold text-slate-900">{local.remitos}</strong></span>
+                        <span>Helado recibido <strong className="block text-sm font-semibold text-slate-900">{kilos(helado?.compradoKg ?? 0)}</strong></span>
+                        <span>Balance <strong className="block text-sm font-semibold text-slate-900">{kilosOSinBase(helado?.balanceKg)}</strong></span>
                       </span>
                     </button>
                   );
@@ -636,15 +636,15 @@ export default function ComprasClient() {
             </Panel>
           ) : (
             <Panel>
-              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 px-4 py-3">
                 <div>
                   <h2 className="font-semibold">Compras recientes de {nombreLocal}</h2>
-                  <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Remitos del período elegido, sin mezclar otras sucursales.</p>
+                  <p className="mt-0.5 text-sm text-slate-500">Remitos del período elegido, sin mezclar otras sucursales.</p>
                 </div>
                 <Button type="button" variant="ghost" onClick={() => setVista("remitos")}>Ver todos los remitos</Button>
               </div>
               {comprasAlcance.length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <div className="divide-y divide-slate-100">
                   {comprasAlcance.slice(0, 5).map((compra) => (
                     <CompraDetalle
                       key={compra.id}
@@ -666,11 +666,11 @@ export default function ComprasClient() {
               <div className="flex items-start justify-between gap-4">
                 <div>
                   <h2 className="font-semibold">Control inicial de helado</h2>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-1 text-sm text-slate-500">
                     Lo recibido contra los gramos equivalentes vendidos.
                   </p>
                 </div>
-                <Scale size={20} className="shrink-0 text-emerald-700 dark:text-[#37e6b0]" aria-hidden />
+                <Scale size={20} className="shrink-0 text-emerald-700" aria-hidden />
               </div>
               <div className="mt-5">
                 <ComparacionHelado resumen={heladoActual ?? datos.helado.total} />
@@ -683,21 +683,21 @@ export default function ComprasClient() {
 
             <Panel className="p-4">
               <h2 className="font-semibold">Calidad de la información</h2>
-              <div className="mt-4 divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <div className="mt-4 divide-y divide-slate-100">
                 <div className="flex items-center justify-between gap-3 py-3 first:pt-0">
-                  <span className="text-sm text-slate-600 dark:text-[#c1cbc6]">Remitos verificados</span>
+                  <span className="text-sm text-slate-600">Remitos verificados</span>
                   <span className="font-semibold tabular-nums">
                     {resumenAlcance.remitos - resumenAlcance.conProblemas} de {resumenAlcance.remitos}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 py-3">
-                  <span className="text-sm text-slate-600 dark:text-[#c1cbc6]">Ventas de helado con equivalencia</span>
+                  <span className="text-sm text-slate-600">Ventas de helado con equivalencia</span>
                   <span className="font-semibold tabular-nums">
                     {heladoActual?.coberturaPct == null ? "Sin datos" : `${numero(heladoActual.coberturaPct)}%`}
                   </span>
                 </div>
                 <div className="flex items-center justify-between gap-3 py-3 last:pb-0">
-                  <span className="text-sm text-slate-600 dark:text-[#c1cbc6]">
+                  <span className="text-sm text-slate-600">
                     {localId ? "Días con ventas cruzadas" : "Remitos sin local"}
                   </span>
                   <span className="font-semibold tabular-nums">
@@ -712,7 +712,7 @@ export default function ComprasClient() {
 
       {vista === "helado" && heladoActual && (
         <div id="compras-panel-helado" role="tabpanel" aria-labelledby="compras-tab-helado" className="space-y-5">
-          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0 dark:border-[#29403b] dark:divide-[#29403b]">
+          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0">
             <Metrica
               label="Recibido"
               valor={kilos(heladoActual.compradoKg)}
@@ -737,7 +737,7 @@ export default function ComprasClient() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="font-semibold">Kilos que entraron y salieron</h2>
-                    <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">
+                    <p className="mt-1 text-sm text-slate-500">
                       {heladoActual.desdeComparacion && heladoActual.hastaComparacion
                         ? `${nombreLocal} · ${fechaLarga(heladoActual.desdeComparacion)} a ${fechaLarga(heladoActual.hastaComparacion)}`
                         : `${nombreLocal} · sin remitos de helado para cruzar`}
@@ -749,19 +749,19 @@ export default function ComprasClient() {
                   {heladoActual.desdeComparacion ? (
                     <ComparacionHelado resumen={heladoActual} />
                   ) : (
-                    <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+                    <p className="text-sm text-slate-500">
                       Hay ventas en Fudo, pero todavía no hay un remito de sabores que defina desde qué fecha compararlas.
                     </p>
                   )}
                 </div>
               </div>
-              <div className="border-t border-slate-100 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0 dark:border-[#1c2521]">
+              <div className="border-t border-slate-100 pt-5 lg:border-l lg:border-t-0 lg:pl-6 lg:pt-0">
                 <p className="text-sm font-semibold">Cómo leer el balance</p>
-                <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-[#c1cbc6]">
+                <p className="mt-2 text-sm leading-6 text-slate-600">
                   El balance es recibido menos vendido estimado. Todavía no es merma: incluye el stock que había al inicio,
                   el que quedó al cierre y los productos cuya receta aún no tiene gramos definidos.
                 </p>
-                <p className="mt-3 text-sm font-medium tabular-nums text-slate-900 dark:text-[#f2f7f4]">
+                <p className="mt-3 text-sm font-medium tabular-nums text-slate-900">
                   {heladoActual.ratioVendidoCompradoPct == null
                     ? "Faltan compras para calcular la relación."
                     : `La venta estimada equivale al ${numero(heladoActual.ratioVendidoCompradoPct)}% de lo recibido en ${heladoActual.diasConVentas} días con ventas.`}
@@ -772,21 +772,21 @@ export default function ComprasClient() {
 
           {!localId && (
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Balance por local</h2>
               </div>
-              <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <div className="divide-y divide-slate-100">
                 {datos.helado.porLocal.map((local) => (
                   <button
                     key={local.localId}
                     type="button"
                     onClick={() => setLocalId(local.localId)}
-                    className="grid min-h-16 w-full gap-2 px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 xl:grid-cols-[minmax(10rem,1fr)_repeat(3,minmax(8rem,0.65fr))_auto] xl:items-center dark:hover:bg-[#13201d]"
+                    className="grid min-h-16 w-full gap-2 px-4 py-3 text-left hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950 xl:grid-cols-[minmax(10rem,1fr)_repeat(3,minmax(8rem,0.65fr))_auto] xl:items-center"
                   >
                     <span className="font-semibold">{local.local}</span>
-                    <span className="text-sm text-slate-500 xl:text-right dark:text-[#94a19c]">Recibido <strong className="ml-1 font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{kilos(local.compradoKg)}</strong></span>
-                    <span className="text-sm text-slate-500 xl:text-right dark:text-[#94a19c]">Vendido <strong className="ml-1 font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{local.desdeComparacion ? kilos(local.vendidoKgEstimado) : "Sin base"}</strong></span>
-                    <span className="text-sm text-slate-500 xl:text-right dark:text-[#94a19c]">Balance <strong className="ml-1 font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{kilosOSinBase(local.balanceKg)}</strong></span>
+                    <span className="text-sm text-slate-500 xl:text-right">Recibido <strong className="ml-1 font-semibold tabular-nums text-slate-900">{kilos(local.compradoKg)}</strong></span>
+                    <span className="text-sm text-slate-500 xl:text-right">Vendido <strong className="ml-1 font-semibold tabular-nums text-slate-900">{local.desdeComparacion ? kilos(local.vendidoKgEstimado) : "Sin base"}</strong></span>
+                    <span className="text-sm text-slate-500 xl:text-right">Balance <strong className="ml-1 font-semibold tabular-nums text-slate-900">{kilosOSinBase(local.balanceKg)}</strong></span>
                     <ArrowRight size={16} aria-hidden className="hidden xl:block" />
                   </button>
                 ))}
@@ -796,19 +796,19 @@ export default function ComprasClient() {
 
           <div className="grid gap-5 xl:grid-cols-2">
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Venta convertida por formato</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Unidades de Fudo multiplicadas por su peso operativo.</p>
+                <p className="mt-0.5 text-sm text-slate-500">Unidades de Fudo multiplicadas por su peso operativo.</p>
               </div>
               {heladoActual.formatos.length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <div className="divide-y divide-slate-100">
                   {heladoActual.formatos.map((formato) => (
                     <div key={formato.id} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 px-4 py-3 text-sm">
                       <div className="min-w-0">
                         <p className="truncate font-medium">{formato.etiqueta}</p>
-                        <p className="text-xs text-slate-500 dark:text-[#7a8882]">{formato.gramosPorUnidad} g por unidad</p>
+                        <p className="text-xs text-slate-500">{formato.gramosPorUnidad} g por unidad</p>
                       </div>
-                      <span className="text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{numero(formato.unidades, 0)} u.</span>
+                      <span className="text-right tabular-nums text-slate-500">{numero(formato.unidades, 0)} u.</span>
                       <span className="w-20 text-right font-semibold tabular-nums">{kilos(formato.kilos)}</span>
                     </div>
                   ))}
@@ -827,17 +827,17 @@ export default function ComprasClient() {
 
           <div className="grid gap-5 xl:grid-cols-2">
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Sabores recibidos</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Cantidad exacta facturada en los remitos verificados.</p>
+                <p className="mt-0.5 text-sm text-slate-500">Cantidad exacta facturada en los remitos verificados.</p>
               </div>
               {heladoActual.sabores.length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <div className="divide-y divide-slate-100">
                   {heladoActual.sabores.slice(0, 12).map((sabor) => (
                     <div key={sabor.producto} className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-4 px-4 py-3 text-sm">
                       <span className="truncate font-medium">{sabor.producto.replace(/^HELADO DE\s+/i, "")}</span>
                       <span className="w-20 text-right tabular-nums">{kilos(sabor.kilos)}</span>
-                      <span className="w-24 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{plata(sabor.costo)}</span>
+                      <span className="w-24 text-right tabular-nums text-slate-500">{plata(sabor.costo)}</span>
                     </div>
                   ))}
                 </div>
@@ -847,11 +847,11 @@ export default function ComprasClient() {
             </Panel>
 
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h2 className="font-semibold">Productos pendientes de equivalencia</h2>
-                    <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Consumen helado, pero todavía no conocemos su receta.</p>
+                    <p className="mt-0.5 text-sm text-slate-500">Consumen helado, pero todavía no conocemos su receta.</p>
                   </div>
                   <Badge tone={heladoActual.sinRegla.length > 0 ? "amber" : "emerald"}>
                     {heladoActual.sinRegla.length > 0 ? `${heladoActual.sinRegla.length} pendientes` : "Completo"}
@@ -859,16 +859,16 @@ export default function ComprasClient() {
                 </div>
               </div>
               {heladoActual.sinRegla.length > 0 ? (
-                <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <div className="divide-y divide-slate-100">
                   {heladoActual.sinRegla.slice(0, 12).map((producto) => (
                     <div key={producto.producto} className="flex items-center justify-between gap-4 px-4 py-3 text-sm">
-                      <span className="min-w-0 truncate text-slate-700 dark:text-[#dbe5e0]">{producto.producto}</span>
-                      <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">{numero(producto.cantidad, 0)} ventas</span>
+                      <span className="min-w-0 truncate text-slate-700">{producto.producto}</span>
+                      <span className="shrink-0 tabular-nums text-slate-500">{numero(producto.cantidad, 0)} ventas</span>
                     </div>
                   ))}
                 </div>
               ) : (
-                <div className="flex items-center gap-2 px-4 py-5 text-sm text-emerald-700 dark:text-[#4ee6b0]">
+                <div className="flex items-center gap-2 px-4 py-5 text-sm text-emerald-700">
                   <CheckCircle2 size={17} aria-hidden />
                   Todas las ventas relacionadas tienen una equivalencia.
                 </div>
@@ -881,10 +881,10 @@ export default function ComprasClient() {
       {vista === "remitos" && (
         <div id="compras-panel-remitos" role="tabpanel" aria-labelledby="compras-tab-remitos" className="space-y-5">
           <Panel>
-            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="flex flex-wrap items-end justify-between gap-3 border-b border-slate-100 px-4 py-3">
               <div>
                 <h2 className="font-semibold">Remitos por local</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+                <p className="mt-0.5 text-sm text-slate-500">
                   {comprasBuscadas.length} resultados · {nombreLocal}
                 </p>
               </div>
@@ -902,12 +902,12 @@ export default function ComprasClient() {
             {gruposRemitos.length > 0 ? (
               <div>
                 {gruposRemitos.map(([local, compras], indice) => (
-                  <div key={local} className={indice > 0 ? "border-t border-slate-200 dark:border-[#29403b]" : ""}>
-                    <div className="flex items-center justify-between gap-3 bg-slate-50 px-4 py-2 dark:bg-[#0d1614]">
+                  <div key={local} className={indice > 0 ? "border-t border-slate-200" : ""}>
+                    <div className="flex items-center justify-between gap-3 bg-slate-50 px-4 py-2">
                       <h3 className="text-sm font-semibold">{local}</h3>
-                      <span className="text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">{compras.length} remitos</span>
+                      <span className="text-xs tabular-nums text-slate-500">{compras.length} remitos</span>
                     </div>
-                    <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                    <div className="divide-y divide-slate-100">
                       {compras.map((compra) => (
                         <CompraDetalle
                           key={compra.id}
@@ -931,14 +931,14 @@ export default function ComprasClient() {
       {vista === "royalty" && (
         <div id="compras-panel-royalty" role="tabpanel" aria-labelledby="compras-tab-royalty">
           <Panel>
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="border-b border-slate-100 px-4 py-3">
               <h2 className="font-semibold">Control del royalty</h2>
-              <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">
                 Se compara lo cobrado en el remito con (venta del local ÷ 1,21) × 5%, usando el mes declarado.
               </p>
             </div>
             {controles.length > 0 ? (
-              <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <div className="divide-y divide-slate-100">
                 {controles.map((control) => (
                   <div key={control.compraId} className="px-4 py-4">
                     <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -946,18 +946,18 @@ export default function ComprasClient() {
                         {control.local} · {mesLargo(control.mes)}
                         {control.origenMes === "fecha" && <span className="ml-2"><Badge tone="amber">Mes supuesto</Badge></span>}
                       </span>
-                      <span className={`font-semibold tabular-nums ${Math.abs(control.diferenciaPct) < 0.5 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
+                      <span className={`font-semibold tabular-nums ${Math.abs(control.diferenciaPct) < 0.5 ? "text-emerald-700" : "text-rose-600"}`}>
                         {control.diferencia >= 0 ? "+" : ""}{plata(control.diferencia)} · {control.diferenciaPct >= 0 ? "+" : ""}{control.diferenciaPct.toFixed(2)}%
                       </span>
                     </div>
-                    <div className="mt-2 grid grid-cols-2 gap-x-5 gap-y-2 text-sm text-slate-500 sm:grid-cols-4 dark:text-[#94a19c]">
-                      <span>Venta <strong className="block font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{plata(control.ventaConIva)}</strong></span>
-                      <span>Neta <strong className="block font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{plata(control.ventaNeta)}</strong></span>
-                      <span>Corresponde <strong className="block font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{plata(control.esperado)}</strong></span>
-                      <span>Cobrado <strong className="block font-semibold tabular-nums text-slate-900 dark:text-[#f2f7f4]">{plata(control.cobrado)}</strong></span>
+                    <div className="mt-2 grid grid-cols-2 gap-x-5 gap-y-2 text-sm text-slate-500 sm:grid-cols-4">
+                      <span>Venta <strong className="block font-semibold tabular-nums text-slate-900">{plata(control.ventaConIva)}</strong></span>
+                      <span>Neta <strong className="block font-semibold tabular-nums text-slate-900">{plata(control.ventaNeta)}</strong></span>
+                      <span>Corresponde <strong className="block font-semibold tabular-nums text-slate-900">{plata(control.esperado)}</strong></span>
+                      <span>Cobrado <strong className="block font-semibold tabular-nums text-slate-900">{plata(control.cobrado)}</strong></span>
                     </div>
                     {!control.completo && (
-                      <p className="mt-3 text-xs text-amber-700 dark:text-amber-300">
+                      <p className="mt-3 text-xs text-amber-700">
                         Hay {control.diasConDatos} de {control.diasDelMes} días sincronizados; la diferencia todavía no es concluyente.
                       </p>
                     )}
@@ -973,7 +973,7 @@ export default function ComprasClient() {
 
       {vista === "cafe" && cafeActual && (
         <div id="compras-panel-cafe" role="tabpanel" aria-labelledby="compras-tab-cafe" className="space-y-5">
-          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0 dark:border-[#29403b] dark:divide-[#29403b]">
+          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 xl:grid-cols-4 xl:divide-y-0">
             <Metrica
               label="Café recibido"
               valor={kilos(cafeActual.compradoKg)}
@@ -1013,7 +1013,7 @@ export default function ComprasClient() {
 
           <Panel className="p-4">
             <h2 className="font-semibold">Cómo se llega a ese consumo</h2>
-            <p className="mt-1 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-1 max-w-[70ch] text-sm text-slate-500">
               Cada infusión se cuenta a {datos.cafe.gramosPorInfusion} g. Es un promedio a
               propósito: parte de esas infusiones son té o mate cocido y no llevan un grano, y
               parte son dobles y llevan el doble. Una promo con su composición cargada suma lo
@@ -1021,37 +1021,37 @@ export default function ComprasClient() {
               lo que la carta dice que llevan todas.
             </p>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
-              <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
-                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
+              <div className="rounded-lg border border-slate-100 p-3">
+                <p className="text-xs font-semibold uppercase text-slate-500">
                   Vendido suelto
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesSueltas)}</p>
-                <p className="text-xs text-slate-500 dark:text-[#94a19c]">cortados, lattes, americanos</p>
+                <p className="text-xs text-slate-500">cortados, lattes, americanos</p>
               </div>
-              <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
-                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
+              <div className="rounded-lg border border-slate-100 p-3">
+                <p className="text-xs font-semibold uppercase text-slate-500">
                   Dentro de una promo
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesEnPromo)}</p>
-                <p className="text-xs text-slate-500 dark:text-[#94a19c]">promos con infusión declarada</p>
+                <p className="text-xs text-slate-500">promos con infusión declarada</p>
               </div>
-              <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
-                <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
+              <div className="rounded-lg border border-slate-100 p-3">
+                <p className="text-xs font-semibold uppercase text-slate-500">
                   Promo sin composición
                 </p>
                 <p className="mt-1 text-xl font-bold tabular-nums">{numero(cafeActual.infusionesSupuestas)}</p>
-                <p className="text-xs text-slate-500 dark:text-[#94a19c]">una infusión supuesta cada una</p>
+                <p className="text-xs text-slate-500">una infusión supuesta cada una</p>
               </div>
             </div>
 
             {cafeActual.detalle.length > 0 && (
               <>
-              <ul className="mt-4 divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+              <ul className="mt-4 divide-y divide-slate-100 md:hidden">
                 {cafeActual.detalle.map((fila) => (
                   <li key={fila.producto} className="flex items-start justify-between gap-3 py-3">
                     <div className="min-w-0">
                       <p className="font-medium">{fila.producto}</p>
-                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                      <p className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-slate-500">
                         <Badge tone={fila.origen === "suelto" ? "slate" : "amber"}>
                           {ETIQUETA_ORIGEN_CAFE[fila.origen]}
                         </Badge>
@@ -1066,7 +1066,7 @@ export default function ComprasClient() {
               <div className="mt-4 hidden overflow-x-auto md:block">
                 <table className="w-full min-w-[30rem] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+                    <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                       <th className="w-2/5 py-2 pr-3 font-semibold">Producto</th>
                       <th className="py-2 pr-3 font-semibold">Origen</th>
                       <th className="py-2 pr-3 text-right font-semibold">Unidades</th>
@@ -1078,7 +1078,7 @@ export default function ComprasClient() {
                     {cafeActual.detalle.map((fila) => (
                       <tr
                         key={fila.producto}
-                        className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]"
+                        className="border-b border-slate-100 last:border-0"
                       >
                         <td className="py-2 pr-3 font-medium">{fila.producto}</td>
                         <td className="py-2 pr-3">
@@ -1087,7 +1087,7 @@ export default function ComprasClient() {
                           </Badge>
                         </td>
                         <td className="py-2 pr-3 text-right tabular-nums">{numero(fila.unidades)}</td>
-                        <td className="py-2 pr-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                        <td className="py-2 pr-3 text-right tabular-nums text-slate-500">
                           {fila.gramosPorUnidad}
                         </td>
                         <td className="py-2 text-right font-semibold tabular-nums">{kilos(fila.kilos)}</td>
@@ -1103,11 +1103,11 @@ export default function ComprasClient() {
           {cafeActual.compras.length > 0 && (
             <Panel className="p-4">
               <h2 className="font-semibold">Café comprado</h2>
-              <div className="mt-3 divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <div className="mt-3 divide-y divide-slate-100">
                 {cafeActual.compras.map((compra) => (
                   <div key={compra.detalle} className="flex items-center justify-between gap-3 py-2.5">
                     <span className="min-w-0 truncate font-medium">{compra.detalle}</span>
-                    <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    <span className="shrink-0 tabular-nums text-slate-500">
                       {kilos(compra.kilos)} · {plata(compra.costo)}
                     </span>
                   </div>
@@ -1118,19 +1118,19 @@ export default function ComprasClient() {
 
           {cafeActual.promosSupuestas.length > 0 && (
             <Panel className="p-4">
-              <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900 dark:text-amber-200">
+              <h2 className="inline-flex items-center gap-2 font-semibold text-amber-900">
                 <AlertTriangle size={16} aria-hidden />
                 Promos contadas con una infusión supuesta
               </h2>
-              <p className="mt-1 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-1 max-w-[70ch] text-sm text-slate-500">
                 No tienen su composición cargada. Suman una infusión cada una (dos las que son para
                 dos); si alguna no lleva café, o lleva dos, el consumo de arriba queda corrido.
               </p>
-              <div className="mt-3 divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <div className="mt-3 divide-y divide-slate-100">
                 {cafeActual.promosSupuestas.slice(0, 15).map((promo) => (
                   <div key={promo.producto} className="flex items-center justify-between gap-3 py-2 text-sm">
                     <span className="min-w-0 truncate">{promo.producto}</span>
-                    <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    <span className="shrink-0 tabular-nums text-slate-500">
                       {numero(promo.unidades)} vendidas · {numero(promo.infusiones)} infusiones
                     </span>
                   </div>
@@ -1140,7 +1140,7 @@ export default function ComprasClient() {
           )}
 
           {cafeActual.comprasSinPeso.length > 0 && (
-            <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="text-sm text-slate-500">
               No se suma porque el remito no dice cuánto pesa:{" "}
               {cafeActual.comprasSinPeso.map((c) => `${c.detalle} (${numero(c.cantidad)})`).join(", ")}.
             </p>
@@ -1158,9 +1158,9 @@ export default function ComprasClient() {
       {vista === "clasificacion" && (
         <div id="compras-panel-clasificacion" role="tabpanel" aria-labelledby="compras-tab-clasificacion">
           <Panel>
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="border-b border-slate-100 px-4 py-3">
               <h2 className="font-semibold">Clasificación de productos</h2>
-              <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">
                 A qué sector imputa cada cosa que se compra y cada cosa que se vende. Es una lista
                 sola porque el sector es uno solo: corregir acá el café que llega por remito
                 corrige también cómo se clasifica el café que se vende en Fudo.

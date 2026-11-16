@@ -114,7 +114,7 @@ export default function ConfiguracionVentasClient() {
 
       <div aria-live="polite">
         <ErrorText>{error}</ErrorText>
-        {guardado && !error && <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">{guardado}</p>}
+        {guardado && !error && <p className="text-sm font-medium text-emerald-700">{guardado}</p>}
       </div>
 
       <Panel>
@@ -122,12 +122,12 @@ export default function ConfiguracionVentasClient() {
           titulo="Importar de Fudo"
           descripcion="Trae salones, mesas, cocinas, categorías, productos con su precio, medios de pago y roles. Sólo lee de Fudo, y se puede repetir: actualiza lo que cambió sin duplicar."
         />
-        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <ul className="divide-y divide-slate-100">
           {locales.map((l) => (
             <li key={l.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
               <div>
                 <p className="font-semibold">{l.nombre}</p>
-                <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+                <p className="text-sm text-slate-500">
                   {l.salones ? `${l.salones} salones · ${l.productos} productos · ${l.medios} medios de pago` : "Todavía no importado"}
                 </p>
               </div>
@@ -143,7 +143,7 @@ export default function ConfiguracionVentasClient() {
           ))}
         </ul>
         {resultado && (
-          <p className="border-t border-slate-100 px-4 py-3 text-sm dark:border-[#1c2521]">
+          <p className="border-t border-slate-100 px-4 py-3 text-sm">
             <strong>{resultado.local}:</strong> {resultado.texto}
           </p>
         )}
@@ -161,7 +161,7 @@ export default function ConfiguracionVentasClient() {
                     onClick={() => setRolId(r.id)}
                     aria-current={r.id === rolId}
                     className={`flex w-full items-center justify-between rounded-md px-3 py-2 text-left text-sm font-medium ${
-                      r.id === rolId ? "bg-emerald-50 text-emerald-900 dark:bg-[#0f2620] dark:text-[#cdfbea]" : "hover:bg-slate-50 dark:hover:bg-[#172724]"
+                      r.id === rolId ? "bg-emerald-50 text-emerald-900" : "hover:bg-slate-50"
                     }`}
                   >
                     {r.nombre}
@@ -180,7 +180,7 @@ export default function ConfiguracionVentasClient() {
                   setRolId(id);
                 }, "Rol creado");
               }}
-              className="flex gap-2 border-t border-slate-100 p-3 dark:border-[#1c2521]"
+              className="flex gap-2 border-t border-slate-100 p-3"
             >
               <Input value={nuevoRol} onChange={(e) => setNuevoRol(e.target.value)} placeholder="Rol nuevo" aria-label="Nombre del rol nuevo" />
               <Button type="submit" variant="ghost" disabled={!nuevoRol.trim()} aria-label="Crear rol copiando el elegido" title="Copia los permisos del rol elegido">
@@ -223,14 +223,14 @@ export default function ConfiguracionVentasClient() {
                 </div>
                 {grupos.map((g) => (
                   <fieldset key={g}>
-                    <legend className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">{g}</legend>
+                    <legend className="mb-2 text-xs font-semibold text-slate-500">{g}</legend>
                     <div className="grid gap-1 sm:grid-cols-2">
                       {catalogo
                         .filter((p) => p.grupo === g)
                         .map((p) => {
                           const tiene = borrador.permisos.includes(p.codigo);
                           return (
-                            <label key={p.codigo} className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm hover:bg-slate-50 dark:hover:bg-[#172724]">
+                            <label key={p.codigo} className="flex min-h-10 items-center gap-2 rounded-md px-2 text-sm hover:bg-slate-50">
                               <Checkbox
                                 checked={tiene}
                                 onChange={() =>
@@ -274,14 +274,14 @@ export default function ConfiguracionVentasClient() {
           {[...new Set(empleados.map((e) => e.local))].sort().map((local) => {
             const delLocal = empleados.filter((e) => e.local === local);
             return (
-              <section key={local} className="border-t border-slate-100 first:border-t-0 dark:border-[#1c2521]">
-                <h3 className="flex items-center justify-between bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-600 dark:bg-[#0d1614] dark:text-[#c1cbc6]">
+              <section key={local} className="border-t border-slate-100 first:border-t-0">
+                <h3 className="flex items-center justify-between bg-slate-50 px-4 py-2 text-xs font-semibold text-slate-600">
                   {local}
-                  <span className="font-normal text-slate-500 dark:text-[#94a19c]">
+                  <span className="font-normal text-slate-500">
                     {delLocal.length} {delLocal.length === 1 ? "persona" : "personas"}
                   </span>
                 </h3>
-                <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <ul className="divide-y divide-slate-100">
                   {delLocal.map((e) => (
                     <li key={e.id} className="grid items-center gap-x-3 gap-y-1.5 px-4 py-2.5 sm:grid-cols-[minmax(0,1fr)_15rem]">
                       <span className="min-w-0 truncate font-medium">{e.nombre}</span>
@@ -312,6 +312,10 @@ export default function ConfiguracionVentasClient() {
       )}
 
       {localMedios && (
+        <PropinaSugerida key={localMedios} localId={localMedios} nombre={locales.find((l) => l.id === localMedios)?.nombre ?? ""} puede={Boolean(permisos.admin_payment_types)} />
+      )}
+
+      {localMedios && (
         <Descuentos localId={localMedios} locales={locales.filter((l) => l.medios > 0)} onCambiarLocal={setLocalMedios} permisos={permisos} />
       )}
 
@@ -332,7 +336,7 @@ export default function ConfiguracionVentasClient() {
               </Select>
             }
           />
-          <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+          <ul className="divide-y divide-slate-100">
             {medios.map((m) => (
               <li key={m.id}>
                 <label className="flex min-h-11 items-center gap-3 px-4 text-sm">
@@ -442,9 +446,9 @@ function Descuentos({
         }
       />
       {lista.length === 0 ? (
-        <p className="px-4 py-4 text-sm text-slate-500 dark:text-[#94a19c]">Todavía no hay descuentos en la lista de este local.</p>
+        <p className="px-4 py-4 text-sm text-slate-500">Todavía no hay descuentos en la lista de este local.</p>
       ) : (
-        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <ul className="divide-y divide-slate-100">
           {lista.map((d) => (
             <li key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-2.5 text-sm">
               <label className="flex min-w-0 flex-1 items-center gap-3">
@@ -455,7 +459,7 @@ function Descuentos({
                 />
                 <span className={`font-medium ${d.activo ? "" : "text-slate-400 line-through"}`}>{d.nombre}</span>
               </label>
-              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800 dark:bg-[#1d1830] dark:text-violet-200">
+              <span className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-semibold text-violet-800">
                 {d.porcentaje ? `${d.porcentaje}%${d.tope ? ` · tope ${pesos(d.tope)}` : ""}` : pesos(d.monto ?? 0)}
               </span>
               {puede && (
@@ -463,7 +467,7 @@ function Descuentos({
                   type="button"
                   onClick={() => void cambiar(() => pedir(`/api/ventas/descuentos/${d.id}`, "DELETE"))}
                   aria-label={`Borrar ${d.nombre}`}
-                  className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600 dark:hover:bg-[#241419]"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-slate-400 hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-600"
                 >
                   <Trash2 size={15} aria-hidden />
                 </button>
@@ -473,19 +477,19 @@ function Descuentos({
         </ul>
       )}
       {puede && (
-        <form onSubmit={crear} className="flex flex-wrap items-end gap-2 border-t border-slate-100 p-4 dark:border-[#1c2521]">
+        <form onSubmit={crear} className="flex flex-wrap items-end gap-2 border-t border-slate-100 p-4">
           <div className="min-w-[12rem] flex-1">
             <Label>Nombre</Label>
             <Input value={nombre} onChange={(e) => setNombre(e.target.value)} placeholder="Empleado, Cliente frecuente, Cortesía…" />
           </div>
-          <div className="flex min-h-11 items-center rounded-lg border border-slate-200 p-0.5 dark:border-[#29403b]">
+          <div className="flex min-h-11 items-center rounded-lg border border-slate-200 p-0.5">
             {(["pct", "monto"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTipo(t)}
                 aria-pressed={tipo === t}
-                className={`min-h-9 rounded-md px-3 text-sm font-semibold ${tipo === t ? "bg-violet-600 text-white" : "text-slate-500 dark:text-[#94a19c]"}`}
+                className={`min-h-9 rounded-md px-3 text-sm font-semibold ${tipo === t ? "bg-violet-600 text-white" : "text-slate-500"}`}
               >
                 {t === "pct" ? "%" : "$"}
               </button>
@@ -507,7 +511,55 @@ function Descuentos({
           </Button>
         </form>
       )}
-      {error && <p className="px-4 pb-3 text-sm text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p className="px-4 pb-3 text-sm text-rose-600">{error}</p>}
+    </Panel>
+  );
+}
+
+/** La propina sugerida que se imprime en la precuenta, como en Fudo. */
+function PropinaSugerida({ localId, nombre, puede }: { localId: string; nombre: string; puede: boolean }) {
+  const [pct, setPct] = useState("");
+  const [guardada, setGuardada] = useState<string | null>(null);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    pedir(`/api/ventas/local?localId=${localId}`)
+      .then((d) => {
+        const v = d.propinaSugeridaPct ? String(d.propinaSugeridaPct) : "";
+        setPct(v);
+        setGuardada(v);
+      })
+      .catch((e: Error) => setError(e.message));
+  }, [localId]);
+
+  async function guardar(e: React.FormEvent) {
+    e.preventDefault();
+    setError("");
+    try {
+      await pedir("/api/ventas/local", "PATCH", { localId, propinaSugeridaPct: pct ? Number(pct.replace(",", ".")) : null });
+      setGuardada(pct);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "No se pudo guardar");
+    }
+  }
+
+  return (
+    <Panel>
+      <PanelHeader
+        titulo="Propina sugerida"
+        descripcion={`Se imprime al pie de la precuenta de ${nombre}: el porcentaje, cuánto es y el total con propina. Vacío, no se imprime.`}
+      />
+      <form onSubmit={guardar} className="flex flex-wrap items-end gap-3 p-4">
+        <div className="w-32">
+          <Label>Porcentaje</Label>
+          <Input inputMode="decimal" value={pct} onChange={(e) => setPct(e.target.value.replace(/[^\d.,]/g, ""))} placeholder="10" disabled={!puede} />
+        </div>
+        <Button type="submit" variant="ghost" disabled={!puede || guardada === null || pct === guardada}>
+          Guardar
+        </Button>
+        {guardada !== null && pct === guardada && guardada && <p className="pb-3 text-sm text-emerald-700">Sale en la precuenta: {guardada}%</p>}
+        <ErrorText>{error}</ErrorText>
+      </form>
     </Panel>
   );
 }

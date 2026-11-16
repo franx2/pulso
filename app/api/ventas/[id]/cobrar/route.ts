@@ -44,6 +44,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
     select: {
       estado: true,
       localId: true,
+      clienteId: true,
       descuentoPct: true,
       descuentoMonto: true,
       items: { select: { precio: true, cantidad: true, anulado: true, descuentoPct: true, descuentoMonto: true } },
@@ -64,6 +65,10 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   const tipoDe = new Map(medios.map((m) => [m.id, m.tipo]));
   if (pedidos.some((p) => !tipoDe.has(p.medioPagoId ?? ""))) {
     return NextResponse.json({ error: "Elegí un medio de pago válido para cada pago" }, { status: 400 });
+  }
+
+  if (!venta.clienteId && pedidos.some((p) => tipoDe.get(p.medioPagoId ?? "") === "CUENTA_CORRIENTE")) {
+    return NextResponse.json({ error: "Para cobrar a cuenta corriente, primero elegí el cliente de la venta" }, { status: 400 });
   }
 
   const { total } = totalesDeVenta(venta.items, { pct: venta.descuentoPct, monto: venta.descuentoMonto });

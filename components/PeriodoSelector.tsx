@@ -158,10 +158,10 @@ function nombrar(valor: ValorPeriodo, medido: { desde: string; hasta: string }, 
 // --- El control ------------------------------------------------------------
 
 const foco =
-  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0]";
-const flecha = `grid w-10 shrink-0 place-items-center text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent dark:text-[#94a19c] dark:hover:bg-[#162824] dark:hover:text-[#f2f7f4] ${foco}`;
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950";
+const flecha = `grid w-10 shrink-0 place-items-center text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent ${foco}`;
 const campo =
-  "min-h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-base text-slate-900 outline-none transition-colors focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600/25 sm:text-sm dark:border-[#29403b] dark:bg-[#0b1412] dark:text-[#f2f7f4] dark:[color-scheme:dark] dark:focus-visible:border-[#37e6b0] dark:focus-visible:ring-[#37e6b0]/25";
+  "min-h-10 w-full rounded-lg border border-slate-200 bg-white px-2.5 text-base text-slate-900 outline-none transition-colors focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-slate-950/25 sm:text-sm";
 
 export default function PeriodoSelector({
   valor,
@@ -196,7 +196,7 @@ export default function PeriodoSelector({
 
   return (
     <div className="flex w-full min-w-0 max-w-full sm:inline-flex sm:w-auto">
-      <div className="flex min-h-11 w-full min-w-0 max-w-full items-stretch overflow-hidden rounded-lg sm:inline-flex sm:w-auto border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
+      <div className="flex min-h-11 w-full min-w-0 max-w-full items-stretch overflow-hidden rounded-lg sm:inline-flex sm:w-auto border border-slate-200 bg-white">
         <button
           type="button"
           className={flecha}
@@ -215,18 +215,18 @@ export default function PeriodoSelector({
           aria-expanded={abierto}
           aria-controls={abierto ? idPanel : undefined}
           aria-label={`Período: ${titulo}, ${detalle}. Cambiar período`}
-          className={`flex min-w-0 flex-1 items-center gap-2.5 border-x border-slate-200 px-3 py-1 text-left transition-colors hover:bg-slate-50 dark:border-[#29403b] dark:hover:bg-[#162824] ${foco} ${
-            abierto ? "bg-slate-50 dark:bg-[#162824]" : ""
+          className={`flex min-w-0 flex-1 items-center gap-2.5 border-x border-slate-200 px-3 py-1 text-left transition-colors hover:bg-slate-50 ${foco} ${
+            abierto ? "bg-slate-50" : ""
           }`}
         >
-          <CalendarDays size={17} className="shrink-0 text-emerald-700 dark:text-[#37e6b0]" aria-hidden />
+          <CalendarDays size={17} className="shrink-0 text-emerald-700" aria-hidden />
           <span className="min-w-0">
-            <span className="block truncate text-sm font-semibold leading-5 text-slate-900 dark:text-[#f2f7f4]">{titulo}</span>
-            <span className="block truncate text-xs leading-4 tabular-nums text-slate-500 dark:text-[#94a19c]">{detalle}</span>
+            <span className="block truncate text-sm font-semibold leading-5 text-slate-900">{titulo}</span>
+            <span className="block truncate text-xs leading-4 tabular-nums text-slate-500">{detalle}</span>
           </span>
           <ChevronDown
             size={15}
-            className={`ml-auto shrink-0 text-slate-400 transition-transform duration-200 dark:text-[#7a8882] ${abierto ? "rotate-180" : ""}`}
+            className={`ml-auto shrink-0 text-slate-400 transition-transform duration-200 ${abierto ? "rotate-180" : ""}`}
             aria-hidden
           />
         </button>
@@ -369,8 +369,8 @@ function PanelPeriodo({
   const opcion = (activo: boolean) =>
     `min-h-10 rounded-lg px-3 text-sm font-medium transition-colors ${foco} ${
       activo
-        ? "bg-emerald-700 text-white dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-        : "text-slate-700 hover:bg-slate-100 dark:text-[#c1cbc6] dark:hover:bg-[#162824]"
+        ? "bg-emerald-700 text-white"
+        : "text-slate-700 hover:bg-slate-100"
     }`;
 
   if (typeof document === "undefined") return null;
@@ -383,15 +383,15 @@ function PanelPeriodo({
       role="dialog"
       aria-label="Elegir período"
       style={posicion ?? { visibility: "hidden" }}
-      className={`fixed z-[61] flex flex-col gap-3 overflow-y-auto overscroll-contain border border-slate-200 bg-white text-slate-900 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4] ${
+      className={`fixed z-[61] flex flex-col gap-3 overflow-y-auto overscroll-contain border border-slate-200 bg-white text-slate-900 ${
         hoja
           ? "rounded-t-2xl border-b-0 px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-12px_35px_rgba(15,23,42,0.22)] motion-safe:animate-[subir_260ms_cubic-bezier(0.16,1,0.3,1)]"
-          : "rounded-xl p-3 shadow-[0_12px_35px_rgba(15,23,42,0.18)] motion-safe:animate-[aparecer_160ms_cubic-bezier(0.16,1,0.3,1)] dark:shadow-[0_12px_35px_rgba(0,0,0,0.5)]"
+          : "rounded-xl p-3 shadow-[0_12px_35px_rgba(15,23,42,0.18)] motion-safe:animate-[aparecer_160ms_cubic-bezier(0.16,1,0.3,1)]"
       }`}
     >
       {hoja && (
         <div className="flex items-center justify-between">
-          <span className="mx-auto mb-1 h-1 w-10 rounded-full bg-slate-200 dark:bg-[#29403b]" aria-hidden />
+          <span className="mx-auto mb-1 h-1 w-10 rounded-full bg-slate-200" aria-hidden />
         </div>
       )}
       {hoja && (
@@ -400,7 +400,7 @@ function PanelPeriodo({
           <button
             type="button"
             onClick={() => onCerrar()}
-            className={`min-h-10 rounded-lg px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 dark:text-[#4ee6b0] dark:hover:bg-[#162824] ${foco}`}
+            className={`min-h-10 rounded-lg px-3 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 ${foco}`}
           >
             Listo
           </button>
@@ -414,12 +414,12 @@ function PanelPeriodo({
         ))}
       </div>
 
-      <div className="border-t border-slate-100 pt-3 dark:border-[#1c2521]">
+      <div className="border-t border-slate-100 pt-3">
         <div className="mb-2 flex items-center gap-1">
           <button
             type="button"
             onClick={() => setAnioVista(String(Number(anioVista) - 1))}
-            className={`grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 dark:text-[#94a19c] dark:hover:bg-[#162824] dark:hover:text-[#f2f7f4] ${foco}`}
+            className={`grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 ${foco}`}
             aria-label="Año anterior"
           >
             <ChevronLeft size={16} aria-hidden />
@@ -429,7 +429,7 @@ function PanelPeriodo({
             type="button"
             onClick={() => setAnioVista(String(Number(anioVista) + 1))}
             disabled={anioVista >= anioHoy}
-            className={`grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent dark:text-[#94a19c] dark:hover:bg-[#162824] dark:hover:text-[#f2f7f4] ${foco}`}
+            className={`grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:bg-transparent ${foco}`}
             aria-label="Año siguiente"
           >
             <ChevronRight size={16} aria-hidden />
@@ -440,8 +440,8 @@ function PanelPeriodo({
             onClick={() => onElegir({ ...valor, periodo: "anio-calendario", anio: anioVista })}
             className={`ml-auto min-h-9 rounded-lg px-3 text-xs font-semibold transition-colors ${foco} ${
               anioCompletoActivo
-                ? "bg-emerald-700 text-white dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-                : "text-emerald-700 hover:bg-emerald-50 dark:text-[#4ee6b0] dark:hover:bg-[#162824]"
+                ? "bg-emerald-700 text-white"
+                : "text-emerald-700 hover:bg-emerald-50"
             }`}
           >
             Año {anioVista} completo
@@ -460,15 +460,15 @@ function PanelPeriodo({
                 aria-pressed={activo}
                 aria-label={nombreMes(mes)}
                 onClick={() => onElegir({ ...valor, periodo: mes === mesHoy ? "mtd" : "mes-calendario", mes })}
-                className={`relative min-h-10 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent dark:disabled:text-[#3d4f4a] ${foco} ${
+                className={`relative min-h-10 rounded-lg text-sm font-medium transition-colors disabled:cursor-not-allowed disabled:text-slate-300 disabled:hover:bg-transparent ${foco} ${
                   activo
-                    ? "bg-emerald-700 text-white dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-                    : "text-slate-700 hover:bg-slate-100 dark:text-[#c1cbc6] dark:hover:bg-[#162824]"
+                    ? "bg-emerald-700 text-white"
+                    : "text-slate-700 hover:bg-slate-100"
                 }`}
               >
                 {nombre.slice(0, 3)}
                 {mes === mesHoy && !activo && (
-                  <span className="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-emerald-600 dark:bg-[#37e6b0]" aria-hidden />
+                  <span className="absolute bottom-1.5 left-1/2 h-1 w-1 -translate-x-1/2 rounded-full bg-emerald-600" aria-hidden />
                 )}
               </button>
             );
@@ -477,29 +477,29 @@ function PanelPeriodo({
       </div>
 
       <form
-        className="border-t border-slate-100 pt-3 dark:border-[#1c2521]"
+        className="border-t border-slate-100 pt-3"
         onSubmit={(e) => {
           e.preventDefault();
           if (!desde || !hasta || errorRango) return;
           onElegir({ ...valor, periodo: desde === hoy && hasta === hoy ? "hoy" : "rango", desde, hasta });
         }}
       >
-        <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Fechas a medida</p>
+        <p className="mb-2 text-xs font-semibold text-slate-500">Fechas a medida</p>
         <div className="grid grid-cols-2 gap-2">
-          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-[#94a19c]">
+          <label className="flex flex-col gap-1 text-xs text-slate-500">
             Desde
             <input type="date" value={desde} max={hasta || hoy} onChange={(e) => setDesde(e.target.value)} className={campo} required />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-slate-500 dark:text-[#94a19c]">
+          <label className="flex flex-col gap-1 text-xs text-slate-500">
             Hasta
             <input type="date" value={hasta} min={desde} max={hoy} onChange={(e) => setHasta(e.target.value)} className={campo} required />
           </label>
         </div>
-        {errorRango && <p className="mt-2 text-xs text-rose-600 dark:text-rose-400">{errorRango}</p>}
+        {errorRango && <p className="mt-2 text-xs text-rose-600">{errorRango}</p>}
         <button
           type="submit"
           disabled={!desde || !hasta || Boolean(errorRango)}
-          className={`mt-2 min-h-10 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-[#37e6b0] dark:text-[#0b1412] dark:hover:bg-[#5cf0c2] ${foco}`}
+          className={`mt-2 min-h-10 w-full rounded-lg bg-emerald-700 px-4 text-sm font-semibold text-white transition-colors hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-50 ${foco}`}
         >
           Ver {desde && hasta && !errorRango ? `del ${fechaCorta(desde)} al ${fechaCorta(hasta)}` : "estas fechas"}
         </button>

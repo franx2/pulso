@@ -67,7 +67,7 @@ function CurvaEstacional({ meses, mesActual }: { meses: Mes[]; mesActual: number
             <div key={mes.mes} className="flex flex-1 flex-col items-center justify-end gap-1">
               <span
                 className={`text-[11px] font-semibold tabular-nums ${
-                  mes.confiable ? "text-slate-500 dark:text-[#94a19c]" : "text-slate-300 dark:text-[#53615c]"
+                  mes.confiable ? "text-slate-500" : "text-slate-300"
                 }`}
               >
                 {mes.indice.toFixed(2)}
@@ -76,11 +76,11 @@ function CurvaEstacional({ meses, mesActual }: { meses: Mes[]; mesActual: number
                 title={`${NOMBRE_MES[mes.mes - 1]}: ${mes.dias} días observados en ${mes.anios} ${mes.anios === 1 ? "año" : "años"}`}
                 className={`w-full rounded-t ${
                   !mes.confiable
-                    ? "bg-slate-200 dark:bg-[#26312d]"
+                    ? "bg-slate-200"
                     : sobre
-                      ? "bg-emerald-600 dark:bg-[#37e6b0]"
-                      : "bg-slate-400 dark:bg-[#53615c]"
-                } ${mes.mes === mesActual ? "ring-2 ring-emerald-700 ring-offset-1 dark:ring-[#4ee6b0] dark:ring-offset-[#101c19]" : ""}`}
+                      ? "bg-emerald-600"
+                      : "bg-slate-400"
+                } ${mes.mes === mesActual ? "ring-2 ring-emerald-700 ring-offset-1" : ""}`}
                 style={{ height: `${Math.max(alto(mes.indice), 3)}%` }}
               />
             </div>
@@ -93,8 +93,8 @@ function CurvaEstacional({ meses, mesActual }: { meses: Mes[]; mesActual: number
             key={mes.mes}
             className={`flex-1 text-center text-[11px] ${
               mes.mes === mesActual
-                ? "font-semibold text-emerald-700 dark:text-[#4ee6b0]"
-                : "text-slate-500 dark:text-[#7a8882]"
+                ? "font-semibold text-emerald-700"
+                : "text-slate-500"
             }`}
           >
             {NOMBRE_MES[mes.mes - 1]}
@@ -128,13 +128,13 @@ export default function TemporadaPanel({
 
   if (error) {
     return (
-      <section className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#94a19c]">
+      <section className="rounded-lg border border-slate-200 bg-white p-4 text-sm text-slate-500">
         No pudimos calcular la temporada. Probá recargar.
       </section>
     );
   }
   if (!datos) {
-    return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Calculando temporada" />;
+    return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70" aria-label="Calculando temporada" />;
   }
 
   const elegido = datos.temporadas.find((t) => t.localId === seleccionado) ?? datos.temporadas[0];
@@ -148,26 +148,26 @@ export default function TemporadaPanel({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <div>
             <h2 className="font-semibold">Proyección por temporada · toda la cadena</h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-0.5 text-sm text-slate-500">
               {fechaCorta(datos.desde)} a {fechaCorta(datos.hasta)} · {datos.dias} días, {datos.cadena.locales}{" "}
               {datos.cadena.locales === 1 ? "local" : "locales"}
             </p>
           </div>
           <div className="text-right">
-            <p className="text-2xl font-semibold tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+            <p className="text-2xl font-semibold tabular-nums text-emerald-700">
               {plata(datos.cadena.total)}
             </p>
-            <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+            <p className="text-xs text-slate-500">
               {pct(aporteTemporada)} contra ignorar la temporada
             </p>
           </div>
         </div>
         {datos.cadena.sinProyeccion.length > 0 && (
-          <p className="border-b border-slate-100 px-4 py-2 text-xs text-amber-700 dark:border-[#1c2521] dark:text-amber-300">
+          <p className="border-b border-slate-100 px-4 py-2 text-xs text-amber-700">
             Sin proyección: {datos.cadena.sinProyeccion.join(", ")} — falta historia reciente sincronizada.
           </p>
         )}
@@ -176,7 +176,7 @@ export default function TemporadaPanel({
           .map((temporada) => (
             <p
               key={temporada.localId}
-              className="border-b border-slate-100 px-4 py-2 text-xs text-amber-700 dark:border-[#1c2521] dark:text-amber-300"
+              className="border-b border-slate-100 px-4 py-2 text-xs text-amber-700"
             >
               <strong className="font-semibold">{temporada.local}</strong> estuvo{" "}
               {temporada.proyeccion!.cierre!.dias} días sin vender (
@@ -186,16 +186,16 @@ export default function TemporadaPanel({
               promedio de los dos lados: después de un cierre largo el nivel puede ser otro.
             </p>
           ))}
-        <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <div className="divide-y divide-slate-100">
           {datos.temporadas.map((temporada) => (
             <button
               key={temporada.localId}
               type="button"
               onClick={() => onSeleccionar(temporada.localId)}
-              className={`flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 ${
+              className={`flex w-full flex-wrap items-baseline justify-between gap-x-4 gap-y-1 px-4 py-3 text-left transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950 ${
                 temporada.localId === elegido.localId
-                  ? "bg-emerald-50/70 dark:bg-[#132a25]"
-                  : "hover:bg-slate-50 dark:hover:bg-[#13201d]"
+                  ? "bg-emerald-50/70"
+                  : "hover:bg-slate-50"
               }`}
             >
               <span className="inline-flex items-center gap-1.5 font-semibold">
@@ -203,11 +203,11 @@ export default function TemporadaPanel({
                 <ArrowRight size={13} aria-hidden />
               </span>
               <span className="flex items-baseline gap-4 text-sm">
-                <span className="text-slate-500 dark:text-[#94a19c]">
+                <span className="text-slate-500">
                   {temporada.mesesDeHistoria} meses de historia
-                  {!temporada.suficiente && <span className="ml-1 text-amber-700 dark:text-amber-300">· parcial</span>}
+                  {!temporada.suficiente && <span className="ml-1 text-amber-700">· parcial</span>}
                 </span>
-                <span className="font-semibold tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                <span className="font-semibold tabular-nums text-emerald-700">
                   {temporada.proyeccion ? plata(temporada.proyeccion.total) : "—"}
                 </span>
               </span>
@@ -216,10 +216,10 @@ export default function TemporadaPanel({
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">Estacionalidad de {elegido.local}</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 text-sm text-slate-500">
             Cuánto vende un día de cada mes contra un día promedio del año, ya descontados el crecimiento y
             la inflación. 1,00 es un mes normal.
           </p>
@@ -227,11 +227,11 @@ export default function TemporadaPanel({
 
         <div className="px-4 py-4">
           {elegido.meses.length === 0 ? (
-            <p className="text-sm text-slate-500 dark:text-[#94a19c]">Todavía no hay historia suficiente.</p>
+            <p className="text-sm text-slate-500">Todavía no hay historia suficiente.</p>
           ) : (
             <>
               <CurvaEstacional meses={elegido.meses} mesActual={mesActual} />
-              <p className="mt-3 text-xs text-slate-500 dark:text-[#94a19c]">
+              <p className="mt-3 text-xs text-slate-500">
                 Las barras grises son meses con menos de 20 días observados: quedan en el cálculo pero no
                 deciden. {elegido.mesesConfiables} de 12 meses tienen respaldo y{" "}
                 <strong className="font-semibold">{elegido.mesesRepetidos} se vieron en más de un año</strong>.
@@ -244,7 +244,7 @@ export default function TemporadaPanel({
                 )}
               </p>
               {!elegido.suficiente && (
-                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+                <p className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800">
                   {elegido.local} tiene {elegido.mesesDeHistoria} meses cargados. Con menos de doce, un mes se
                   compara contra un año que todavía no existe entero: tomá la curva como indicio, no como
                   medición.
@@ -255,10 +255,10 @@ export default function TemporadaPanel({
         </div>
 
         {elegido.proyeccion && elegido.proyeccion.porMes.length > 0 && (
-          <div className="overflow-x-auto border-t border-slate-100 dark:border-[#1c2521]">
+          <div className="overflow-x-auto border-t border-slate-100">
             <table className="w-full min-w-[34rem] text-sm">
               <thead>
-                <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+                <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                   <th className="px-4 py-3 font-semibold">Mes</th>
                   <th className="px-3 py-3 text-right font-semibold">Días</th>
                   <th className="px-3 py-3 text-right font-semibold">Índice</th>
@@ -266,19 +266,19 @@ export default function TemporadaPanel({
                   <th className="px-4 py-3 text-right font-semibold">Ventas previstas</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <tbody className="divide-y divide-slate-100">
                 {elegido.proyeccion.porMes.map((mes) => (
                   <tr key={mes.mes}>
                     <td className="px-4 py-3 font-semibold">
                       {mesLargo(mes.mes)}
                       {!mes.confiable ? (
-                        <span className="ml-1.5 text-xs font-normal text-amber-700 dark:text-amber-300">
+                        <span className="ml-1.5 text-xs font-normal text-amber-700">
                           poca historia
                         </span>
                       ) : (
                         !mes.repetido && (
                           <span
-                            className="ml-1.5 text-xs font-normal text-amber-700 dark:text-amber-300"
+                            className="ml-1.5 text-xs font-normal text-amber-700"
                             title="El índice de este mes sale de un solo año: todavía no se sabe si se repite"
                           >
                             un solo año
@@ -286,17 +286,17 @@ export default function TemporadaPanel({
                         )
                       )}
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    <td className="px-3 py-3 text-right tabular-nums text-slate-500">
                       {mes.dias}
                     </td>
                     <td
                       className={`px-3 py-3 text-right tabular-nums ${
-                        mes.indice >= 1 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-slate-500 dark:text-[#94a19c]"
+                        mes.indice >= 1 ? "text-emerald-700" : "text-slate-500"
                       }`}
                     >
                       ×{mes.indice.toFixed(2)}
                     </td>
-                    <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                    <td className="px-3 py-3 text-right tabular-nums text-slate-500">
                       {plataCompacta(mes.ventas / mes.dias)}
                     </td>
                     <td className="px-4 py-3 text-right font-semibold tabular-nums">{plata(mes.ventas)}</td>
@@ -304,7 +304,7 @@ export default function TemporadaPanel({
                 ))}
               </tbody>
             </table>
-            <p className="px-4 py-3 text-xs text-slate-500 dark:text-[#94a19c]">
+            <p className="px-4 py-3 text-xs text-slate-500">
               El primer y el último mes suelen estar cortados por el horizonte: mirá la columna “Días” antes
               de comparar meses entre sí.
             </p>
@@ -312,10 +312,10 @@ export default function TemporadaPanel({
         )}
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">¿Sirve ajustar por temporada?</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 text-sm text-slate-500">
             Se miden {elegido.backtest?.ventanas.length ?? 4} ventanas de 45 días hacia atrás. En cada una
             se proyecta sin mirar lo que pasó y se compara contra lo real, al lado de la alternativa boba:
             repetir el promedio de los últimos 28 días. Son varias y no una porque una sola ventana puede
@@ -324,42 +324,42 @@ export default function TemporadaPanel({
         </div>
         {elegido.backtest ? (
           <>
-            <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-[#1c2521]">
+            <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
               <div className="px-4 py-3">
-                <p className="text-xs text-slate-500 dark:text-[#94a19c]">Con temporada · mediana</p>
+                <p className="text-xs text-slate-500">Con temporada · mediana</p>
                 <p className="mt-1 text-xl font-semibold tabular-nums">
                   {(elegido.backtest.medianaConTemporada * 100).toFixed(1)}%
                 </p>
-                <p className="text-xs text-slate-500 dark:text-[#7a8882]">error medio por día</p>
+                <p className="text-xs text-slate-500">error medio por día</p>
               </div>
               <div className="px-4 py-3">
-                <p className="text-xs text-slate-500 dark:text-[#94a19c]">Repitiendo 28 días · mediana</p>
-                <p className="mt-1 text-xl font-semibold tabular-nums text-slate-500 dark:text-[#94a19c]">
+                <p className="text-xs text-slate-500">Repitiendo 28 días · mediana</p>
+                <p className="mt-1 text-xl font-semibold tabular-nums text-slate-500">
                   {(elegido.backtest.medianaSinTemporada * 100).toFixed(1)}%
                 </p>
-                <p className="text-xs text-slate-500 dark:text-[#7a8882]">error medio por día</p>
+                <p className="text-xs text-slate-500">error medio por día</p>
               </div>
               <div className="px-4 py-3">
-                <p className="text-xs text-slate-500 dark:text-[#94a19c]">Diferencia</p>
+                <p className="text-xs text-slate-500">Diferencia</p>
                 <p
                   className={`mt-1 text-xl font-semibold tabular-nums ${
                     elegido.backtest.medianaMejora > 0
-                      ? "text-emerald-700 dark:text-[#4ee6b0]"
-                      : "text-rose-600 dark:text-rose-400"
+                      ? "text-emerald-700"
+                      : "text-rose-600"
                   }`}
                 >
                   {pct(elegido.backtest.medianaMejora)}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-[#7a8882]">
+                <p className="text-xs text-slate-500">
                   gana en {elegido.backtest.ventanasQueMejoran} de {elegido.backtest.ventanas.length} ·
                   peor caso {pct(elegido.backtest.peorMejora)}
                 </p>
               </div>
             </div>
-            <div className="overflow-x-auto border-t border-slate-100 dark:border-[#1c2521]">
+            <div className="overflow-x-auto border-t border-slate-100">
               <table className="w-full min-w-[30rem] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                     <th className="px-4 py-2.5 font-semibold">Ventana desde</th>
                     <th className="px-3 py-2.5 text-right font-semibold">Días</th>
                     <th className="px-3 py-2.5 text-right font-semibold">Con temporada</th>
@@ -367,24 +367,24 @@ export default function TemporadaPanel({
                     <th className="px-4 py-2.5 text-right font-semibold">Diferencia</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <tbody className="divide-y divide-slate-100">
                   {elegido.backtest.ventanas.map((ventana) => (
                     <tr key={ventana.corte}>
                       <td className="px-4 py-2.5">{fechaCorta(ventana.corte)}</td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">
                         {ventana.dias}
                       </td>
                       <td className="px-3 py-2.5 text-right tabular-nums">
                         {(ventana.wapeConTemporada * 100).toFixed(1)}%
                       </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                      <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">
                         {(ventana.wapeSinTemporada * 100).toFixed(1)}%
                       </td>
                       <td
                         className={`px-4 py-2.5 text-right font-semibold tabular-nums ${
                           ventana.mejora > 0
-                            ? "text-emerald-700 dark:text-[#4ee6b0]"
-                            : "text-rose-600 dark:text-rose-400"
+                            ? "text-emerald-700"
+                            : "text-rose-600"
                         }`}
                       >
                         {pct(ventana.mejora)}
@@ -396,7 +396,7 @@ export default function TemporadaPanel({
             </div>
           </>
         ) : (
-          <p className="px-4 py-3 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="px-4 py-3 text-sm text-slate-500">
             Todavía no hay 45 días recientes completos para medirlo en {elegido.local}.
           </p>
         )}

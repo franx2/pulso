@@ -62,7 +62,7 @@ export default function ReportesVentasClient() {
         {locales.length > 1 && <SelectorLocal locales={locales} valor={localId} onChange={setLocalGuardado} todos={null} />}
         <PeriodoSelector valor={valor} onChange={setValor} hoy={hoy} rango={datos ?? undefined} />
         {datos && (
-          <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+          <p className="text-xs text-slate-500">
             {fechaLarga(datos.desde)} a {fechaLarga(datos.hasta)} · contra {fechaLarga(datos.anterior.desde)} a {fechaLarga(datos.anterior.hasta)}
           </p>
         )}
@@ -70,7 +70,7 @@ export default function ReportesVentasClient() {
 
       <ErrorText>{error}</ErrorText>
       {!datos ? (
-        !error && <div className="h-96 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando reportes" />
+        !error && <div className="h-96 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando reportes" />
       ) : (
         <Contenido datos={datos} />
       )}
@@ -103,7 +103,7 @@ function Contenido({ datos }: { datos: Respuesta }) {
           cadaEtiqueta={cada}
           alto={190}
         />
-        <p className="mb-1 mt-3 text-xs font-medium text-slate-500 dark:text-[#94a19c]">Cantidad de ventas</p>
+        <p className="mb-1 mt-3 text-xs font-medium text-slate-500">Cantidad de ventas</p>
         <BarrasVerticales
           datos={datos.evolucion.map((d) => ({ etiqueta: diaCorto(d.dia), valor: d.cantidad }))}
           color={COLOR_CAT(1)}
@@ -168,15 +168,15 @@ function Tabla({ titulo, subtitulo, columnas, filas }: { titulo: string; subtitu
     <Panel>
       <div className="px-4 pt-3.5">
         <h2 className="text-sm font-semibold">{titulo}</h2>
-        {subtitulo && <p className="text-xs text-slate-500 dark:text-[#94a19c]">{subtitulo}</p>}
+        {subtitulo && <p className="text-xs text-slate-500">{subtitulo}</p>}
       </div>
       {filas.length === 0 ? (
-        <p className="px-4 py-6 text-sm text-slate-500 dark:text-[#94a19c]">Sin datos en el período.</p>
+        <p className="px-4 py-6 text-sm text-slate-500">Sin datos en el período.</p>
       ) : (
         <div className="overflow-x-auto p-2">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-600 dark:bg-[#0d1614] dark:text-[#c1cbc6]">
+              <tr className="bg-slate-50 text-left text-xs font-semibold text-slate-600">
                 {columnas.map((c, i) => (
                   <th key={c} className={`px-3 py-2 ${i >= columnas.length - 2 && i > 1 ? "text-right" : ""}`}>
                     {c}
@@ -186,7 +186,7 @@ function Tabla({ titulo, subtitulo, columnas, filas }: { titulo: string; subtitu
             </thead>
             <tbody>
               {filas.map((f, r) => (
-                <tr key={r} className="odd:bg-white even:bg-slate-50/60 dark:odd:bg-transparent dark:even:bg-[#0d1614]">
+                <tr key={r} className="odd:bg-white even:bg-slate-50/60">
                   {f.map((celda, i) => (
                     <td key={i} className={`px-3 py-1.5 ${i >= f.length - 2 && i > 1 ? "text-right tabular-nums" : ""} ${i === 0 ? "w-8 text-slate-500" : ""}`}>
                       {celda}

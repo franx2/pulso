@@ -34,8 +34,8 @@ export function PanelGrafico({
     <Panel className={`flex flex-col ${className}`}>
       <div className="flex flex-wrap items-start justify-between gap-2 px-4 pt-3.5">
         <div>
-          <h2 className="text-sm font-semibold text-slate-950 dark:text-[#f2f7f4]">{titulo}</h2>
-          {subtitulo && <p className="text-xs text-slate-500 dark:text-[#94a19c]">{subtitulo}</p>}
+          <h2 className="text-sm font-semibold text-slate-950">{titulo}</h2>
+          {subtitulo && <p className="text-xs text-slate-500">{subtitulo}</p>}
         </div>
         {accion}
       </div>
@@ -62,14 +62,14 @@ export function Indicador({
   const Flecha = sube ? ArrowUpRight : ArrowDownRight;
   return (
     <Panel className="px-4 py-3">
-      <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">{etiqueta}</p>
+      <p className="text-xs font-medium text-slate-500">{etiqueta}</p>
       <p className="mt-1 text-2xl font-bold tabular-nums text-[var(--cat-1)]">{valor}</p>
-      <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500 dark:text-[#94a19c]">
+      <p className="mt-0.5 flex items-center gap-1 text-xs text-slate-500">
         {variacion == null ? (
           "sin período anterior para comparar"
         ) : (
           <>
-            <span className={`inline-flex items-center font-semibold ${bueno ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
+            <span className={`inline-flex items-center font-semibold ${bueno ? "text-emerald-700" : "text-rose-600"}`}>
               <Flecha size={13} aria-hidden />
               {sube ? "+" : ""}
               {variacion.toFixed(1).replace(".", ",")}%
@@ -120,7 +120,7 @@ export function BarrasVerticales({
   return (
     <div className="flex gap-2">
       {!sinEje && (
-        <div className="relative w-14 shrink-0 text-right text-[0.6875rem] tabular-nums text-slate-400 dark:text-[#7a8882]" style={{ height: alto }}>
+        <div className="relative w-14 shrink-0 text-right text-[0.6875rem] tabular-nums text-slate-400" style={{ height: alto }}>
           {ticks.map((t) => (
             <span key={t} className="absolute right-0 -translate-y-1/2" style={{ bottom: `${(t / tope) * 100}%` }}>
               {formato(t)}
@@ -133,7 +133,7 @@ export function BarrasVerticales({
           {ticks.map((t) => (
             <div
               key={t}
-              className={`absolute inset-x-0 border-t ${t === 0 ? "border-slate-300 dark:border-[#29403b]" : "border-slate-100 dark:border-[#1c2521]"}`}
+              className={`absolute inset-x-0 border-t ${t === 0 ? "border-slate-300" : "border-slate-100"}`}
               style={{ bottom: `${(t / tope) * 100}%` }}
               aria-hidden
             />
@@ -153,7 +153,7 @@ export function BarrasVerticales({
                   style={{ height: `${(d.valor / tope) * 100}%`, background: color, opacity: activa == null || activa === k ? 1 : 0.55 }}
                 />
                 {activa === k && (
-                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#17211e] px-2 py-1 text-xs text-white shadow-[0_6px_16px_-6px_rgba(15,23,42,0.5)] dark:bg-[#f2f7f4] dark:text-[#0b1412]">
+                  <div className="pointer-events-none absolute bottom-full left-1/2 z-10 mb-1 -translate-x-1/2 whitespace-nowrap rounded-md bg-[#1E1B18] px-2 py-1 text-xs text-white shadow-[0_6px_16px_-6px_rgba(15,23,42,0.5)]">
                     <span className="font-semibold">{d.etiqueta}</span> · {formato(d.valor)}
                     {d.detalle && <span className="opacity-75"> · {d.detalle}</span>}
                   </div>
@@ -164,7 +164,7 @@ export function BarrasVerticales({
         </div>
         <div className="mt-1.5 flex gap-[2px]" aria-hidden>
           {datos.map((d, k) => (
-            <span key={d.etiqueta} className="min-w-0 flex-1 truncate text-center text-[0.6875rem] text-slate-400 dark:text-[#7a8882]">
+            <span key={d.etiqueta} className="min-w-0 flex-1 truncate text-center text-[0.6875rem] text-slate-400">
               {k % cadaEtiqueta === 0 ? d.etiqueta : ""}
             </span>
           ))}
@@ -179,24 +179,24 @@ export type Porcion = { nombre: string; valor: number; pct: number; color: strin
 /** Barras horizontales con la leyenda de valores y porcentajes debajo, como en Fudo. */
 export function BarrasHorizontales({ datos, formato }: { datos: Porcion[]; formato: (n: number) => string }) {
   const maximo = Math.max(1, ...datos.map((d) => d.valor));
-  if (datos.length === 0) return <p className="py-6 text-center text-sm text-slate-500 dark:text-[#94a19c]">Sin datos en el período.</p>;
+  if (datos.length === 0) return <p className="py-6 text-center text-sm text-slate-500">Sin datos en el período.</p>;
   return (
     <div className="flex flex-col gap-4">
       <ul className="flex flex-col gap-[3px]">
         {datos.map((d) => (
           <li key={d.nombre} className="grid grid-cols-[6.5rem_minmax(0,1fr)] items-center gap-2" title={`${d.nombre}: ${formato(d.valor)}`}>
-            <span className="truncate text-right text-xs text-slate-600 dark:text-[#c1cbc6]">{d.nombre}</span>
+            <span className="truncate text-right text-xs text-slate-600">{d.nombre}</span>
             <span className="h-5 rounded-r-[4px]" style={{ width: `${Math.max(1, (d.valor / maximo) * 100)}%`, background: d.color }} />
           </li>
         ))}
       </ul>
-      <ul className="divide-y divide-slate-100 border-t border-slate-100 text-xs dark:divide-[#1c2521] dark:border-[#1c2521]">
+      <ul className="divide-y divide-slate-100 border-t border-slate-100 text-xs">
         {datos.map((d) => (
           <li key={d.nombre} className="flex items-center gap-2 py-1.5">
             <span className="h-2.5 w-2.5 shrink-0 rounded-[3px]" style={{ background: d.color }} aria-hidden />
             <span className="min-w-0 flex-1 truncate font-medium">{d.nombre}</span>
             <span className="tabular-nums">{formato(d.valor)}</span>
-            <span className="w-14 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{d.pct.toFixed(2).replace(".", ",")}%</span>
+            <span className="w-14 text-right tabular-nums text-slate-500">{d.pct.toFixed(2).replace(".", ",")}%</span>
           </li>
         ))}
       </ul>

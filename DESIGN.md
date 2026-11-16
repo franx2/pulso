@@ -1,70 +1,72 @@
 ---
 name: "Pulso Operativo"
-description: "Centro de control claro y verificable para operaciones gastronómicas."
+description: "Consola de operación de Bianco & Nero: papel cálido, tinta casi negra, arena dorada y salvia."
 colors:
-  pulse-teal: "#0F766E"
-  pulse-teal-deep: "#115E59"
-  pulse-mint: "#37E6B0"
-  pulse-paper: "#F6F8F5"
-  pulse-ink: "#17211E"
-  surface: "#FFFFFF"
-  line: "#E2E8F0"
-  muted: "#64748B"
-  dark-ground: "#0B1412"
-  dark-surface: "#101C19"
-  dark-line: "#29403B"
-  dark-muted: "#94A19C"
-  dark-selected: "#1D4E48"
-  scrim: "rgba(0,0,0,0.45)"
+  tinta: "#161311"
+  tinta-calida: "#2D2A26"
+  papel: "#F5F3EE"
+  surface: "#FDFDFC"
+  piedra: "#E3E0D8"
+  muted: "#706B60"
+  arena: "#D6C69B"
+  arena-oscura: "#A08F5C"
+  arena-texto: "#6E6038"
+  salvia: "#74926B"
+  salvia-profunda: "#4A6244"
+  scrim: "rgba(22,19,17,0.5)"
   warning: "#B45309"
   danger: "#E11D48"
 typography:
   headline:
-    fontFamily: "Geist, Arial, Helvetica, sans-serif"
+    fontFamily: "Roboto Condensed, Arial Narrow, sans-serif"
     fontSize: "1.25rem"
     fontWeight: 700
     lineHeight: 1.2
-    letterSpacing: "0"
+    letterSpacing: "0.06em"
+    textTransform: "uppercase"
   headline-wide:
-    fontFamily: "Geist, Arial, Helvetica, sans-serif"
+    fontFamily: "Roboto Condensed, Arial Narrow, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.2
-    letterSpacing: "0"
+    letterSpacing: "0.06em"
+    textTransform: "uppercase"
   title:
-    fontFamily: "Geist, Arial, Helvetica, sans-serif"
-    fontSize: "1rem"
-    fontWeight: 600
+    fontFamily: "Roboto Condensed, Arial Narrow, sans-serif"
+    fontSize: "0.875rem"
+    fontWeight: 700
     lineHeight: 1.4
-    letterSpacing: "0"
+    letterSpacing: "0.06em"
+    textTransform: "uppercase"
   body:
-    fontFamily: "Geist, Arial, Helvetica, sans-serif"
+    fontFamily: "Roboto Condensed, Arial Narrow, sans-serif"
     fontSize: "0.875rem"
     fontWeight: 400
     lineHeight: 1.5
     letterSpacing: "0"
   label:
-    fontFamily: "Geist, Arial, Helvetica, sans-serif"
-    fontSize: "0.75rem"
+    fontFamily: "Roboto Condensed, Arial Narrow, sans-serif"
+    fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 1.35
-    letterSpacing: "0"
+    letterSpacing: "0.08em"
+    textTransform: "uppercase"
   data:
-    fontFamily: "Geist, Arial, Helvetica, sans-serif"
+    fontFamily: "Roboto Condensed, Arial Narrow, sans-serif"
     fontSize: "1.5rem"
     fontWeight: 700
     lineHeight: 1.2
     letterSpacing: "0"
   micro:
-    fontFamily: "Geist, Arial, Helvetica, sans-serif"
+    fontFamily: "Roboto Condensed, Arial Narrow, sans-serif"
     fontSize: "0.6875rem"
     fontWeight: 600
     lineHeight: 1.3
     letterSpacing: "0"
 rounded:
-  control: "8px"
-  field: "12px"
-  modal: "16px"
+  control: "4px"
+  field: "6px"
+  modal: "10px"
   pill: "9999px"
 spacing:
   compact: "4px"
@@ -75,7 +77,7 @@ spacing:
   gutter: "32px"
 components:
   button-primary:
-    backgroundColor: "{colors.pulse-teal}"
+    backgroundColor: "{colors.tinta}"
     textColor: "{colors.surface}"
     typography: "{typography.body}"
     rounded: "{rounded.control}"
@@ -83,89 +85,84 @@ components:
     height: "44px"
   button-ghost:
     backgroundColor: "{colors.surface}"
-    textColor: "{colors.pulse-ink}"
+    textColor: "{colors.tinta-calida}"
     typography: "{typography.body}"
     rounded: "{rounded.control}"
     padding: "8px 16px"
     height: "44px"
   field:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.pulse-ink}"
+    backgroundColor: "#FFFFFF"
+    textColor: "{colors.tinta}"
     typography: "{typography.body}"
     rounded: "{rounded.field}"
     padding: "10px 12px"
     height: "44px"
   panel:
-    backgroundColor: "{colors.surface}"
-    textColor: "{colors.pulse-ink}"
+    backgroundColor: "#FFFFFF"
+    textColor: "{colors.tinta}"
     rounded: "{rounded.control}"
     padding: "16px"
   badge:
-    backgroundColor: "#D1FAE5"
-    textColor: "{colors.pulse-teal}"
+    backgroundColor: "#E2E9DD"
+    textColor: "{colors.salvia-profunda}"
     typography: "{typography.label}"
     rounded: "{rounded.pill}"
     padding: "2px 8px"
 ---
-
 # Design System: Pulso Operativo
 
 ## Overview
 
-**Creative North Star: "El pulso de la operación"**
+**Creative North Star: "La caja de bombones"**
 
-Pulso es una consola de trabajo serena y precisa. La interfaz prioriza contexto, lectura comparativa y acción: primero se define local y período; después aparecen cifras, evidencia y excepciones. La marca se reconoce por el teal operativo, el menta reservado para actividad o proyección y una composición de reglas finas sobre papel cálido.
-
-La densidad es deliberada, pero nunca amontonada. Las pantallas de administración usan bandas métricas, tablas y gráficos con referencias visibles; en móvil, las tablas se convierten en filas verticales completas. La incertidumbre, los datos parciales y las estimaciones se nombran en pantalla.
+Pulso es la consola de los locales de Bianco & Nero y se viste como la marca: papel cálido, tinta casi negra, un dorado arena de caja de regalo y un verde salvia apagado. Nada de teal de plantilla ni grises azulados: los neutros son piedra cálida, y el negro es el negro de la casa. La interfaz prioriza contexto, lectura comparativa y acción; la marca vive en los detalles precisos (títulos condensados en mayúsculas, esquinas de papelería, el cuadrado partido del logo), no en decoración.
 
 **Key Characteristics:**
-- Teal escaso y funcional para acciones, selección y lectura positiva.
-- Números tabulares, jerarquía compacta y comparaciones con base explícita.
-- Paneles planos de borde fino; profundidad sólo para navegación flotante y modales.
-- Desktop denso con rail compacto expandible; móvil vertical con navegación inferior desplazable.
+- Tinta para la acción principal y lo seleccionado; salvia para "bien / activo / a favor"; arena como acento escaso.
+- Roboto Condensed en toda la app: entra más cifra por fila y los títulos en mayúsculas con aire repiten la web de la marca.
+- Paneles planos de borde fino y esquinas de 4px; profundidad sólo para hojas, modales y la barra inferior.
+- Sólo modo claro: se trabaja en el salón y en la caja, con luz.
 
 ## Colors
 
-La paleta mezcla un teal sobrio con menta activa, papel apenas cálido y señales semánticas que no compiten con los datos.
+La implementación redefine las escalas de Tailwind que ya usaba toda la app: `slate` es la piedra cálida y `emerald` es la salvia. `arena-*` es la escala nueva del dorado. Así 1.400 clases cambiaron de mundo sin tocarse una por una.
 
 ### Primary
-- **Teal Pulso** (`pulse-teal`): acción primaria, navegación activa, serie actual y selección.
-- **Teal Profundo** (`pulse-teal-deep`): hover y estados activos con mayor contraste.
+- **Tinta** (`tinta`, `slate-950`): botón primario, navegación activa, mesa ocupada, encabezados de hoja y comanda.
+- **Tinta cálida** (`tinta-calida`, `slate-800`): hover del primario, la barra inferior, la serie actual de los gráficos.
 
 ### Secondary
-- **Menta de Actividad** (`pulse-mint`): pronóstico, estado vivo y acento sobre superficies oscuras; no reemplaza al color principal en grandes áreas.
+- **Salvia** (`salvia`, `emerald-500..800`): positivo, presente, listo, mesa libre al abrirla, el botón de fichar.
+- **Arena** (`arena`, `arena-300`): selección del plano, cobro parcial, resaltado de fila elegida. Como texto sólo `arena-700` (contraste 6:1).
 
 ### Tertiary
-- **Ámbar de Revisión** (`warning`): datos parciales, cobertura insuficiente y condiciones que requieren revisión.
-- **Rosa de Excepción** (`danger`): caídas, pérdidas y errores; nunca se usa como decoración.
+- **Ámbar de revisión** (`warning`): pendiente, sin enviar, datos parciales.
+- **Rosa de excepción** (`danger`): errores, demoras, deuda. Nunca decorativo.
 
 ### Neutral
-- **Papel Operativo** (`pulse-paper`): fondo claro general.
-- **Tinta Pulso** (`pulse-ink`): texto principal y cifras.
-- **Superficie** (`surface`): controles y paneles.
-- **Línea y Texto Secundario** (`line`, `muted`): estructura, ejes y explicación.
-- **Noche Operativa** (`dark-ground`, `dark-surface`, `dark-line`, `dark-muted`): equivalentes oscuros, activados por clase y no por categoría de pantalla.
-- **Teal Seleccionado** (`#1d4e48`): el relleno de un segmento activo en modo oscuro. Es el único tono entre `dark-surface` y `pulse-teal`: en oscuro el blanco del control claro encandila y el teal pleno grita.
-- **Velo** (`rgba(0,0,0,0.45)`): el fondo de un modal a pantalla completa. No es un color de la paleta a propósito — atenúa la pantalla que está detrás, no pinta una superficie.
+- **Papel** (`papel`): fondo general. **Superficie** (`surface`, `#FDFDFC`): barras, hojas y botones fantasma; los paneles son blancos.
+- **Piedra** (`slate-200`): líneas. **Texto secundario** (`slate-500`, 5:1 sobre papel).
+- **Velo** (`scrim`): detrás de modales y hojas.
 
-**The Semantic Restraint Rule.** Teal indica acción o selección; menta indica actividad o pronóstico; ámbar y rosa sólo aparecen cuando existe una condición verificable.
+**The Semantic Restraint Rule.** Tinta es acción o selección; salvia es estado bueno; arena es acento; ámbar y rosa sólo aparecen cuando hay una condición verificable.
+
+**Gráficos.** La serie actual va en tinta y la referencia en arena oscura (se separan por luminosidad). Las categóricas de Ventas (`--cat-1..7`) siguen siendo las validadas contra daltonismo.
 
 ## Typography
 
-**Display Font:** Geist, con fallback sans-serif.
-**Body Font:** Geist, con fallback sans-serif.
+**Familia única:** Roboto Condensed (400/500/600/700), servida con `next/font`.
 
-**Character:** Una sola familia de dibujo limpio mantiene la consola directa. La personalidad nace del contraste de peso y de cifras alineadas, no de mezclar tipografías ni espaciar letras.
+**Character:** condensada y firme, como la web de Bianco & Nero. La personalidad sale de los títulos en mayúsculas con tracking (`.titulo-marca`, 0.06em) y del contraste de peso; el cuerpo va en minúsculas y sin tracking.
 
 ### Hierarchy
-- **Headline** (700, 20px; 24px desde tablet, 1.2): título único de pantalla.
-- **Title** (600, 16px, 1.4): paneles, lecturas y grupos de decisión.
-- **Body** (400, 14px, 1.5): explicación y contenido operativo; limitar párrafos a unos 70 caracteres.
-- **Label** (600, 12px, 1.35): pestañas, encabezados de tabla y metadatos.
-- **Data** (700, hasta 24px, 1.2): KPI y resultados; siempre con cifras tabulares.
-- **Micro** (600, 11px, 1.3): anotaciones dentro de un gráfico — marcas de eje, globos de pico, etiquetas de la barra inferior. Es el único paso por debajo de Label y existe porque un eje de 24 horas o una barra de turno no admiten 12px sin chocar. Nunca para texto que se lee en prosa, y nunca para una cifra que alguien tenga que comparar.
+- **Headline** (700, 20px; 24px desde tablet, mayúsculas): título de pantalla.
+- **Title** (700, 14px, mayúsculas): encabezado de panel, de hoja, de modal.
+- **Body** (400, 14px, 1.5): contenido operativo; párrafos de unos 70 caracteres.
+- **Label** (600, 11px, mayúsculas, 0.08em): encabezados de tabla, rótulos de métrica y de grupo.
+- **Data** (700, hasta 24px): KPI y montos, con cifras tabulares.
+- **Micro** (600, 11px): anotaciones dentro de gráficos y del plano.
 
-**The Numeric Alignment Rule.** Montos, porcentajes, conteos y fechas comparables usan cifras tabulares y alineación consistente; el signo va antes del símbolo monetario.
+**The Numeric Alignment Rule.** Montos, porcentajes, conteos y horas comparables usan cifras tabulares; el signo va antes del símbolo monetario.
 
 ## Layout
 
@@ -180,48 +177,51 @@ Los tableros siguen un orden estable: contexto compartido, modos, banda de cuatr
 El sistema es plano por defecto. Paneles, tablas y barras se separan con fondo y línea de 1px, sin sombra. La sombra suave se reserva para navegación móvil flotante, modales y estados que realmente se elevan sobre el contenido.
 
 ### Shadow Vocabulary
-- **Control Bajo** (`0 1px 2px rgba(15, 23, 42, 0.05)`): controles seleccionados y tarjetas heredadas de contenido.
-- **Navegación Flotante** (`0 12px 35px rgba(15, 23, 42, 0.22)`): barra inferior móvil sobre el lienzo.
+- **Barra inferior** (`0 10px 30px rgba(22,19,17,0.3)`): la barra de tinta flotando sobre el lienzo en el celular.
+- **Hoja** (`0 -12px 32px rgba(22,19,17,0.18)`): el panel de mesa o de venta cuando sube desde abajo.
 
 **The Flat by Default Rule.** Si un bloque ya tiene borde, no sumar sombra salvo que cambie de plano o flote sobre contenido desplazable.
 
 ## Shapes
 
-Los paneles analíticos y botones usan esquinas discretas de 8px. Campos y controles táctiles heredados usan 12px; modales y navegación móvil pueden llegar a 16px. La forma píldora queda reservada a badges breves y estados, nunca a contenedores de página.
+Esquinas de papelería: 4px en paneles y botones, 6px en campos, 10px en modales y hojas. Las mesas cuadradas del plano llevan 3px; las redondas, círculo. La píldora queda para badges breves.
 
 ## Components
 
 ### Buttons
-- **Shape:** control compacto de 8px y altura táctil mínima de 44px.
-- **Primary:** teal con texto blanco; en oscuro, menta con tinta profunda.
+- **Shape:** control compacto de 4px y altura táctil mínima de 44px.
+- **Primary:** tinta con texto papel.
 - **Hover / Focus:** oscurecimiento o aclarado de superficie y anillo de 2px con offset; transición breve de estado.
-- **Ghost / Danger:** superficie blanca con borde fino; el peligro conserva el fondo neutro y usa texto rosa.
+- **Ghost / Danger:** superficie papel con borde de piedra; el peligro conserva el fondo neutro y usa texto rosa.
 
 ### Chips
 - **Style:** píldoras pequeñas para estado o señal; las opciones de modo son controles segmentados rectangulares.
-- **State:** selección sobre superficie blanca con sombra baja; opción inactiva en texto secundario.
+- **State:** el segmento activo se rellena de tinta; la opción inactiva va en texto secundario.
 
 ### Cards / Containers
-- **Corner Style:** 8px en paneles de comando; 12px sólo en la tarjeta compartida heredada.
-- **Background:** blanco sobre papel cálido; superficie verde-negra sobre fondo nocturno.
+- **Corner Style:** 4px.
+- **Background:** blanco sobre papel cálido.
 - **Shadow Strategy:** plano por defecto.
 - **Border:** línea neutra de 1px.
 - **Internal Padding:** 16px, con encabezado y cuerpo separados por regla cuando hay jerarquía interna.
 
 ### Inputs / Fields
-- **Style:** superficie sólida, borde de 1px, radio de 12px y texto de 16px en móvil para evitar zoom del navegador.
-- **Focus:** borde teal y anillo claro de 2px; equivalente menta en modo oscuro.
+- **Style:** superficie sólida, borde de 1px, radio de 6px y texto de 16px en móvil para evitar zoom del navegador.
+- **Focus:** borde de tinta y anillo arena de 2px.
 - **Error / Disabled:** señal semántica en texto; opacidad reducida y cursor no disponible.
 
 ### Navigation
-- **Desktop:** rail fijo de iconos agrupado por Operación, Análisis y Gestión; se expande con hover o foco para revelar marca, grupos y etiquetas. El activo conserva bloque teal e icono Lucide.
-- **Mobile:** barra inferior flotante y desplazable; el elemento activo se centra automáticamente y mantiene icono más etiqueta.
+- **Desktop:** rail fijo de iconos agrupado por Operación, Análisis y Gestión, con los rótulos de grupo en arena; se expande con hover o foco. El activo es un bloque de tinta.
+- **Mobile:** barra inferior de tinta, flotante y desplazable; el activo es una ficha papel con etiqueta en mayúsculas.
+
+### Panel lateral (estilo Fudo)
+Elegir una mesa en el salón o una venta en el listado abre un panel a la derecha (`xl` / `2xl`); en pantallas menores es una hoja que sube desde abajo sobre un velo. Encabezado de tinta (ocupada) o salvia (libre) con el número en mayúsculas.
 
 ### Command Context
 La firma analítica combina selector de alcance y selector temporal en una sola barra. Debajo muestra el rango exacto, la referencia y la cobertura antes de cualquier KPI.
 
 ### Analytical Charts
-Las series siempre llevan ejes, leyenda y referencia. El período anterior usa trazo discontinuo; el pronóstico conecta historia y futuro, y su área menta representa intervalo, no una segunda línea. Hover y teclado revelan fecha y valor sin alterar el tamaño del gráfico.
+Las series siempre llevan ejes, leyenda y referencia. El período anterior usa trazo discontinuo; el pronóstico conecta historia y futuro, y su banda translúcida representa intervalo, no una segunda línea. Hover y teclado revelan fecha y valor sin alterar el tamaño del gráfico.
 
 ## Do's and Don'ts
 
@@ -236,5 +236,5 @@ Las series siempre llevan ejes, leyenda y referencia. El período anterior usa t
 - **Don't** usar sparklines sin ejes, tarjetas repetidas o mini-gráficos como sustituto de una comparación explicada.
 - **Don't** presentar correlación como causa ni el intervalo de pronóstico como certeza.
 - **Don't** mezclar locales o ventanas temporales dentro de una misma banda de métricas.
-- **Don't** usar gradientes, texto con tracking decorativo, sombras duras, iconos de texto o color semántico ornamental.
+- **Don't** usar gradientes, tracking fuera de los títulos en mayúsculas, sombras duras, iconos de texto o color semántico ornamental.
 - **Don't** mostrar dotación sugerida hasta que la capacidad por empleado tenga suficientes fichajes reales.

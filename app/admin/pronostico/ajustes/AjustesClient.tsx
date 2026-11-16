@@ -87,7 +87,7 @@ export default function AjustesClient() {
       <div>
         <Link
           href="/admin/pronostico"
-          className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-[#94a19c]"
+          className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
         >
           <ArrowLeft size={14} />
           Volver al pronóstico
@@ -99,7 +99,7 @@ export default function AjustesClient() {
 
       <Card className="flex flex-col gap-3">
         <SectionTitle>Ajuste manual de demanda (K)</SectionTitle>
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           Multiplica la demanda pronosticada. 1.00 no cambia nada; 1.20 espera 20% más; 0.80 espera
           20% menos. Sirve para lo que el modelo no puede saber: un corte de calle, un evento en el
           barrio, una promoción que arranca el jueves.
@@ -170,24 +170,24 @@ export default function AjustesClient() {
         </Button>
 
         {config.ajustes.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-[#7a8882]">
+          <p className="text-sm text-slate-500">
             Sin ajustes manuales: el pronóstico va tal cual lo calcula el modelo.
           </p>
         ) : (
           <ul className="flex flex-col gap-1.5">
             {config.ajustes.map((a) => (
-              <li key={a.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-2.5 text-sm dark:border-[#1c2521]">
+              <li key={a.id} className="flex items-center justify-between gap-2 rounded-xl border border-slate-100 p-2.5 text-sm">
                 <span>
                   <strong className="tabular-nums">×{a.valor.toFixed(2)}</strong> · {a.local}
                   {a.diaSemana != null && ` · ${NOMBRE_DIA[a.diaSemana]}`}
                   {a.fecha && ` · ${a.fecha}`}
-                  {a.motivo && <span className="ml-1 text-slate-500 dark:text-[#7a8882]">({a.motivo})</span>}
+                  {a.motivo && <span className="ml-1 text-slate-500">({a.motivo})</span>}
                 </span>
                 <button
                   type="button"
                   onClick={() => guardar({ tipo: "borrarAjusteK", id: a.id })}
                   aria-label="Quitar ajuste"
-                  className="shrink-0 text-slate-500 hover:text-red-600 dark:hover:text-red-400"
+                  className="shrink-0 text-slate-500 hover:text-red-600"
                 >
                   <Trash2 size={15} />
                 </button>
@@ -199,7 +199,7 @@ export default function AjustesClient() {
 
       <Card className="flex flex-col gap-3">
         <SectionTitle>Capacidad por sector</SectionTitle>
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           Cuánta carga por hora sostiene una persona. Es el número que convierte demanda en
           dotación: si está mal, la dotación está mal. La tabla de rangos se deriva de acá, no se
           configura aparte.
@@ -207,7 +207,7 @@ export default function AjustesClient() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[40rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                 <th className="py-2 pr-3 font-semibold">Local</th>
                 <th className="py-2 pr-3 font-semibold">Sector</th>
                 <th className="py-2 pr-3 text-right font-semibold">Carga/hora por persona</th>
@@ -217,7 +217,7 @@ export default function AjustesClient() {
             </thead>
             <tbody>
               {config.capacidades.map((c) => (
-                <tr key={c.id} className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]">
+                <tr key={c.id} className="border-b border-slate-100 last:border-0">
                   <td className="py-2 pr-3">{c.local}</td>
                   <td className="py-2 pr-3 font-medium">{c.sector.toLowerCase()}</td>
                   <td className="py-2 pr-3 text-right">
@@ -236,10 +236,10 @@ export default function AjustesClient() {
                   <td className="py-2 pr-3">
                     <BadgeOrigen origen={c.origen} />
                     {c.observaciones > 0 && (
-                      <span className="ml-1 text-xs text-slate-500 dark:text-[#7a8882]">{c.observaciones} obs.</span>
+                      <span className="ml-1 text-xs text-slate-500">{c.observaciones} obs.</span>
                     )}
                   </td>
-                  <td className="py-2 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <td className="py-2 text-xs text-slate-500">
                     {c.matriz
                       .slice(0, 3)
                       .map((m) => `${m.desde}-${m.hasta ?? "+"} → ${m.personas}`)
@@ -254,7 +254,7 @@ export default function AjustesClient() {
 
       <Card className="flex flex-col gap-3">
         <SectionTitle>Matriz categoría × sector</SectionTitle>
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           Cuánta carga genera una unidad vendida de cada categoría en cada sector. Los valores
           arrancan por defecto y se corrigen a mano; el que toques queda marcado como manual y el
           modelo deja de pisarlo.
@@ -262,7 +262,7 @@ export default function AjustesClient() {
         <div className="overflow-x-auto">
           <table className="w-full min-w-[36rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                 <th className="py-2 pr-3 font-semibold">Categoría</th>
                 {sectores.map((s) => (
                   <th key={s} className="py-2 pr-3 text-right font-semibold">
@@ -273,7 +273,7 @@ export default function AjustesClient() {
             </thead>
             <tbody>
               {categorias.map((cat) => (
-                <tr key={cat} className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]">
+                <tr key={cat} className="border-b border-slate-100 last:border-0">
                   <td className="py-2 pr-3 font-medium">{etiquetaCategoria(cat)}</td>
                   {sectores.map((sec) => {
                     const c = globales.find((x) => x.categoria === cat && x.sector === sec);
@@ -286,7 +286,7 @@ export default function AjustesClient() {
                           step="0.1"
                           defaultValue={c.coeficiente}
                           className={`w-auto! py-1 text-right text-sm ${
-                            c.origen === "MANUAL" ? "border-emerald-400 dark:border-[#37e6b0]" : ""
+                            c.origen === "MANUAL" ? "border-emerald-400" : ""
                           }`}
                           onBlur={(e) => {
                             const v = Number(e.target.value);
@@ -306,7 +306,7 @@ export default function AjustesClient() {
       <Card className="flex flex-col gap-2">
         <SectionTitle>Sensibilidad al clima</SectionTitle>
         {config.clima.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="text-sm text-slate-500">
             Todavía sin medir. Se calcula comparando días con y sin cada condición, contra el mismo
             día de semana, y necesita historia suficiente. Mientras tanto el clima no mueve el
             pronóstico en vez de moverlo con un número inventado.
@@ -321,7 +321,7 @@ export default function AjustesClient() {
                 </span>
                 <span className="flex items-center gap-2">
                   <span className="tabular-nums font-medium">×{c.factor.toFixed(2)}</span>
-                  <span className="text-xs text-slate-500 dark:text-[#7a8882]">
+                  <span className="text-xs text-slate-500">
                     {c.dias} días · confianza {(c.confianza * 100).toFixed(0)}%
                   </span>
                 </span>

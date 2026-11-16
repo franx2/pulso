@@ -169,7 +169,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
         <button
           type="button"
           onClick={() => setInicioSemana((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() - 7))}
-          className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-[#18201d]"
+          className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
           aria-label="Semana anterior"
         >
           <ChevronLeft size={18} />
@@ -180,7 +180,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
         <button
           type="button"
           onClick={() => setInicioSemana((d) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7))}
-          className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 dark:hover:bg-[#18201d]"
+          className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100"
           aria-label="Semana siguiente"
         >
           <ChevronRight size={18} />
@@ -207,7 +207,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
           {/* Los 7 días en una sola tarjeta continua (en vez de 7 tarjetas separadas)
               para ver las superposiciones de la semana de un vistazo, sin scrollear
               tarjeta por tarjeta. */}
-          <Card className="flex flex-col divide-y divide-slate-100 p-0 dark:divide-[#26312d]">
+          <Card className="flex flex-col divide-y divide-slate-100 p-0">
           {dias.map((dia) => {
             const clave = iso(dia);
             const horario = horarios.find((h) => h.diaSemana === dia.getDay());
@@ -222,7 +222,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                       {fechaCorta(dia)}
                     </span>
                     {totalPorDia.has(dia.getDay()) && (
-                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+                      <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[11px] font-semibold text-amber-800">
                         ≈{totalPorDia.get(dia.getDay())!.toFixed(0)} ventas/día
                       </span>
                     )}
@@ -256,7 +256,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                             <div className="flex items-center gap-2">
                               <span className="w-20 shrink-0" />
                               <div
-                                className="relative flex-1 overflow-visible rounded bg-slate-50 dark:bg-[#18201d]"
+                                className="relative flex-1 overflow-visible rounded bg-slate-50"
                                 style={{ height: ALTO_CURVA }}
                               >
                                 <svg
@@ -265,7 +265,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                                   className="absolute inset-0 h-full w-full overflow-hidden rounded"
                                 >
                                   {/* Grilla de referencia: 50% y 100% de la escala compartida. */}
-                                  <line x1="0" y1={ALTO_CURVA / 2} x2="100" y2={ALTO_CURVA / 2} stroke="currentColor" strokeWidth="0.5" className="text-slate-200 dark:text-[#26312d]" vectorEffect="non-scaling-stroke" />
+                                  <line x1="0" y1={ALTO_CURVA / 2} x2="100" y2={ALTO_CURVA / 2} stroke="currentColor" strokeWidth="0.5" className="text-slate-200" vectorEffect="non-scaling-stroke" />
                                   <path d={area} fill="#f59e0b" fillOpacity="0.18" />
                                   <path d={linea} fill="none" stroke="#f59e0b" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
                                 </svg>
@@ -275,11 +275,11 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                                 {pico && pico.valor > 0 && (
                                   <>
                                     <span
-                                      className="absolute h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-700 dark:bg-amber-500"
+                                      className="absolute h-1.5 w-1.5 -translate-x-1/2 -translate-y-1/2 rounded-full bg-amber-700"
                                       style={{ left: `${pico.xPct}%`, top: pico.y }}
                                     />
                                     <span
-                                      className="absolute -translate-x-1/2 whitespace-nowrap rounded bg-amber-700 px-1 py-0.5 text-[11px] font-semibold leading-none text-white shadow-sm dark:bg-amber-600"
+                                      className="absolute -translate-x-1/2 whitespace-nowrap rounded bg-amber-700 px-1 py-0.5 text-[11px] font-semibold leading-none text-white shadow-sm"
                                       style={{ left: `${Math.min(Math.max(pico.xPct, 8), 92)}%`, top: topBadgePx }}
                                     >
                                       pico {pico.valor.toFixed(1)} ventas/h
@@ -295,7 +295,7 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                                 {marcas.map((m) => (
                                   <span
                                     key={m.label}
-                                    className="absolute -translate-x-1/2 text-[11px] text-slate-500 dark:text-[#7a8882]"
+                                    className="absolute -translate-x-1/2 text-[11px] text-slate-500"
                                     style={{ left: `${m.xPct}%` }}
                                   >
                                     {m.label}
@@ -315,10 +315,10 @@ export default function SemanaGantt({ locales }: { locales: Local[] }) {
                       const pos = posicionBarra(horario.abre!, horario.cierra!, t.horaInicio, t.horaFin);
                       return (
                         <div key={t.id} className="flex items-center gap-2">
-                          <span className="w-20 shrink-0 truncate text-xs text-slate-500 dark:text-[#94a19c]">
+                          <span className="w-20 shrink-0 truncate text-xs text-slate-500">
                             {t.empleado?.nombre}
                           </span>
-                          <div className="relative h-5 flex-1 rounded bg-slate-100 dark:bg-[#18201d]">
+                          <div className="relative h-5 flex-1 rounded bg-slate-100">
                             {pos && (
                               <div
                                 className={`absolute inset-y-0 rounded ${colorPorEmpleado.get(t.empleado?.nombre ?? "") ?? "bg-emerald-500"}`}

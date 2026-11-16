@@ -22,13 +22,13 @@ export function Button({
   variant?: "primary" | "ghost" | "danger";
 }) {
   const base =
-    "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412]";
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50";
   const variants = {
     primary:
-      "bg-emerald-700 text-white hover:bg-emerald-800 dark:bg-[#37e6b0] dark:text-[#062419] dark:hover:bg-[#7bf0ca]",
-    ghost: "bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#e0e7e3] dark:hover:bg-[#172724]",
+      "bg-slate-950 text-[#FDFDFC] hover:bg-slate-800",
+    ghost: "bg-[#FDFDFC] text-slate-800 border border-slate-300 hover:border-slate-400 hover:bg-slate-50",
     danger:
-      "bg-white text-red-600 border border-red-200 hover:bg-red-50 dark:border-[#5a2f35] dark:bg-[#101c19] dark:hover:bg-red-950/30",
+      "bg-white text-red-600 border border-red-200 hover:bg-red-50",
   };
   return <button className={`${base} ${variants[variant]} ${className}`} {...props} />;
 }
@@ -36,7 +36,7 @@ export function Button({
 export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return (
     <input
-      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4] dark:focus:border-[#37e6b0] dark:focus:ring-[#1d4e48] ${className}`}
+      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-slate-700 focus:ring-2 focus:ring-arena-200 ${className}`}
       {...props}
     />
   );
@@ -45,7 +45,7 @@ export function Input({ className = "", ...props }: InputHTMLAttributes<HTMLInpu
 export function Textarea({ className = "", ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
   return (
     <textarea
-      className={`min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4] dark:focus:border-[#37e6b0] dark:focus:ring-[#1d4e48] ${className}`}
+      className={`min-h-24 w-full resize-y rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-slate-700 focus:ring-2 focus:ring-arena-200 ${className}`}
       {...props}
     />
   );
@@ -55,7 +55,7 @@ export function Checkbox({ className = "", ...props }: InputHTMLAttributes<HTMLI
   return (
     <input
       type="checkbox"
-      className={`h-4 w-4 shrink-0 cursor-pointer accent-emerald-600 dark:accent-[#37e6b0] ${className}`}
+      className={`h-4 w-4 shrink-0 cursor-pointer accent-slate-950 ${className}`}
       {...props}
     />
   );
@@ -64,7 +64,7 @@ export function Checkbox({ className = "", ...props }: InputHTMLAttributes<HTMLI
 export function Select({ className = "", children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
   return (
     <select
-      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#f2f7f4] dark:focus:border-[#37e6b0] dark:focus:ring-[#1d4e48] ${className}`}
+      className={`w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-base outline-none focus:border-slate-700 focus:ring-2 focus:ring-arena-200 ${className}`}
       {...props}
     >
       {children}
@@ -79,7 +79,7 @@ export function Card({
 }: HTMLAttributes<HTMLDivElement> & { children: ReactNode }) {
   return (
     <div
-      className={`rounded-lg border border-slate-200 bg-white p-4 dark:border-[#29403b] dark:bg-[#101c19] ${className}`}
+      className={`rounded-lg border border-slate-200 bg-white p-4 ${className}`}
       {...props}
     >
       {children}
@@ -117,7 +117,7 @@ export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: st
   });
 
   return (
-    <label ref={etiqueta} htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-600 dark:text-slate-300">
+    <label ref={etiqueta} htmlFor={htmlFor} className="mb-1 block text-sm font-medium text-slate-600">
       {children}
     </label>
   );
@@ -126,7 +126,7 @@ export function Label({ children, htmlFor }: { children: ReactNode; htmlFor?: st
 export function Spinner() {
   return (
     <div className="flex items-center justify-center py-16 text-slate-500">
-      <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-600" />
+      <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-slate-950" />
     </div>
   );
 }
@@ -141,12 +141,12 @@ export function PageTitle({
   actions?: ReactNode;
 }) {
   return (
-    <div className="sticky top-0 z-10 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-[#F6F8F5]/95 px-4 py-3.5 backdrop-blur-sm supports-backdrop-blur:bg-[#F6F8F5]/85 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8 dark:border-[#26312d] dark:bg-[#0B1412]/95 dark:supports-backdrop-blur:bg-[#0B1412]/85">
+    <div className="sticky top-0 z-10 -mx-4 mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 bg-papel/95 px-4 py-3.5 backdrop-blur-sm supports-backdrop-blur:bg-papel/85 sm:-mx-6 sm:px-6 md:-mx-8 md:px-8">
       <div className="min-w-0">
-        <h1 className="flex items-center gap-2 text-xl font-bold md:text-2xl">
+        <h1 className="titulo-marca flex items-center gap-2 text-xl font-bold md:text-2xl">
           {children}
         </h1>
-        {subtitle && <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">{subtitle}</p>}
+        {subtitle && <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">{subtitle}</p>}
       </div>
       {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
     </div>
@@ -155,11 +155,11 @@ export function PageTitle({
 
 export function SectionTitle({ children, action }: { children: ReactNode; action?: ReactNode }) {
   if (!action) {
-    return <p className="mb-3 text-sm font-semibold text-slate-600 dark:text-slate-300">{children}</p>;
+    return <p className="titulo-marca mb-3 text-xs font-semibold text-slate-600">{children}</p>;
   }
   return (
     <div className="mb-3 flex items-center justify-between gap-3">
-      <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">{children}</p>
+      <p className="titulo-marca text-xs font-semibold text-slate-600">{children}</p>
       {action}
     </div>
   );
@@ -170,14 +170,14 @@ export function ErrorText({ children }: { children: ReactNode }) {
   // role="alert": un error que aparece debajo de un formulario no se anuncia
   // solo; sin esto quien usa lector de pantalla no se entera de que falló.
   return (
-    <p role="alert" className="text-sm font-medium text-red-600 dark:text-red-400">
+    <p role="alert" className="text-sm font-medium text-red-600">
       {children}
     </p>
   );
 }
 
 export function EmptyState({ children, inCard = true }: { children: ReactNode; inCard?: boolean }) {
-  const text = <p className="text-center text-sm text-slate-500 dark:text-slate-400">{children}</p>;
+  const text = <p className="text-center text-sm text-slate-500">{children}</p>;
   return inCard ? <Card>{text}</Card> : text;
 }
 
@@ -193,15 +193,15 @@ export function IconButton({
   children: ReactNode;
 }) {
   const tones = {
-    danger: "text-slate-300 hover:text-red-500 dark:text-slate-600 dark:hover:text-red-400",
-    default: "text-slate-300 hover:text-emerald-600 dark:text-slate-600 dark:hover:text-[#37e6b0]",
+    danger: "text-slate-300 hover:text-red-500",
+    default: "text-slate-300 hover:text-emerald-600",
   };
   return (
     <button
       type="button"
       title={label}
       aria-label={label}
-      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${tones[tone]} ${className}`}
+      className={`grid h-11 w-11 shrink-0 place-items-center rounded-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 ${tones[tone]} ${className}`}
       {...props}
     >
       {children}
@@ -217,10 +217,10 @@ export function Badge({
   tone?: "emerald" | "amber" | "rose" | "slate";
 }) {
   const tones = {
-    emerald: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300",
-    amber: "bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300",
-    rose: "bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300",
-    slate: "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300",
+    emerald: "bg-emerald-100 text-emerald-700",
+    amber: "bg-amber-100 text-amber-700",
+    rose: "bg-rose-100 text-rose-700",
+    slate: "bg-slate-100 text-slate-600",
   };
   return <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ${tones[tone]}`}>{children}</span>;
 }
@@ -315,23 +315,23 @@ export function Modal({
   }, []);
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/45 px-0 sm:items-center sm:px-4">
+    <div className="fixed inset-0 z-[70] flex items-end justify-center bg-slate-950/50 px-0 sm:items-center sm:px-4">
       <div
         ref={panel}
         role="dialog"
         aria-modal="true"
         aria-labelledby={idTitulo}
         tabIndex={-1}
-        className={`max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-t-2xl bg-white shadow-2xl outline-none dark:bg-[#0b1412] sm:rounded-2xl`}
+        className={`max-h-[85vh] w-full ${maxWidth} overflow-y-auto rounded-t-2xl bg-white shadow-2xl outline-none sm:rounded-2xl`}
       >
-        <div className="sticky top-0 flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4 dark:border-[#29403b] dark:bg-[#0b1412]">
-          <h3 id={idTitulo} className="text-lg font-bold">
+        <div className="sticky top-0 flex items-center justify-between gap-3 border-b border-slate-100 bg-white px-5 py-4">
+          <h3 id={idTitulo} className="titulo-marca text-lg font-bold">
             {title}
           </h3>
           <button
             type="button"
             onClick={onClose}
-            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:text-[#b0c3bc] dark:hover:bg-[#172724] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412]"
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-xl text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2"
             aria-label="Cerrar"
           >
             <X size={20} strokeWidth={2.3} />
@@ -372,7 +372,7 @@ export function useConfirm() {
 
   const dialog = request ? (
     <Modal title={request.title} onClose={() => (busy ? undefined : setRequest(null))}>
-      {request.message && <div className="text-sm text-slate-600 dark:text-slate-300">{request.message}</div>}
+      {request.message && <div className="text-sm text-slate-600">{request.message}</div>}
       <div className="mt-5 flex justify-end gap-2">
         {!request.infoOnly && (
           <Button variant="ghost" onClick={() => setRequest(null)} disabled={busy}>
@@ -393,64 +393,6 @@ export function useConfirm() {
   return { confirm: setRequest, dialog };
 }
 
-export type ThemeMode = "auto" | "light" | "dark";
-
-function storedThemeMode(): ThemeMode {
-  try {
-    const saved = localStorage.getItem("theme");
-    return saved === "light" || saved === "dark" || saved === "auto" ? saved : "auto";
-  } catch {
-    return "auto";
-  }
-}
-
-export function useDarkMode() {
-  const [dark, setDark] = useState(false);
-  const [mode, setThemeMode] = useState<ThemeMode>("auto");
-
-  useEffect(() => {
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
-    const sync = () => {
-      const nextMode = storedThemeMode();
-      const nextDark = nextMode === "dark" || (nextMode === "auto" && media.matches);
-      setThemeMode(nextMode);
-      setDark(nextDark);
-      document.documentElement.classList.toggle("dark", nextDark);
-    };
-    const onSystemThemeChange = (event: MediaQueryListEvent) => {
-      if (storedThemeMode() !== "auto") return;
-      setDark(event.matches);
-      document.documentElement.classList.toggle("dark", event.matches);
-    };
-    sync();
-    media.addEventListener("change", onSystemThemeChange);
-    window.addEventListener("controlpersonal-theme-change", sync);
-    return () => {
-      media.removeEventListener("change", onSystemThemeChange);
-      window.removeEventListener("controlpersonal-theme-change", sync);
-    };
-  }, []);
-
-  function setMode(nextMode: ThemeMode) {
-    const nextDark = nextMode === "dark" || (nextMode === "auto" && window.matchMedia("(prefers-color-scheme: dark)").matches);
-    setThemeMode(nextMode);
-    setDark(nextDark);
-    document.documentElement.classList.toggle("dark", nextDark);
-    try {
-      localStorage.setItem("theme", nextMode);
-    } catch {
-      // Modo privado o navegador sin storage disponible.
-    }
-    window.dispatchEvent(new Event("controlpersonal-theme-change"));
-  }
-
-  function toggle() {
-    setMode(dark ? "light" : "dark");
-  }
-
-  return { dark, mode, setMode, toggle };
-}
-
 /**
  * Panel analítico: plano, borde fino, esquinas de 8px.
  *
@@ -465,7 +407,7 @@ export function Panel({
 }: HTMLAttributes<HTMLElement> & { children: ReactNode }) {
   return (
     <section
-      className={`rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19] ${className}`}
+      className={`rounded-lg border border-slate-200 bg-white ${className}`}
       {...props}
     >
       {children}
@@ -484,11 +426,11 @@ export function PanelHeader({
   action?: ReactNode;
 }) {
   return (
-    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+    <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
       <div className="min-w-0">
-        <h2 className="font-semibold text-slate-950 dark:text-[#f2f7f4]">{titulo}</h2>
+        <h2 className="titulo-marca text-sm font-bold text-slate-950">{titulo}</h2>
         {descripcion && (
-          <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500 dark:text-[#94a19c]">{descripcion}</p>
+          <p className="mt-0.5 max-w-[70ch] text-sm text-slate-500">{descripcion}</p>
         )}
       </div>
       {action && <div className="shrink-0 text-right">{action}</div>}
@@ -513,7 +455,7 @@ export function SelectorSegmentado<T extends string | number>({
 }) {
   return (
     <div
-      className="scrollbar-hidden inline-flex max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-slate-50 p-0.5 dark:border-[#29403b] dark:bg-[#0b1412]"
+      className="scrollbar-hidden inline-flex max-w-full overflow-x-auto rounded-lg border border-slate-200 bg-[#FDFDFC] p-0.5"
       role="tablist"
       aria-label={label}
     >
@@ -524,10 +466,10 @@ export function SelectorSegmentado<T extends string | number>({
           role="tab"
           aria-selected={valor === opcion.clave}
           onClick={() => onChange(opcion.clave)}
-          className={`min-h-8 whitespace-nowrap rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${
+          className={`min-h-8 whitespace-nowrap rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${
             valor === opcion.clave
-              ? "bg-white text-slate-950 shadow-[0_1px_2px_rgba(15,23,42,0.05)] dark:bg-[#1d4e48] dark:text-[#f2f7f4]"
-              : "text-slate-500 hover:text-slate-900 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+              ? "bg-slate-950 text-[#FDFDFC]"
+              : "text-slate-500 hover:text-slate-900"
           }`}
         >
           {opcion.label}
@@ -546,14 +488,14 @@ export function SelectorSegmentado<T extends string | number>({
  */
 export function Delta({ valor, texto = "vs. período anterior" }: { valor: number | null; texto?: string }) {
   if (valor == null) {
-    return <span className="text-xs text-slate-500 dark:text-[#7a8882]">sin base comparable</span>;
+    return <span className="text-xs text-slate-500">sin base comparable</span>;
   }
   const sube = valor >= 0;
   const Icono = sube ? TrendingUp : TrendingDown;
   return (
     <span
       className={`inline-flex items-center gap-1 text-xs font-semibold ${
-        sube ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"
+        sube ? "text-emerald-700" : "text-rose-600"
       }`}
     >
       <Icono size={13} aria-hidden />
@@ -588,22 +530,22 @@ export function Metrica({
 }) {
   const color =
     tono === "negativo"
-      ? "text-rose-600 dark:text-rose-400"
+      ? "text-rose-600"
       : tono === "advertencia"
-        ? "text-amber-700 dark:text-amber-300"
+        ? "text-amber-700"
         : tono === "positivo"
-          ? "text-emerald-700 dark:text-[#4ee6b0]"
-          : "text-slate-950 dark:text-[#f2f7f4]";
+          ? "text-emerald-700"
+          : "text-slate-950";
   return (
     <div className="min-w-0 px-4 py-4 first:pl-0 last:pr-0 md:px-5">
-      <p className="text-xs font-medium text-slate-500 dark:text-[#94a19c]">{label}</p>
+      <p className="titulo-marca text-[0.6875rem] font-semibold text-slate-500">{label}</p>
       <p
         title={valorCompleto ?? valor}
         className={`mt-1 whitespace-nowrap text-xl font-bold tabular-nums md:text-2xl ${color}`}
       >
         {valor}
       </p>
-      <div className="mt-1 min-h-5 text-xs text-slate-500 dark:text-[#7a8882]">
+      <div className="mt-1 min-h-5 text-xs text-slate-500">
         {delta !== undefined ? <Delta valor={delta} texto={textoDelta} /> : nota}
       </div>
     </div>

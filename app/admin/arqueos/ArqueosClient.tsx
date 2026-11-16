@@ -83,7 +83,7 @@ export default function ArqueosClient() {
       ) : arqueos.length === 0 ? (
         <EmptyState>Sin arqueos en este período. Sólo se generan al fichar salida en un local con Fudo configurado.</EmptyState>
       ) : (
-        <Card className="divide-y divide-slate-100 p-0 dark:divide-[#1c2521]">
+        <Card className="divide-y divide-slate-100 p-0">
           {arqueos.map((a) => {
             const diferencia = a.efectivoContado != null ? a.efectivoContado - a.efectivoEsperado : null;
             return (
@@ -93,9 +93,9 @@ export default function ArqueosClient() {
               >
                 <div className="flex items-center justify-between">
                   <span className="font-semibold">{a.empleado}</span>
-                  <span className="text-xs text-slate-500 dark:text-[#7a8882]">{hora(a.timestamp)}</span>
+                  <span className="text-xs text-slate-500">{hora(a.timestamp)}</span>
                 </div>
-                <div className="flex items-center justify-between text-slate-600 dark:text-[#c1cbc6]">
+                <div className="flex items-center justify-between text-slate-600">
                   <span className="flex items-center gap-1">
                     <Wallet size={13} />
                     {a.local}

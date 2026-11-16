@@ -23,7 +23,7 @@ export default function RegistrarRostro({
   return (
     <Card className="w-full">
       <SectionTitle>Reconocimiento facial</SectionTitle>
-      <p className="mb-3 text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="mb-3 text-sm text-slate-500">
         {registrado
           ? "Tu rostro está registrado. Al fichar, la cámara confirma que sos vos."
           : "Para fichar necesitás registrar tu rostro una vez."}
@@ -105,12 +105,12 @@ function ModalRegistro({ onClose, onListo }: { onClose: () => void; onListo: () 
           <video ref={video} playsInline muted className="h-56 w-full -scale-x-100 object-cover" />
         </div>
 
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           Mirá de frente, con buena luz y sin gorro ni barbijo. Sacamos una foto y guardamos una
           huella matemática de tu cara.
         </p>
 
-        <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3 dark:border-[#26312d]">
+        <label className="flex items-start gap-3 rounded-xl border border-slate-200 p-3">
           <Checkbox
             className="mt-1"
             checked={consiente}
@@ -121,7 +121,7 @@ function ModalRegistro({ onClose, onListo }: { onClose: () => void; onListo: () 
               <ShieldCheck size={14} />
               Autorizo el uso de mi rostro
             </span>
-            <span className="mt-0.5 block text-slate-500 dark:text-[#94a19c]">
+            <span className="mt-0.5 block text-slate-500">
               Acepto que la empresa registre y procese mi rostro con el único fin de validar mis
               fichajes. Puedo pedir que se borre cuando quiera.
             </span>

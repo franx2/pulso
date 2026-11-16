@@ -95,34 +95,34 @@ export default function VentasFudo({ localId }: { localId: string }) {
       >
         Ventas y mozos
       </SectionTitle>
-      <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="mb-4 text-sm text-slate-500">
         Personas atendidas y desglose por mozo, según Fudo. El mozo sólo aparece en las ventas
         donde Fudo lo registró — es habitual que sea una parte, no todas. Si el nombre no matchea
         solo, elegí a mano qué empleado de Pulso es cada uno: queda guardado para la próxima vez.
       </p>
 
-      {cargando && <p className="text-sm text-slate-500 dark:text-[#7a8882]">Consultando Fudo…</p>}
+      {cargando && <p className="text-sm text-slate-500">Consultando Fudo…</p>}
       <ErrorText>{error}</ErrorText>
 
       {resumen && !cargando && (
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3">
               <p className="text-lg font-bold">{resumen.cantidadVentas}</p>
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Ventas</p>
+              <p className="text-xs text-slate-500">Ventas</p>
             </div>
-            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3">
               <p className="text-lg font-bold">${resumen.totalVentas.toFixed(2)}</p>
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Total</p>
+              <p className="text-xs text-slate-500">Total</p>
             </div>
-            <div className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+            <div className="rounded-lg border border-slate-100 p-3">
               <p className="text-lg font-bold">{resumen.personasAtendidas}</p>
-              <p className="text-xs text-slate-500 dark:text-[#94a19c]">Personas atendidas</p>
+              <p className="text-xs text-slate-500">Personas atendidas</p>
             </div>
           </div>
 
           {resumen.porMozo.length === 0 ? (
-            <p className="text-center text-sm text-slate-500 dark:text-[#7a8882]">
+            <p className="text-center text-sm text-slate-500">
               Ninguna venta tiene mozo asignado en este período
             </p>
           ) : (
@@ -130,7 +130,7 @@ export default function VentasFudo({ localId }: { localId: string }) {
               {resumen.porMozo.map((m) => (
                 <li
                   key={m.fudoUsuarioId}
-                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
+                  className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3 text-sm"
                 >
                   <span className="flex items-center gap-2">
                     <Users size={14} />
@@ -138,7 +138,7 @@ export default function VentasFudo({ localId }: { localId: string }) {
                     {!m.empleadoId && <Badge tone="slate">sin vincular en Pulso</Badge>}
                   </span>
                   <span className="flex items-center gap-2">
-                    <span className="text-slate-600 dark:text-[#c1cbc6]">
+                    <span className="text-slate-600">
                       {m.cantidadVentas} ventas · ${m.totalVentas.toFixed(2)}
                     </span>
                     <Select

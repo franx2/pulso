@@ -85,7 +85,7 @@ export default function CajaClient() {
     }
   }
 
-  if (!datos) return error ? <ErrorText>{error}</ErrorText> : <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando la caja" />;
+  if (!datos) return error ? <ErrorText>{error}</ErrorText> : <div className="h-64 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando la caja" />;
   const { abierta, cerradas, permisos } = datos;
   const diferencia = abierta?.efectivoEsperado != null && contado ? num(contado) - abierta.efectivoEsperado : null;
 
@@ -116,13 +116,13 @@ export default function CajaClient() {
               <Unlock size={16} aria-hidden />
               Abrir caja
             </Button>
-            {!permisos.create_cash_counts && <p className="text-xs text-slate-500 dark:text-[#94a19c]">Tu rol no puede abrir la caja.</p>}
+            {!permisos.create_cash_counts && <p className="text-xs text-slate-500">Tu rol no puede abrir la caja.</p>}
           </form>
         </Panel>
       ) : (
         <>
           <Panel>
-            <div className="grid grid-cols-2 divide-slate-100 px-4 md:grid-cols-4 md:divide-x dark:divide-[#1c2521]">
+            <div className="grid grid-cols-2 divide-slate-100 px-4 md:grid-cols-4 md:divide-x">
               <Metrica label="Vendido" valor={plata(abierta.vendido)} nota={abierta.ventas.length === 1 ? "1 venta cerrada" : `${abierta.ventas.length} ventas cerradas`} />
               <Metrica label="Propinas" valor={plata(abierta.propinas)} />
               <Metrica label="Fondo inicial" valor={plata(abierta.fondoInicial)} />
@@ -138,7 +138,7 @@ export default function CajaClient() {
             <Panel>
               <PanelHeader titulo="Por medio de pago" />
               {abierta.porMedio.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-slate-500 dark:text-[#94a19c]">Todavía no se cobró nada.</p>
+                <p className="px-4 py-6 text-sm text-slate-500">Todavía no se cobró nada.</p>
               ) : (
                 <div className="p-4">
                   <BarrasHorizontales
@@ -164,7 +164,7 @@ export default function CajaClient() {
                       (ok) => ok && setMov({ tipo: mov.tipo, monto: "", motivo: "" })
                     );
                   }}
-                  className="flex flex-wrap items-end gap-2 border-b border-slate-100 p-4 dark:border-[#1c2521]"
+                  className="flex flex-wrap items-end gap-2 border-b border-slate-100 p-4"
                 >
                   <SelectorSegmentado
                     label="Tipo de movimiento"
@@ -189,18 +189,18 @@ export default function CajaClient() {
                 </form>
               )}
               {abierta.movimientos.length === 0 ? (
-                <p className="px-4 py-6 text-sm text-slate-500 dark:text-[#94a19c]">Sin movimientos.</p>
+                <p className="px-4 py-6 text-sm text-slate-500">Sin movimientos.</p>
               ) : (
-                <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <ul className="divide-y divide-slate-100">
                   {abierta.movimientos.map((m) => (
                     <li key={m.id} className="flex items-center gap-3 px-4 py-2.5 text-sm">
                       {m.tipo === "EGRESO" ? (
-                        <ArrowUpCircle size={16} className="shrink-0 text-rose-600 dark:text-rose-400" aria-label="Retiro" />
+                        <ArrowUpCircle size={16} className="shrink-0 text-rose-600" aria-label="Retiro" />
                       ) : (
-                        <ArrowDownCircle size={16} className="shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-label="Ingreso" />
+                        <ArrowDownCircle size={16} className="shrink-0 text-emerald-700" aria-label="Ingreso" />
                       )}
                       <span className="min-w-0 flex-1 truncate">
-                        {m.motivo} <span className="text-slate-500 dark:text-[#94a19c]">· {m.empleado} · {hora(m.createdAt)}</span>
+                        {m.motivo} <span className="text-slate-500">· {m.empleado} · {hora(m.createdAt)}</span>
                       </span>
                       <span className="font-semibold tabular-nums">
                         {m.tipo === "EGRESO" ? "−" : ""}
@@ -216,15 +216,15 @@ export default function CajaClient() {
           <Panel>
             <PanelHeader titulo="Ventas de esta caja" />
             {abierta.ventas.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-slate-500 dark:text-[#94a19c]">Todavía no se cerró ninguna venta.</p>
+              <p className="px-4 py-6 text-sm text-slate-500">Todavía no se cerró ninguna venta.</p>
             ) : (
-              <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+              <ul className="divide-y divide-slate-100">
                 {abierta.ventas.map((v) => (
                   <li key={v.id}>
-                    <Link href={`/ventas/${v.id}`} className="flex justify-between px-4 py-2.5 text-sm hover:bg-slate-50 dark:hover:bg-[#172724]">
+                    <Link href={`/ventas/${v.id}`} className="flex justify-between px-4 py-2.5 text-sm hover:bg-slate-50">
                       <span>
                         #{v.numero} · {v.mesa ? `Mesa ${v.mesa}` : "Mostrador"}
-                        <span className="text-slate-500 dark:text-[#94a19c]"> · {v.cerradaEn ? hora(v.cerradaEn) : ""}</span>
+                        <span className="text-slate-500"> · {v.cerradaEn ? hora(v.cerradaEn) : ""}</span>
                       </span>
                       <span className="font-semibold tabular-nums">{plata(v.total ?? 0)}</span>
                     </Link>
@@ -251,7 +251,7 @@ export default function CajaClient() {
                 <Input inputMode="decimal" value={contado} onChange={(e) => setContado(e.target.value)} className="text-lg font-semibold tabular-nums" />
               </div>
               {diferencia != null && (
-                <p className={`text-sm font-semibold ${Math.abs(diferencia) < 1 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-700 dark:text-rose-300"}`}>
+                <p className={`text-sm font-semibold ${Math.abs(diferencia) < 1 ? "text-emerald-700" : "text-rose-700"}`}>
                   {Math.abs(diferencia) < 1 ? "Cierra justo" : diferencia > 0 ? `Sobran ${plata(diferencia)}` : `Faltan ${plata(-diferencia)}`}
                 </p>
               )}
@@ -267,12 +267,12 @@ export default function CajaClient() {
       {cerradas.length > 0 && (
         <Panel>
           <PanelHeader titulo="Cajas anteriores" />
-          <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+          <ul className="divide-y divide-slate-100">
             {cerradas.map((c) => (
               <li key={c.id} className="flex flex-wrap justify-between gap-2 px-4 py-2.5 text-sm">
                 <span>
                   {c.nombre} · {diaHora(c.abiertaEn)} a {hora(c.cerradaEn)}
-                  <span className="text-slate-500 dark:text-[#94a19c]"> · cerró {c.cerradaPor ?? "—"}</span>
+                  <span className="text-slate-500"> · cerró {c.cerradaPor ?? "—"}</span>
                 </span>
                 <span className="tabular-nums">contado {c.efectivoContado != null ? plata(c.efectivoContado) : "—"}</span>
               </li>

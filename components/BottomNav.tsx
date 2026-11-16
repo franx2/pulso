@@ -79,7 +79,7 @@ export function BottomNav({ active, rol = "EMPLEADO" }: { active: NavActivo; rol
   if (visibles.length < 2) return null;
 
   const contenedor =
-    "mx-auto flex max-w-lg gap-1 rounded-2xl border border-slate-200/90 bg-white/95 p-1.5 shadow-[0_12px_35px_rgba(15,23,42,0.22)] backdrop-blur dark:border-[#29403b] dark:bg-[#101c19]/95 dark:shadow-[0_14px_38px_rgba(0,0,0,0.5)]";
+    "mx-auto flex max-w-lg gap-1 rounded-xl bg-slate-950 p-1.5 shadow-[0_10px_30px_rgba(22,19,17,0.3)]";
 
   // Pocos destinos: todos a la vista, como siempre.
   if (visibles.length <= MAXIMO_EN_BARRA) {
@@ -117,7 +117,7 @@ export function BottomNav({ active, rol = "EMPLEADO" }: { active: NavActivo; rol
             className={`${CLASE_ITEM} ${activoEnMas ? CLASE_ACTIVO : CLASE_INACTIVO}`}
           >
             <MoreHorizontal size={20} strokeWidth={2.3} />
-            <span className="block truncate text-[11px] font-bold leading-tight">Más</span>
+            <span className="block truncate text-[10px] font-semibold uppercase leading-tight tracking-[0.08em]">Más</span>
           </button>
         </div>
       </nav>
@@ -128,7 +128,7 @@ export function BottomNav({ active, rol = "EMPLEADO" }: { active: NavActivo; rol
             {grupos.map((grupo) => (
               <div key={grupo || "general"}>
                 {grupo && (
-                  <p className="mb-1.5 px-1 text-xs font-semibold uppercase text-slate-500 dark:text-[#94a19c]">{grupo}</p>
+                  <p className="mb-1.5 px-1 text-[0.6875rem] font-semibold uppercase tracking-[0.14em] text-arena-700">{grupo}</p>
                 )}
                 <div className="flex flex-col gap-1">
                   {visibles
@@ -139,10 +139,10 @@ export function BottomNav({ active, rol = "EMPLEADO" }: { active: NavActivo; rol
                         href={i.href}
                         onClick={() => setAbierto(false)}
                         aria-current={active === i.key ? "page" : undefined}
-                        className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0] ${
+                        className={`flex min-h-12 items-center gap-3 rounded-xl px-3 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 ${
                           active === i.key
-                            ? "bg-emerald-700 text-white dark:bg-[#1d4e48] dark:text-[#37e6b0]"
-                            : "text-slate-700 hover:bg-slate-100 dark:text-[#e0e7e3] dark:hover:bg-[#172724]"
+                            ? "bg-slate-950 text-[#FDFDFC]"
+                            : "text-slate-700 hover:bg-slate-100"
                         }`}
                       >
                         <i.Icon size={20} strokeWidth={2.3} className="shrink-0" aria-hidden />
@@ -160,10 +160,10 @@ export function BottomNav({ active, rol = "EMPLEADO" }: { active: NavActivo; rol
 }
 
 const CLASE_ITEM =
-  "flex min-h-[58px] min-w-16 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412]";
-const CLASE_ACTIVO = "bg-emerald-700 text-white shadow-sm dark:bg-[#1d4e48] dark:text-[#37e6b0]";
+  "flex min-h-[58px] min-w-16 flex-1 flex-col items-center justify-center gap-1 rounded-xl px-1 py-2 text-center transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-arena-300";
+const CLASE_ACTIVO = "bg-[#FDFDFC] text-slate-950";
 const CLASE_INACTIVO =
-  "text-slate-500 hover:bg-slate-100 hover:text-slate-800 dark:text-[#b0c3bc] dark:hover:bg-[#172724] dark:hover:text-[#f2f7f4]";
+  "text-slate-300 hover:bg-slate-800 hover:text-[#FDFDFC]";
 
 function NavItem({
   active,
@@ -186,7 +186,7 @@ function NavItem({
   return (
     <Link ref={ref} href={href} className={cls} aria-current={active ? "page" : undefined}>
       <Icon size={20} strokeWidth={2.3} />
-      <span className="block truncate text-[11px] font-bold leading-tight">{label}</span>
+      <span className="block truncate text-[10px] font-semibold uppercase leading-tight tracking-[0.08em]">{label}</span>
     </Link>
   );
 }

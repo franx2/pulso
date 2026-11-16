@@ -167,6 +167,20 @@ export default async function ImprimirPage({
             </div>
           </>
         )}
+        {tipo === "precuenta" && venta.local.propinaSugeridaPct && (
+          <>
+            <hr />
+            <div className="fila">
+              <span>Propina sugerida {venta.local.propinaSugeridaPct}%</span>
+              <span>{plata((venta.total * venta.local.propinaSugeridaPct) / 100)}</span>
+            </div>
+            <div className="fila">
+              <span>Total con propina</span>
+              <span>{plata(venta.total * (1 + venta.local.propinaSugeridaPct / 100))}</span>
+            </div>
+            <p className="chico">La propina es voluntaria.</p>
+          </>
+        )}
         {tipo === "ticket" &&
           venta.pagos
             .filter((p) => !p.anulado)

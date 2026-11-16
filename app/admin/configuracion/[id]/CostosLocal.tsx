@@ -83,7 +83,7 @@ export default function CostosLocal({ localId }: { localId: string }) {
     <div className="space-y-6">
       <section>
         <h3 className="font-semibold">Comisiones por medio de pago</h3>
-        <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="mt-0.5 text-sm text-slate-500">
           Se aplican sobre lo cobrado por cada medio. Son por local porque cada sucursal negocia
           sus propios contratos.
         </p>
@@ -104,9 +104,9 @@ export default function CostosLocal({ localId }: { localId: string }) {
                         setComisiones({ ...comisiones, [campo.clave]: Number(e.target.value) / 100 })
                       }
                     />
-                    <span className="text-sm text-slate-500 dark:text-[#94a19c]">%</span>
+                    <span className="text-sm text-slate-500">%</span>
                   </div>
-                  <p className="mt-0.5 text-xs text-slate-500 dark:text-[#7a8882]">{campo.ayuda}</p>
+                  <p className="mt-0.5 text-xs text-slate-500">{campo.ayuda}</p>
                 </div>
               ))}
             </div>
@@ -117,11 +117,11 @@ export default function CostosLocal({ localId }: { localId: string }) {
         )}
       </section>
 
-      <section className="border-t border-slate-100 pt-5 dark:border-[#1c2521]">
+      <section className="border-t border-slate-100 pt-5">
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
             <h3 className="font-semibold">Costos fijos del mes</h3>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-0.5 text-sm text-slate-500">
               No están en Fudo ni en los remitos: sin esto el resultado se queda en margen de
               contribución. Dejar un concepto en cero lo marca como pendiente.
             </p>
@@ -132,12 +132,12 @@ export default function CostosLocal({ localId }: { localId: string }) {
           </div>
         </div>
 
-        <div className="mt-3 divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <div className="mt-3 divide-y divide-slate-100">
           {conceptos.map((c, i) => (
             <div key={c.concepto} className="flex flex-wrap items-center gap-3 py-2.5">
               <span className="w-32 font-medium">{c.concepto}</span>
               <div className="flex items-center gap-1.5">
-                <span className="text-sm text-slate-500 dark:text-[#94a19c]">$</span>
+                <span className="text-sm text-slate-500">$</span>
                 <Input
                   type="number"
                   min="0"
@@ -163,7 +163,7 @@ export default function CostosLocal({ localId }: { localId: string }) {
                 }}
               />
               {c.monto === 0 && (
-                <span className="text-xs text-amber-700 dark:text-amber-300">sin cargar</span>
+                <span className="text-xs text-amber-700">sin cargar</span>
               )}
             </div>
           ))}
@@ -173,7 +173,7 @@ export default function CostosLocal({ localId }: { localId: string }) {
           <Button type="button" disabled={guardando} onClick={guardarCostos}>
             Guardar costos de {mesLargo(mes)}
           </Button>
-          <span className="text-sm text-slate-500 dark:text-[#94a19c]">
+          <span className="text-sm text-slate-500">
             Total {plata(total)}
             {faltan > 0 && ` · ${faltan} sin cargar`}
           </span>
@@ -184,7 +184,7 @@ export default function CostosLocal({ localId }: { localId: string }) {
         <p
           role="status"
           className={`text-sm font-medium ${
-            aviso.ok ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"
+            aviso.ok ? "text-emerald-700" : "text-rose-600"
           }`}
         >
           {aviso.texto}

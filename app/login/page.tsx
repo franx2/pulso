@@ -85,10 +85,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-[#f6f8f5] px-6 py-10 dark:bg-[#0b1412]">
+    <div className="flex flex-1 flex-col items-center justify-center gap-8 bg-[#F5F3EE] px-6 py-10">
       <Brand centered />
       <Card className={`w-full ${modo === "crear" ? "max-w-sm" : "max-w-xs"}`}>
-        <h1 className="mb-4 text-lg font-semibold">{TITULO[modo]}</h1>
+        <h1 className="titulo-marca mb-4 text-lg font-bold">{TITULO[modo]}</h1>
 
         {modo === "crear" ? (
           <CrearCuenta
@@ -108,7 +108,7 @@ export default function LoginPage() {
             }}
           >
             {aviso && (
-              <p role="status" className="mb-4 flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800 dark:bg-[#122620] dark:text-[#9cefd0]">
+              <p role="status" className="mb-4 flex items-start gap-2 rounded-lg bg-emerald-50 px-3 py-2 text-sm text-emerald-800">
                 <CheckCircle2 size={16} className="mt-0.5 shrink-0" aria-hidden />
                 {aviso}
               </p>
@@ -150,7 +150,7 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => cambiarModo(modo === "passkey" ? "password" : "passkey")}
-              className="mt-3 w-full rounded-lg py-2 text-center text-sm text-slate-500 underline dark:text-[#94a19c]"
+              className="mt-3 w-full rounded-lg py-2 text-center text-sm text-slate-500 underline"
             >
               {modo === "passkey" ? "Prefiero ingresar con contraseña" : "Prefiero usar Face ID / huella"}
             </button>
@@ -159,12 +159,12 @@ export default function LoginPage() {
               <ErrorText>{error}</ErrorText>
             </div>
 
-            <div className="mt-3 border-t border-slate-100 pt-4 text-center text-sm dark:border-[#1c2521]">
-              <span className="text-slate-500 dark:text-[#94a19c]">¿Es tu primera vez? </span>
+            <div className="mt-3 border-t border-slate-100 pt-4 text-center text-sm">
+              <span className="text-slate-500">¿Es tu primera vez? </span>
               <button
                 type="button"
                 onClick={() => cambiarModo("crear")}
-                className="font-semibold text-emerald-700 underline-offset-2 hover:underline dark:text-[#4ee6b0]"
+                className="font-semibold text-emerald-700 underline-offset-2 hover:underline"
               >
                 Crear cuenta
               </button>
@@ -227,7 +227,7 @@ function CrearCuenta({ onCreada, onVolver }: { onCreada: (usuario: string) => vo
           placeholder="nombre.apellido"
           autoComplete="username"
         />
-        <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">Con esto vas a entrar. Sin espacios.</p>
+        <p className="mt-1 text-xs text-slate-500">Con esto vas a entrar. Sin espacios.</p>
       </div>
       <div>
         <Label>Sucursal donde trabajás</Label>
@@ -256,7 +256,7 @@ function CrearCuenta({ onCreada, onVolver }: { onCreada: (usuario: string) => vo
           <Input type="password" value={confirmar} onChange={(e) => setConfirmar(e.target.value)} required autoComplete="new-password" />
         </div>
       </div>
-      <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+      <p className="text-xs text-slate-500">
         Al menos 8 caracteres. Tu cuenta queda pendiente hasta que un administrador la active; después podés sumar
         Face ID o huella desde tu celular.
       </p>
@@ -270,7 +270,7 @@ function CrearCuenta({ onCreada, onVolver }: { onCreada: (usuario: string) => vo
       <button
         type="button"
         onClick={onVolver}
-        className="inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm text-slate-500 hover:text-slate-900 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+        className="inline-flex items-center justify-center gap-1.5 rounded-lg py-2 text-sm text-slate-500 hover:text-slate-900"
       >
         <ArrowLeft size={15} aria-hidden />
         Volver a ingresar

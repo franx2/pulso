@@ -236,7 +236,7 @@ export default function EmpleadosClient() {
 
       {link && (
         <Aviso onCerrar={() => setLink("")}>
-          <LinkIcon size={16} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+          <LinkIcon size={16} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden />
           <p>
             Compartí este link para que registre su Face ID / huella:{" "}
             <a href={link} className="break-all font-medium underline">
@@ -247,7 +247,7 @@ export default function EmpleadosClient() {
       )}
       {passwordGenerada && (
         <Aviso onCerrar={() => setPasswordGenerada(null)}>
-          <Lock size={16} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+          <Lock size={16} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden />
           <p>
             Contraseña de <strong>{passwordGenerada.nombre}</strong>: se muestra una sola vez, pasásela ahora —{" "}
             <span className="font-mono font-bold">{passwordGenerada.password}</span>
@@ -256,19 +256,19 @@ export default function EmpleadosClient() {
       )}
 
       {pendientes.length > 0 && (
-        <Panel className="border-amber-300 bg-amber-50/60 dark:border-amber-500/40 dark:bg-amber-500/10">
-          <div className="flex items-center gap-2 border-b border-amber-200 px-4 py-3 dark:border-amber-500/30">
-            <Bell size={16} className="text-amber-700 dark:text-amber-300" aria-hidden />
-            <h2 className="font-semibold text-amber-950 dark:text-amber-200">
+        <Panel className="border-amber-300 bg-amber-50/60">
+          <div className="flex items-center gap-2 border-b border-amber-200 px-4 py-3">
+            <Bell size={16} className="text-amber-700" aria-hidden />
+            <h2 className="font-semibold text-amber-950">
               {pendientes.length === 1 ? "1 persona espera" : `${pendientes.length} personas esperan`} que actives su cuenta
             </h2>
           </div>
-          <ul className="divide-y divide-amber-200/70 dark:divide-amber-500/20">
+          <ul className="divide-y divide-amber-200/70">
             {pendientes.map((e) => (
               <li key={e.id} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                 <div className="min-w-0">
                   <p className="font-semibold">{e.nombre}</p>
-                  <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">
+                  <p className="text-sm text-slate-600">
                     @{e.usuario} · {e.local.nombre}
                     {e.email && ` · ${e.email}`} · pidió la cuenta el {new Date(e.pendienteDesde!).toLocaleDateString("es-AR")}
                   </p>
@@ -296,7 +296,7 @@ export default function EmpleadosClient() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
               <div className="flex min-w-0 flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
                 <div className="sm:w-72">
-                  <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Buscar</p>
+                  <p className="mb-2 text-xs font-semibold text-slate-500">Buscar</p>
                   <label className="relative block">
                     <span className="sr-only">Buscar por nombre, usuario, email o categoría</span>
                     <Search size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -310,13 +310,13 @@ export default function EmpleadosClient() {
                 </div>
                 {locales.length > 1 && (
                   <div className="min-w-0">
-                    <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Sucursal</p>
+                    <p className="mb-2 text-xs font-semibold text-slate-500">Sucursal</p>
                     <SelectorLocal locales={locales} valor={filtroLocal} onChange={setFiltroLocal} todos="Todas" />
                   </div>
                 )}
               </div>
               <div className="min-w-0">
-                <p className="mb-2 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Rol</p>
+                <p className="mb-2 text-xs font-semibold text-slate-500">Rol</p>
                 <SelectorSegmentado
                   label="Filtrar por rol"
                   valor={filtroRol}
@@ -330,8 +330,8 @@ export default function EmpleadosClient() {
                 />
               </div>
             </div>
-            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
-              <span className="font-medium text-slate-700 dark:text-[#dbe5e0]">
+            <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+              <span className="font-medium text-slate-700">
                 {visibles.length} de {empleados.filter((e) => !e.pendienteDesde && (verInactivos || e.activo)).length} usuarios
               </span>
               {inactivos > 0 && (
@@ -344,8 +344,8 @@ export default function EmpleadosClient() {
           </Panel>
 
           {seleccion.size > 0 && (
-            <Panel className="flex flex-wrap items-center gap-2 border-emerald-200 bg-emerald-50 p-3 dark:border-[#2f6b55] dark:bg-[#122620]">
-              <Banknote size={16} className="shrink-0 text-emerald-700 dark:text-[#4ee6b0]" aria-hidden />
+            <Panel className="flex flex-wrap items-center gap-2 border-emerald-200 bg-emerald-50 p-3">
+              <Banknote size={16} className="shrink-0 text-emerald-700" aria-hidden />
               <span className="text-sm font-semibold">
                 {seleccion.size} {seleccion.size === 1 ? "seleccionado" : "seleccionados"}
               </span>
@@ -369,7 +369,7 @@ export default function EmpleadosClient() {
           )}
 
           {!cargado ? (
-            <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Cargando equipo" />
+            <div className="h-64 animate-pulse rounded-lg bg-slate-200/70" aria-label="Cargando equipo" />
           ) : visibles.length === 0 ? (
             <EmptyState>{empleados.length === 0 ? "Todavía no hay usuarios cargados." : "Nadie coincide con la búsqueda y los filtros."}</EmptyState>
           ) : (
@@ -378,7 +378,7 @@ export default function EmpleadosClient() {
               <div className="hidden overflow-x-auto lg:block">
                 <table className="w-full min-w-[60rem] text-sm">
                   <thead>
-                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500 dark:border-[#29403b] dark:bg-[#0d1614] dark:text-[#94a19c]">
+                    <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
                       <th className={`${celda} w-10`}>
                         <Checkbox
                           checked={todosMarcados}
@@ -398,17 +398,17 @@ export default function EmpleadosClient() {
                       <th className={`${celda} w-px`} />
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                  <tbody className="divide-y divide-slate-100">
                     {visibles.map((e) => {
                       const a = acceso(e);
                       return (
-                        <tr key={e.id} className={`hover:bg-slate-50/70 dark:hover:bg-[#13201d] ${e.activo ? "" : "opacity-60"}`}>
+                        <tr key={e.id} className={`hover:bg-slate-50/70 ${e.activo ? "" : "opacity-60"}`}>
                           <td className={celda}>
                             <Checkbox checked={seleccion.has(e.id)} onChange={() => alternarSeleccion(e.id)} aria-label={`Seleccionar a ${e.nombre}`} />
                           </td>
                           <td className={celda}>
                             <p className="font-semibold">{e.nombre}</p>
-                            <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+                            <p className="text-xs text-slate-500">
                               @{e.usuario}
                               {!e.activo && " · inactivo"}
                             </p>
@@ -428,7 +428,7 @@ export default function EmpleadosClient() {
                           <td className={celda}>
                             <p>{e.local.nombre}</p>
                             {e.asignaciones.length > 0 && (
-                              <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+                              <p className="text-xs text-slate-500">
                                 también {e.asignaciones.map((x) => x.local.nombre).join(" · ")}
                               </p>
                             )}
@@ -454,7 +454,7 @@ export default function EmpleadosClient() {
                           <td className={celda}>
                             <Badge tone={a.tono}>{a.texto}</Badge>
                           </td>
-                          <td className={`${celda} tabular-nums text-slate-500 dark:text-[#94a19c]`}>{cuandoFicho(e.ultimoFichaje)}</td>
+                          <td className={`${celda} tabular-nums text-slate-500`}>{cuandoFicho(e.ultimoFichaje)}</td>
                           <td className={`${celda} whitespace-nowrap text-right`}>
                             <Button variant="ghost" className="py-1.5 text-sm" onClick={() => setEdicion({ tipo: "editar", empleado: e })}>
                               <Pencil size={14} aria-hidden />
@@ -468,7 +468,7 @@ export default function EmpleadosClient() {
                 </table>
               </div>
 
-              <ul className="divide-y divide-slate-100 lg:hidden dark:divide-[#1c2521]">
+              <ul className="divide-y divide-slate-100 lg:hidden">
                 {visibles.map((e) => {
                   const a = acceso(e);
                   return (
@@ -478,7 +478,7 @@ export default function EmpleadosClient() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
                             <p className="truncate font-semibold">{e.nombre}</p>
-                            <p className="truncate text-xs text-slate-500 dark:text-[#94a19c]">
+                            <p className="truncate text-xs text-slate-500">
                               @{e.usuario} · {e.local.nombre}
                               {e.categoria && ` · ${e.categoria.nombre}`}
                             </p>
@@ -488,7 +488,7 @@ export default function EmpleadosClient() {
                             Editar
                           </Button>
                         </div>
-                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500 dark:text-[#94a19c]">
+                        <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-xs text-slate-500">
                           <Badge tone={e.rol === "EMPLEADO" ? "slate" : "amber"}>{ETIQUETA_ROL[e.rol]}</Badge>
                           <Badge tone={a.tono}>{a.texto}</Badge>
                           {!e.activo && <Badge tone="slate">Inactivo</Badge>}
@@ -538,9 +538,9 @@ export default function EmpleadosClient() {
 
 function Aviso({ children, onCerrar }: { children: React.ReactNode; onCerrar: () => void }) {
   return (
-    <div className="flex items-start justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm dark:border-[#2f6b55] dark:bg-[#122620]">
+    <div className="flex items-start justify-between gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm">
       <div className="flex min-w-0 items-start gap-2">{children}</div>
-      <button type="button" onClick={onCerrar} aria-label="Cerrar" className="shrink-0 text-emerald-700 dark:text-[#4ee6b0]">
+      <button type="button" onClick={onCerrar} aria-label="Cerrar" className="shrink-0 text-emerald-700">
         <X size={16} />
       </button>
     </div>
@@ -636,14 +636,14 @@ function FichaUsuario({
                 key={r}
                 className={`flex cursor-pointer items-start gap-2.5 rounded-lg border px-3 py-2 text-sm transition-colors ${
                   rol === r
-                    ? "border-emerald-600 bg-emerald-50/60 dark:border-[#37e6b0] dark:bg-[#122620]"
-                    : "border-slate-200 hover:bg-slate-50 dark:border-[#29403b] dark:hover:bg-[#13201d]"
+                    ? "border-emerald-600 bg-emerald-50/60"
+                    : "border-slate-200 hover:bg-slate-50"
                 }`}
               >
                 <input type="radio" name="rol" value={r} checked={rol === r} onChange={() => setRol(r)} className="mt-1 accent-emerald-700" />
                 <span>
                   <span className="font-semibold">{ETIQUETA_ROL[r]}</span>
-                  <span className="block text-xs text-slate-500 dark:text-[#94a19c]">{DESCRIPCION_ROL[r]}</span>
+                  <span className="block text-xs text-slate-500">{DESCRIPCION_ROL[r]}</span>
                 </span>
               </label>
             ))}
@@ -654,7 +654,7 @@ function FichaUsuario({
           <div>
             <Label>Email para avisos</Label>
             <Input type="email" value={email} onChange={(ev) => setEmail(ev.target.value)} placeholder="Sin email: no recibe alertas" />
-            <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">Le llegan las alertas de tardanzas, faltas y salidas olvidadas.</p>
+            <p className="mt-1 text-xs text-slate-500">Le llegan las alertas de tardanzas, faltas y salidas olvidadas.</p>
           </div>
         )}
 
@@ -715,9 +715,9 @@ function FichaUsuario({
         )}
 
         {e && !pendiente && (
-          <div className="rounded-lg border border-slate-200 p-3 dark:border-[#29403b]">
+          <div className="rounded-lg border border-slate-200 p-3">
             <p className="text-sm font-semibold">Acceso</p>
-            <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">{acceso(e).texto}. Si cambió de celular o se olvidó cómo entrar:</p>
+            <p className="mt-0.5 text-xs text-slate-500">{acceso(e).texto}. Si cambió de celular o se olvidó cómo entrar:</p>
             <div className="mt-2 flex flex-wrap gap-2">
               <Button type="button" variant="ghost" className="py-1.5 text-sm" onClick={() => onAccion(e, "passkey")}>
                 <KeyRound size={14} aria-hidden />
@@ -733,7 +733,7 @@ function FichaUsuario({
 
         <ErrorText>{error}</ErrorText>
 
-        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between dark:border-[#1c2521]">
+        <div className="flex flex-col-reverse gap-2 border-t border-slate-100 pt-4 sm:flex-row sm:items-center sm:justify-between">
           {pendiente ? (
             <Button type="button" variant="danger" onClick={() => onAccion(e!, "rechazar")}>
               Rechazar y borrar
@@ -743,7 +743,7 @@ function FichaUsuario({
               {e.activo ? "Desactivar usuario" : "Volver a activar"}
             </Button>
           ) : (
-            <p className="text-xs text-slate-500 dark:text-[#94a19c]">Al crearlo te damos el link para que registre su passkey.</p>
+            <p className="text-xs text-slate-500">Al crearlo te damos el link para que registre su passkey.</p>
           )}
           <div className="flex gap-2">
             <Button type="button" variant="ghost" onClick={onCerrar}>
@@ -773,16 +773,16 @@ function RolesYPermisos({ empleados }: { empleados: Empleado[] }) {
   return (
     <div className="grid gap-5 xl:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] xl:items-start">
       <Panel>
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">Roles</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Cada usuario tiene uno; se cambia desde la lista o en Editar.</p>
+          <p className="mt-0.5 text-sm text-slate-500">Cada usuario tiene uno; se cambia desde la lista o en Editar.</p>
         </div>
-        <ul className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <ul className="divide-y divide-slate-100">
           {roles.map((r) => (
             <li key={r} className="flex items-start justify-between gap-3 px-4 py-3">
               <div>
                 <p className="font-semibold">{ETIQUETA_ROL[r]}</p>
-                <p className="text-sm text-slate-500 dark:text-[#94a19c]">{DESCRIPCION_ROL[r]}</p>
+                <p className="text-sm text-slate-500">{DESCRIPCION_ROL[r]}</p>
               </div>
               <Badge tone="slate">{cuantos(r)} activos</Badge>
             </li>
@@ -791,13 +791,13 @@ function RolesYPermisos({ empleados }: { empleados: Empleado[] }) {
       </Panel>
 
       <Panel className="overflow-hidden">
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">Qué pantallas ve cada rol</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full min-w-[28rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500 dark:border-[#29403b] dark:bg-[#0d1614] dark:text-[#94a19c]">
+              <tr className="border-b border-slate-200 bg-slate-50 text-left text-xs font-semibold text-slate-500">
                 <th className="px-4 py-2.5">Pantalla</th>
                 {roles.map((r) => (
                   <th key={r} className="px-4 py-2.5 text-center">
@@ -807,9 +807,9 @@ function RolesYPermisos({ empleados }: { empleados: Empleado[] }) {
               </tr>
             </thead>
             {grupos.map((grupo) => (
-              <tbody key={grupo} className="divide-y divide-slate-100 dark:divide-[#1c2521]">
-                <tr className="bg-slate-50/60 dark:bg-[#0d1614]">
-                  <th colSpan={4} className="px-4 py-1.5 text-left text-xs font-semibold text-slate-500 dark:text-[#94a19c]">
+              <tbody key={grupo} className="divide-y divide-slate-100">
+                <tr className="bg-slate-50/60">
+                  <th colSpan={4} className="px-4 py-1.5 text-left text-xs font-semibold text-slate-500">
                     {grupo}
                   </th>
                 </tr>
@@ -824,9 +824,9 @@ function RolesYPermisos({ empleados }: { empleados: Empleado[] }) {
                     {roles.map((r) => (
                       <td key={r} className="px-4 py-2.5 text-center">
                         {RANGO[r] >= RANGO[item.minimo] ? (
-                          <Check size={16} className="mx-auto text-emerald-700 dark:text-[#4ee6b0]" aria-label="Ve" />
+                          <Check size={16} className="mx-auto text-emerald-700" aria-label="Ve" />
                         ) : (
-                          <span className="text-slate-300 dark:text-[#3d4f4a]" aria-label="No ve">
+                          <span className="text-slate-300" aria-label="No ve">
                             —
                           </span>
                         )}

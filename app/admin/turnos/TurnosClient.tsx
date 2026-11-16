@@ -294,7 +294,7 @@ export default function TurnosClient() {
             <div>
               <Label>Empleado</Label>
               {empleadosDelLocal.length === 0 ? (
-                <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+                <p className="text-sm text-slate-500">
                   No hay empleados asignados a esta sucursal.
                 </p>
               ) : (
@@ -330,8 +330,8 @@ export default function TurnosClient() {
                   return (
                     <div
                       key={offset}
-                      className={`flex flex-wrap items-center gap-2 rounded-xl border p-2 dark:border-[#26312d] ${
-                        d.activo ? "border-slate-200" : "border-slate-100 opacity-60 dark:border-[#1c2521]"
+                      className={`flex flex-wrap items-center gap-2 rounded-xl border p-2 ${
+                        d.activo ? "border-slate-200" : "border-slate-100 opacity-60"
                       }`}
                     >
                       <label className="flex w-24 shrink-0 items-center gap-2 text-sm font-medium capitalize">
@@ -358,7 +358,7 @@ export default function TurnosClient() {
                         className="w-auto! py-1.5"
                       />
                       {d.activo && cruza && (
-                        <span className="w-full text-xs text-amber-700 dark:text-amber-300">
+                        <span className="w-full text-xs text-amber-700">
                           Termina al día siguiente
                         </span>
                       )}
@@ -418,14 +418,14 @@ export default function TurnosClient() {
                 {fechas.map((f) => (
                   <span
                     key={f}
-                    className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm dark:bg-[#18201d]"
+                    className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm"
                   >
                     {formatearFechaSql(f, { weekday: "short", day: "2-digit", month: "short" })}
                     <button
                       type="button"
                       onClick={() => quitarFecha(f)}
                       aria-label={`Quitar ${f}`}
-                      className="grid h-5 w-5 place-items-center rounded-full text-slate-500 transition-colors hover:bg-slate-200 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500 dark:text-[#94a19c] dark:hover:bg-[#26312d] dark:hover:text-rose-400"
+                      className="grid h-5 w-5 place-items-center rounded-full text-slate-500 transition-colors hover:bg-slate-200 hover:text-rose-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
                     >
                       <X size={12} />
                     </button>
@@ -452,7 +452,7 @@ export default function TurnosClient() {
               />
             </div>
           </div>
-          <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+          <p className="text-xs text-slate-500">
             Este horario se aplica a cada empleado que marques. Podés ajustarlo individualmente
             abajo antes de guardar.
           </p>
@@ -460,11 +460,11 @@ export default function TurnosClient() {
           <div>
             <Label>Empleados</Label>
             {empleadosDelLocal.length === 0 ? (
-              <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="text-sm text-slate-500">
                 No hay empleados asignados a esta sucursal.
               </p>
             ) : (
-              <div className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-2 dark:border-[#26312d]">
+              <div className="flex flex-col gap-1.5 rounded-xl border border-slate-200 p-2">
                 {empleadosDelLocal.map((emp) => (
                   <label key={emp.id} className="flex items-center gap-2 py-0.5 text-sm">
                     <Checkbox
@@ -487,7 +487,7 @@ export default function TurnosClient() {
                   const h = seleccion[id];
                   const cruza = h.horaFin <= h.horaInicio;
                   return (
-                    <div key={id} className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 p-2 dark:border-[#26312d]">
+                    <div key={id} className="flex flex-wrap items-center gap-2 rounded-xl border border-slate-200 p-2">
                       <span className="min-w-0 flex-1 truncate text-sm font-medium">{emp?.nombre}</span>
                       <Input
                         type="time"
@@ -503,7 +503,7 @@ export default function TurnosClient() {
                         className="w-auto! py-1.5"
                       />
                       {cruza && (
-                        <span className="w-full text-xs text-amber-700 dark:text-amber-300">
+                        <span className="w-full text-xs text-amber-700">
                           Termina al día siguiente
                         </span>
                       )}
@@ -537,7 +537,7 @@ export default function TurnosClient() {
               <Card key={t.id} className="flex items-center justify-between gap-3 md:p-3">
                 <div className="min-w-0">
                   <p className="truncate font-semibold">{t.empleado?.nombre}</p>
-                  <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+                  <p className="text-sm text-slate-500">
                     {formatearFechaSql(t.fecha, { weekday: "short", day: "2-digit", month: "short" })}
                     {" · "}
                     {t.horaInicio}–{t.horaFin}

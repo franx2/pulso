@@ -49,9 +49,9 @@ export default function EquivalenciasHelado({ reglas, onGuardado }: { reglas: Re
 
   return (
     <Panel>
-      <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <div className="border-b border-slate-100 px-4 py-3">
         <h2 className="font-semibold">Equivalencias</h2>
-        <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="mt-0.5 text-sm text-slate-500">
           Cuántos gramos lleva cada formato. Valen para toda la cadena y recalculan el período entero.
         </p>
       </div>
@@ -61,15 +61,15 @@ export default function EquivalenciasHelado({ reglas, onGuardado }: { reglas: Re
           if (cambiadas.length && !invalida) guardar(cambiadas.map((r) => ({ id: r.id, gramos: Number(valores[r.id]) })));
         }}
       >
-        <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <div className="divide-y divide-slate-100">
           {reglas.map((r) => {
             const editada = r.gramos !== r.porDefecto;
             return (
               <div key={r.id} className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm">
                 <label htmlFor={`eq-${r.id}`} className="min-w-0">
-                  <span className="block text-slate-700 dark:text-[#dbe5e0]">{r.etiqueta}</span>
+                  <span className="block text-slate-700">{r.etiqueta}</span>
                   {editada && (
-                    <span className="block text-xs text-slate-500 dark:text-[#94a19c]">De fábrica: {r.porDefecto} g</span>
+                    <span className="block text-xs text-slate-500">De fábrica: {r.porDefecto} g</span>
                   )}
                 </label>
                 <div className="flex shrink-0 items-center gap-1.5">
@@ -78,7 +78,7 @@ export default function EquivalenciasHelado({ reglas, onGuardado }: { reglas: Re
                       type="button"
                       onClick={() => guardar([{ id: r.id, gramos: null }])}
                       disabled={guardando}
-                      className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-40 dark:text-[#94a19c] dark:hover:bg-[#162824] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0]"
+                      className="grid h-9 w-9 place-items-center rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:opacity-40"
                       aria-label={`Volver ${r.etiqueta} a ${r.porDefecto} g`}
                       title={`Volver a ${r.porDefecto} g`}
                     >
@@ -97,27 +97,27 @@ export default function EquivalenciasHelado({ reglas, onGuardado }: { reglas: Re
                       setListo(false);
                       setValores((v) => ({ ...v, [r.id]: e.target.value }));
                     }}
-                    className="h-10 w-24 rounded-lg border border-slate-200 bg-white px-2.5 text-right text-base tabular-nums text-slate-900 outline-none focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-emerald-600/25 sm:text-sm dark:border-[#29403b] dark:bg-[#0b1412] dark:text-[#f2f7f4] dark:focus-visible:border-[#37e6b0]"
+                    className="h-10 w-24 rounded-lg border border-slate-200 bg-white px-2.5 text-right text-base tabular-nums text-slate-900 outline-none focus-visible:border-emerald-600 focus-visible:ring-2 focus-visible:ring-slate-950/25 sm:text-sm"
                   />
-                  <span className="w-3 text-slate-500 dark:text-[#94a19c]">g</span>
+                  <span className="w-3 text-slate-500">g</span>
                 </div>
               </div>
             );
           })}
         </div>
-        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-100 px-4 py-3">
           <p className="text-sm" role="status">
             {error ? (
-              <span className="text-rose-600 dark:text-rose-400">{error}</span>
+              <span className="text-rose-600">{error}</span>
             ) : invalida ? (
-              <span className="text-rose-600 dark:text-rose-400">Los gramos tienen que estar entre 10 y 5.000.</span>
+              <span className="text-rose-600">Los gramos tienen que estar entre 10 y 5.000.</span>
             ) : listo ? (
-              <span className="inline-flex items-center gap-1.5 text-emerald-700 dark:text-[#4ee6b0]">
+              <span className="inline-flex items-center gap-1.5 text-emerald-700">
                 <CheckCircle2 size={15} aria-hidden />
                 Guardado; el balance ya usa los gramos nuevos.
               </span>
             ) : cambiadas.length > 0 ? (
-              <span className="text-slate-500 dark:text-[#94a19c]">
+              <span className="text-slate-500">
                 {cambiadas.length === 1 ? "1 cambio sin guardar" : `${cambiadas.length} cambios sin guardar`}
               </span>
             ) : null}

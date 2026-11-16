@@ -43,7 +43,7 @@ export default function FondoInicialModal({
   return (
     <Modal title="Fondo de caja" onClose={onListo}>
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2 text-sm text-slate-600 dark:text-[#c1cbc6]">
+        <div className="flex items-center gap-2 text-sm text-slate-600">
           <Wallet size={16} />
           ¿Cuánto efectivo había en la caja antes de vender? Al cerrar, sumamos esto a lo vendido
           para saber cuánto debería haber.

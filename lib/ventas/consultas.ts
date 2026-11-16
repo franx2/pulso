@@ -7,7 +7,7 @@ export async function ventaCompleta(id: string) {
     where: { id },
     include: {
       local: {
-        select: { id: true, nombre: true, razonSocialCompras: true, cuitCompras: true, arcaPuntoVenta: true, arcaCertificado: true, arcaDatosTicket: true },
+        select: { id: true, nombre: true, propinaSugeridaPct: true, razonSocialCompras: true, cuitCompras: true, arcaPuntoVenta: true, arcaCertificado: true, arcaDatosTicket: true },
       },
       comprobantes: { orderBy: { creadoEn: "asc" } },
       mesa: { select: { id: true, numero: true, salon: { select: { nombre: true } } } },
@@ -28,7 +28,7 @@ export async function ventaCompleta(id: string) {
     numero: v.numero,
     tipo: v.tipo,
     estado: v.estado,
-    local: { id: v.local.id, nombre: v.local.nombre },
+    local: { id: v.local.id, nombre: v.local.nombre, propinaSugeridaPct: v.local.propinaSugeridaPct },
     factura: {
       habilitada: Boolean(v.local.arcaPuntoVenta && v.local.arcaCertificado),
       emisor: { razonSocial: v.local.razonSocialCompras, cuit: v.local.cuitCompras, datos: v.local.arcaDatosTicket },
@@ -57,6 +57,7 @@ export async function ventaCompleta(id: string) {
     cerradaEn: v.cerradaEn?.toISOString() ?? null,
     comensales: v.comensales,
     cliente: v.cliente,
+    clienteId: v.clienteId,
     comentario: v.comentario,
     descuentoPct: v.descuentoPct,
     descuentoMonto: v.descuentoMonto,
@@ -73,6 +74,7 @@ export async function ventaCompleta(id: string) {
       creadoPor: i.creadoPor.nombre,
       createdAt: i.createdAt.toISOString(),
       enviadoEn: i.enviadoEn?.toISOString() ?? null,
+      estadoCocina: i.estadoCocina,
       anulado: i.anulado,
       descuentoPct: i.descuentoPct,
       descuentoMonto: i.descuentoMonto,

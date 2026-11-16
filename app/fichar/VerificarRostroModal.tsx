@@ -148,10 +148,10 @@ export default function VerificarRostroModal({
         <div
           className={`flex items-center gap-2 text-sm font-medium ${
             ok
-              ? "text-emerald-700 dark:text-[#4ee6b0]"
+              ? "text-emerald-700"
               : fallo
-                ? "text-red-600 dark:text-red-400"
-                : "text-slate-600 dark:text-[#c1cbc6]"
+                ? "text-red-600"
+                : "text-slate-600"
           }`}
         >
           {ok && <CheckCircle2 size={17} />}

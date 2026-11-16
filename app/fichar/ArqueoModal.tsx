@@ -51,13 +51,13 @@ export default function ArqueoModal({
   return (
     <Modal title="Arqueo de caja" onClose={onListo}>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1 text-sm text-slate-600 dark:text-[#c1cbc6]">
+        <div className="flex flex-col gap-1 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <Wallet size={16} />
             Debería haber ${efectivoEsperado.toFixed(2)} en la caja.
           </div>
           {fondoInicial != null && efectivoVendido != null && (
-            <p className="pl-6 text-xs text-slate-500 dark:text-[#7a8882]">
+            <p className="pl-6 text-xs text-slate-500">
               Fondo inicial ${fondoInicial.toFixed(2)} + vendido en efectivo $
               {efectivoVendido.toFixed(2)}
               {gastosEfectivo != null && gastosEfectivo > 0 && (

@@ -140,7 +140,7 @@ export default function EditorPlano({
 
       <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_18rem]">
         <Panel className="min-w-0">
-          <p className="border-b border-slate-100 px-4 py-2.5 text-sm text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">
+          <p className="border-b border-slate-100 px-4 py-2.5 text-sm text-slate-500">
             Arrastrá cada mesa a su lugar. Tocá una para cambiarle el número, la forma o el tamaño; con una elegida, las flechas del teclado también la mueven.
           </p>
           <div className="overflow-auto p-4">
@@ -154,7 +154,7 @@ export default function EditorPlano({
                 <div
                   key={k}
                   aria-hidden
-                  className="rounded-md border border-dashed border-slate-200 dark:border-[#1f2f2b]"
+                  className="rounded-md border border-dashed border-slate-200"
                   style={{ gridColumn: (k % columnas) + 1, gridRow: Math.floor(k / columnas) + 1 }}
                 />
               ))}
@@ -202,13 +202,13 @@ export default function EditorPlano({
                     } ${
                       enArrastre
                         ? arrastreValido
-                          ? "scale-105 border-[#0f766e] bg-emerald-50 shadow-[0_10px_24px_-10px_rgba(15,118,110,0.7)] dark:bg-[#123a33]"
-                          : "scale-105 border-rose-500 bg-rose-50 dark:bg-[#3a1720]"
+                          ? "scale-105 border-[#4A6244] bg-emerald-50 shadow-[0_10px_24px_-10px_rgba(15,118,110,0.7)]"
+                          : "scale-105 border-rose-500 bg-rose-50"
                         : elegidaEsta
-                          ? "border-[#0f766e] bg-white ring-2 ring-[#37e6b0] ring-offset-2 dark:bg-[#101c19] dark:ring-offset-[#101c19]"
+                          ? "border-[#4A6244] bg-white ring-2 ring-[#D6C69B] ring-offset-2"
                           : m.ocupada
-                            ? "border-[#0f766e] bg-[#0f766e] text-white dark:bg-[#1d4e48]"
-                            : "border-slate-300 bg-white hover:border-slate-400 dark:border-[#29403b] dark:bg-[#101c19]"
+                            ? "border-[#4A6244] bg-[#4A6244] text-white"
+                            : "border-slate-300 bg-white hover:border-slate-400"
                     }`}
                   >
                     <span className="text-lg font-bold leading-none">{m.numero}</span>
@@ -248,7 +248,7 @@ export default function EditorPlano({
                 }}
               />
             ) : (
-              <p className="text-sm text-slate-500 dark:text-[#94a19c]">Tocá una mesa para editarla.</p>
+              <p className="text-sm text-slate-500">Tocá una mesa para editarla.</p>
             )}
           </Panel>
 
@@ -317,7 +317,7 @@ function FichaMesa({
   const [confirmar, setConfirmar] = useState(false);
   const opcion = (activo: boolean) =>
     `min-h-10 flex-1 rounded-md px-3 text-sm font-semibold transition-colors ${
-      activo ? "bg-[#0f766e] text-white dark:bg-[#1d4e48]" : "text-slate-600 hover:bg-slate-100 dark:text-[#c1cbc6] dark:hover:bg-[#172724]"
+      activo ? "bg-[#4A6244] text-white" : "text-slate-600 hover:bg-slate-100"
     }`;
 
   return (
@@ -341,8 +341,8 @@ function FichaMesa({
       </form>
 
       <div>
-        <p className="mb-1.5 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Forma</p>
-        <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 dark:border-[#29403b]">
+        <p className="mb-1.5 text-xs font-semibold text-slate-500">Forma</p>
+        <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5">
           <button type="button" className={opcion(mesa.forma === "CUADRADA")} aria-pressed={mesa.forma === "CUADRADA"} onClick={() => onGuardar({ forma: "CUADRADA" })}>
             Cuadrada
           </button>
@@ -353,8 +353,8 @@ function FichaMesa({
       </div>
 
       <div>
-        <p className="mb-1.5 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Tamaño</p>
-        <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5 dark:border-[#29403b]">
+        <p className="mb-1.5 text-xs font-semibold text-slate-500">Tamaño</p>
+        <div className="flex gap-1 rounded-lg border border-slate-200 p-0.5">
           <button type="button" className={opcion(mesa.tamano === "CHICA")} aria-pressed={mesa.tamano === "CHICA"} onClick={() => onGuardar({ tamano: "CHICA" })}>
             Chica
           </button>
@@ -365,7 +365,7 @@ function FichaMesa({
       </div>
 
       <div>
-        <p className="mb-1.5 text-xs font-semibold text-slate-500 dark:text-[#94a19c]">Mover un casillero</p>
+        <p className="mb-1.5 text-xs font-semibold text-slate-500">Mover un casillero</p>
         <div className="grid w-32 grid-cols-3 gap-1">
           <span />
           <Button variant="ghost" className="px-0" onClick={() => onMover(-1, 0)} aria-label="Mover arriba">
@@ -401,7 +401,7 @@ function FichaMesa({
       )}
 
       {confirmar ? (
-        <div className="flex flex-col gap-2 rounded-lg bg-rose-50 p-3 text-sm dark:bg-[#241419]">
+        <div className="flex flex-col gap-2 rounded-lg bg-rose-50 p-3 text-sm">
           <p>¿Sacar la mesa {mesa.numero} del plano? Si ya tuvo ventas, el historial la sigue mostrando.</p>
           <div className="flex gap-2">
             <Button variant="ghost" onClick={() => setConfirmar(false)}>

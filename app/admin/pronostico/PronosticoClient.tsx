@@ -158,20 +158,20 @@ function CorrelacionFila({ correlacion }: { correlacion: Correlacion }) {
     <div className="py-4 first:pt-0 last:pb-0">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <h3 className="text-sm font-semibold text-slate-800 dark:text-[#e0e7e3]">{correlacion.etiqueta}</h3>
-          <p className="mt-0.5 text-xs text-slate-500 dark:text-[#94a19c]">{correlacion.detalle}</p>
+          <h3 className="text-sm font-semibold text-slate-800">{correlacion.etiqueta}</h3>
+          <p className="mt-0.5 text-xs text-slate-500">{correlacion.detalle}</p>
         </div>
         <div className="text-right">
           <p className="font-semibold tabular-nums">{correlacion.r == null ? "—" : `r ${correlacion.r.toFixed(2)}`}</p>
-          <p className="text-xs text-slate-500 dark:text-[#7a8882]">{lecturaCorrelacion(correlacion.r)} · n={correlacion.n}</p>
+          <p className="text-xs text-slate-500">{lecturaCorrelacion(correlacion.r)} · n={correlacion.n}</p>
         </div>
       </div>
-      <div className="relative mt-3 h-2 rounded-full bg-slate-100 dark:bg-[#18201d]" aria-hidden>
-        <span className="absolute inset-y-[-3px] left-1/2 w-px bg-slate-300 dark:bg-[#53615c]" />
-        <span className={`absolute inset-y-0 rounded-full ${correlacion.r != null && correlacion.r < 0 ? "bg-rose-500" : "bg-emerald-600 dark:bg-[#37e6b0]"}`} style={{ left: `${inicio}%`, width: `${ancho}%` }} />
-        {correlacion.r != null && <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-800 shadow-sm dark:border-[#101c19] dark:bg-[#f2f7f4]" style={{ left: `${posicion}%` }} />}
+      <div className="relative mt-3 h-2 rounded-full bg-slate-100" aria-hidden>
+        <span className="absolute inset-y-[-3px] left-1/2 w-px bg-slate-300" />
+        <span className={`absolute inset-y-0 rounded-full ${correlacion.r != null && correlacion.r < 0 ? "bg-rose-500" : "bg-emerald-600"}`} style={{ left: `${inicio}%`, width: `${ancho}%` }} />
+        {correlacion.r != null && <span className="absolute top-1/2 h-3 w-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white bg-slate-800 shadow-sm" style={{ left: `${posicion}%` }} />}
       </div>
-      <div className="mt-1 flex justify-between text-[11px] text-slate-500 dark:text-[#7a8882]"><span>−1 inversa</span><span>0</span><span>+1 directa</span></div>
+      <div className="mt-1 flex justify-between text-[11px] text-slate-500"><span>−1 inversa</span><span>0</span><span>+1 directa</span></div>
     </div>
   );
 }
@@ -179,9 +179,9 @@ function CorrelacionFila({ correlacion }: { correlacion: Correlacion }) {
 function PronosticoSkeleton() {
   return (
     <div className="animate-pulse space-y-5" aria-label="Cargando pronóstico">
-      <div className="h-20 rounded-lg bg-slate-200/70 dark:bg-[#172724]" />
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{Array.from({ length: 4 }, (_, i) => <div key={i} className="h-24 rounded-lg bg-slate-200/70 dark:bg-[#172724]" />)}</div>
-      <div className="h-96 rounded-lg bg-slate-200/70 dark:bg-[#172724]" />
+      <div className="h-20 rounded-lg bg-slate-200/70" />
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">{Array.from({ length: 4 }, (_, i) => <div key={i} className="h-24 rounded-lg bg-slate-200/70" />)}</div>
+      <div className="h-96 rounded-lg bg-slate-200/70" />
     </div>
   );
 }
@@ -239,7 +239,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
       <PageTitle
         subtitle="Demanda futura, rango esperado y evidencia del modelo"
         actions={
-          <Link href="/admin/pronostico/ajustes" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#e0e7e3] dark:hover:bg-[#172724]">
+          <Link href="/admin/pronostico/ajustes" className="inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950">
             <SlidersHorizontal size={16} aria-hidden /><span className="hidden sm:inline">Parámetros</span>
           </Link>
         }
@@ -283,7 +283,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
         <EmptyState>Todavía no hay locales con Fudo configurado para pronosticar.</EmptyState>
       ) : vista === "proyeccion" ? (
         <div className="space-y-5">
-          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 md:grid-cols-4 md:divide-y-0 dark:border-[#29403b] dark:divide-[#29403b]">
+          <section className="grid grid-cols-2 divide-x divide-y border-y border-slate-200 md:grid-cols-4 md:divide-y-0">
             <Metrica label={`Ventas previstas · ${horizonte} días`} valor={plataCompacta(resumen.ventas)} nota={`${datos.local.nombre} · escenario central`} tono="positivo" />
             <Metrica label="Tickets previstos" valor={numero(resumen.tickets)} nota={`Promedio ${numero(resumen.tickets / Math.max(horizonte, 1))} por día`} />
             <Metrica
@@ -301,9 +301,9 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
 
           <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(17rem,0.72fr)]">
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Tickets reales y proyectados</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">El área menta es incertidumbre, no una segunda proyección.</p>
+                <p className="mt-0.5 text-sm text-slate-500">El área menta es incertidumbre, no una segunda proyección.</p>
               </div>
               <div className="p-4">
                 <ForecastChart
@@ -314,34 +314,34 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
             </Panel>
 
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Lectura operativa</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Qué explica el escenario central.</p>
+                <p className="mt-0.5 text-sm text-slate-500">Qué explica el escenario central.</p>
               </div>
-              <div className="divide-y divide-slate-100 px-4 dark:divide-[#1c2521]">
+              <div className="divide-y divide-slate-100 px-4">
                 {resumen.pico && (
                   <div className="py-4">
-                    <p className="text-xs text-slate-500 dark:text-[#7a8882]">Día de mayor demanda</p>
+                    <p className="text-xs text-slate-500">Día de mayor demanda</p>
                     <p className="mt-1 font-semibold">{capitalizar(fechaLarga(resumen.pico.fecha))}</p>
-                    <p className="mt-1 text-sm tabular-nums text-slate-500 dark:text-[#94a19c]">{numero(resumen.pico.tickets)} tickets · rango {numero(resumen.pico.ticketsMin)}–{numero(resumen.pico.ticketsMax)}</p>
+                    <p className="mt-1 text-sm tabular-nums text-slate-500">{numero(resumen.pico.tickets)} tickets · rango {numero(resumen.pico.ticketsMin)}–{numero(resumen.pico.ticketsMax)}</p>
                   </div>
                 )}
                 <div className="py-4">
-                  <p className="text-xs text-slate-500 dark:text-[#7a8882]">Cambio contra la base</p>
-                  <p className={`mt-1 inline-flex items-center gap-1.5 font-semibold ${factores && factores.factorFinal >= 1 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>
+                  <p className="text-xs text-slate-500">Cambio contra la base</p>
+                  <p className={`mt-1 inline-flex items-center gap-1.5 font-semibold ${factores && factores.factorFinal >= 1 ? "text-emerald-700" : "text-rose-600"}`}>
                     {factores && factores.factorFinal >= 1 ? <TrendingUp size={16} aria-hidden /> : <TrendingDown size={16} aria-hidden />}
                     {factores ? pctFactor(factores.factorFinal) : "—"}
                   </p>
-                  <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">Promedio ponderado de tendencia, clima, calendario y ajustes.</p>
+                  <p className="mt-1 text-sm text-slate-500">Promedio ponderado de tendencia, clima, calendario y ajustes.</p>
                 </div>
                 <div className="py-4">
-                  <p className="text-xs text-slate-500 dark:text-[#7a8882]">Señales activas</p>
+                  <p className="text-xs text-slate-500">Señales activas</p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {[...new Set(datos.pronostico.flatMap((dia) => dia.motivos))].slice(0, 5).map((motivo) => <Badge key={motivo} tone="slate">{motivo}</Badge>)}
-                    {datos.pronostico.every((dia) => dia.motivos.length === 0) && <span className="text-sm text-slate-500 dark:text-[#94a19c]">Sin desvíos relevantes del patrón habitual.</span>}
+                    {datos.pronostico.every((dia) => dia.motivos.length === 0) && <span className="text-sm text-slate-500">Sin desvíos relevantes del patrón habitual.</span>}
                   </div>
                 </div>
-                <div className="flex items-start gap-2 py-4 text-xs text-slate-500 dark:text-[#94a19c]">
+                <div className="flex items-start gap-2 py-4 text-xs text-slate-500">
                   <Info size={14} className="mt-0.5 shrink-0" aria-hidden />
                   El tablero ya no muestra dotación diaria: esa conversión sigue siendo experimental hasta que haya suficientes fichajes reales.
                 </div>
@@ -350,11 +350,11 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
           </div>
 
           <Panel>
-            <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="border-b border-slate-100 px-4 py-3">
               <h2 className="font-semibold">Plan semanal</h2>
-              <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Resumen para decidir; el detalle de 30 minutos queda fuera de la vista principal.</p>
+              <p className="mt-0.5 text-sm text-slate-500">Resumen para decidir; el detalle de 30 minutos queda fuera de la vista principal.</p>
             </div>
-            <div className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+            <div className="divide-y divide-slate-100 md:hidden">
               {resumen.semanas.map((semana) => (
                 <div key={semana.clave} className="px-4 py-4">
                   <div className="flex items-start justify-between gap-3">
@@ -363,16 +363,16 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
                   </div>
                   <dl className="mt-3 grid grid-cols-2 gap-x-5 gap-y-3 text-sm">
                     <div>
-                      <dt className="text-xs text-slate-500 dark:text-[#94a19c]">Tickets</dt>
+                      <dt className="text-xs text-slate-500">Tickets</dt>
                       <dd className="mt-0.5 font-semibold tabular-nums">{numero(semana.tickets)}</dd>
                     </div>
                     <div>
-                      <dt className="text-xs text-slate-500 dark:text-[#94a19c]">Intervalo</dt>
+                      <dt className="text-xs text-slate-500">Intervalo</dt>
                       <dd className="mt-0.5 font-semibold tabular-nums">{numero(semana.ticketsMin)}–{numero(semana.ticketsMax)}</dd>
                     </div>
                     <div className="col-span-2">
-                      <dt className="text-xs text-slate-500 dark:text-[#94a19c]">Señal principal</dt>
-                      <dd className="mt-0.5 text-slate-700 dark:text-[#c1cbc6]">{semana.motivos.length > 0 ? semana.motivos.join(" · ") : "Patrón habitual"}</dd>
+                      <dt className="text-xs text-slate-500">Señal principal</dt>
+                      <dd className="mt-0.5 text-slate-700">{semana.motivos.length > 0 ? semana.motivos.join(" · ") : "Patrón habitual"}</dd>
                     </div>
                   </dl>
                 </div>
@@ -381,7 +381,7 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
             <div className="hidden overflow-x-auto md:flex">
               <table className="w-full min-w-[46rem] text-sm">
                 <thead>
-                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+                  <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                     <th className="px-4 py-3 font-semibold">Semana</th>
                     <th className="px-3 py-3 text-right font-semibold">Ventas previstas</th>
                     <th className="px-3 py-3 text-right font-semibold">Tickets</th>
@@ -389,14 +389,14 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
                     <th className="px-4 py-3 font-semibold">Señal principal</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                <tbody className="divide-y divide-slate-100">
                   {resumen.semanas.map((semana) => (
                     <tr key={semana.clave}>
                       <td className="px-4 py-3 font-semibold">{fechaCorta(semana.desde)} – {fechaCorta(semana.hasta)}</td>
                       <td className="px-3 py-3 text-right font-semibold tabular-nums">{plata(semana.ventas)}</td>
                       <td className="px-3 py-3 text-right tabular-nums">{numero(semana.tickets)}</td>
-                      <td className="px-3 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{numero(semana.ticketsMin)}–{numero(semana.ticketsMax)}</td>
-                      <td className="px-4 py-3 text-slate-500 dark:text-[#94a19c]">{semana.motivos.length > 0 ? semana.motivos.join(" · ") : "Patrón habitual"}</td>
+                      <td className="px-3 py-3 text-right tabular-nums text-slate-500">{numero(semana.ticketsMin)}–{numero(semana.ticketsMax)}</td>
+                      <td className="px-4 py-3 text-slate-500">{semana.motivos.length > 0 ? semana.motivos.join(" · ") : "Patrón habitual"}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -411,14 +411,14 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
       ) : (
         <div className="space-y-5">
           <Panel>
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
               <div>
                 <h2 className="font-semibold">Cómo se calcula</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Todos los factores son visibles; ninguno reemplaza el rango de incertidumbre.</p>
+                <p className="mt-0.5 text-sm text-slate-500">Todos los factores son visibles; ninguno reemplaza el rango de incertidumbre.</p>
               </div>
               <Badge tone={datos.local.tipoLocal === "INDOOR_MALL" ? "slate" : "emerald"}>{datos.local.tipoLocal === "INDOOR_MALL" ? "Local en shopping" : "Local a la calle"}</Badge>
             </div>
-            <div className="grid divide-y divide-slate-100 md:grid-cols-6 md:divide-x md:divide-y-0 dark:divide-[#1c2521]">
+            <div className="grid divide-y divide-slate-100 md:grid-cols-6 md:divide-x md:divide-y-0">
               {[
                 ["Base histórica", numero(datos.modelo.factores.baseTickets), `${datos.modelo.ventanaDias} días`],
                 ["Tendencia", `×${datos.modelo.factores.tendencia.toFixed(2)}`, pctFactor(datos.modelo.factores.tendencia)],
@@ -428,47 +428,47 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
                 ["Resultado", numero(datos.modelo.factores.finalTickets), `${horizonte} días`],
               ].map(([label, valor, nota]) => (
                 <div key={label} className="px-4 py-4">
-                  <p className="text-xs text-slate-500 dark:text-[#94a19c]">{label}</p>
+                  <p className="text-xs text-slate-500">{label}</p>
                   <p className="mt-1 text-lg font-bold tabular-nums">{valor}</p>
-                  <p className="mt-1 text-xs text-slate-500 dark:text-[#7a8882]">{nota}</p>
+                  <p className="mt-1 text-xs text-slate-500">{nota}</p>
                 </div>
               ))}
             </div>
-            <div className="grid gap-5 border-t border-slate-100 p-4 md:grid-cols-3 dark:border-[#1c2521]">
+            <div className="grid gap-5 border-t border-slate-100 p-4 md:grid-cols-3">
               <div>
                 <h3 className="text-sm font-semibold">Patrón comparable</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">Promedia el mismo día de semana y la misma franja. Cada semana anterior pesa {Math.round(datos.modelo.decaimientoSemanal * 100)}% de la siguiente.</p>
+                <p className="mt-1 text-sm text-slate-500">Promedia el mismo día de semana y la misma franja. Cada semana anterior pesa {Math.round(datos.modelo.decaimientoSemanal * 100)}% de la siguiente.</p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold">Factores acotados</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">Tendencia, clima y calendario ajustan la base. El automático se recorta entre ×{datos.modelo.limitesFactor.min.toFixed(2)} y ×{datos.modelo.limitesFactor.max.toFixed(2)}.</p>
+                <p className="mt-1 text-sm text-slate-500">Tendencia, clima y calendario ajustan la base. El automático se recorta entre ×{datos.modelo.limitesFactor.min.toFixed(2)} y ×{datos.modelo.limitesFactor.max.toFixed(2)}.</p>
               </div>
               <div>
                 <h3 className="text-sm font-semibold">Intervalo, no certeza</h3>
-                <p className="mt-1 text-sm text-slate-500 dark:text-[#94a19c]">La dispersión histórica y la cantidad de muestras abren o cierran el rango esperado de tickets.</p>
+                <p className="mt-1 text-sm text-slate-500">La dispersión histórica y la cantidad de muestras abren o cierran el rango esperado de tickets.</p>
               </div>
             </div>
-            <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500 dark:border-[#1c2521] dark:text-[#94a19c]">Los factores mostrados son promedios ponderados del horizonte. El resultado exacto se calcula día por día y puede diferir por redondeo y por el recorte de seguridad.</p>
+            <p className="border-t border-slate-100 px-4 py-3 text-xs text-slate-500">Los factores mostrados son promedios ponderados del horizonte. El resultado exacto se calcula día por día y puede diferir por redondeo y por el recorte de seguridad.</p>
           </Panel>
 
           <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Prueba contra datos reales</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">El período de prueba no entra al entrenamiento.</p>
+                <p className="mt-0.5 text-sm text-slate-500">El período de prueba no entra al entrenamiento.</p>
               </div>
               <div className="p-4">
                 {wape == null ? (
-                  <div className="flex items-start gap-2 text-sm text-amber-700 dark:text-amber-300"><AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />Faltan al menos 5 días comparables para publicar un error.</div>
+                  <div className="flex items-start gap-2 text-sm text-amber-700"><AlertTriangle size={16} className="mt-0.5 shrink-0" aria-hidden />Faltan al menos 5 días comparables para publicar un error.</div>
                 ) : (
                   <>
-                    <p className="text-3xl font-bold tabular-nums">{(wape * 100).toFixed(1)}% <span className="text-base font-medium text-slate-500 dark:text-[#94a19c]">WAPE día</span></p>
-                    <p className="mt-2 text-sm text-slate-600 dark:text-[#c1cbc6]">En la prueba reciente, el error absoluto equivale a {(wape * 100).toFixed(1)} tickets por cada 100 observados.</p>
-                    <dl className="mt-5 divide-y divide-slate-100 text-sm dark:divide-[#1c2521]">
-                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500 dark:text-[#94a19c]">Período</dt><dd className="text-right tabular-nums">{fechaCorta(datos.modelo.backtest.desde)} – {fechaCorta(datos.modelo.backtest.hasta)}</dd></div>
-                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500 dark:text-[#94a19c]">Días evaluados</dt><dd className="tabular-nums">{datos.modelo.backtest.diasEvaluados}</dd></div>
-                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500 dark:text-[#94a19c]">Sesgo</dt><dd className="tabular-nums">{datos.modelo.backtest.sesgoPct == null ? "—" : `${datos.modelo.backtest.sesgoPct >= 0 ? "+" : ""}${datos.modelo.backtest.sesgoPct.toFixed(1)}%`}</dd></div>
-                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500 dark:text-[#94a19c]">Ventana elegida</dt><dd>{datos.modelo.ventanaDias} días</dd></div>
+                    <p className="text-3xl font-bold tabular-nums">{(wape * 100).toFixed(1)}% <span className="text-base font-medium text-slate-500">WAPE día</span></p>
+                    <p className="mt-2 text-sm text-slate-600">En la prueba reciente, el error absoluto equivale a {(wape * 100).toFixed(1)} tickets por cada 100 observados.</p>
+                    <dl className="mt-5 divide-y divide-slate-100 text-sm">
+                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500">Período</dt><dd className="text-right tabular-nums">{fechaCorta(datos.modelo.backtest.desde)} – {fechaCorta(datos.modelo.backtest.hasta)}</dd></div>
+                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500">Días evaluados</dt><dd className="tabular-nums">{datos.modelo.backtest.diasEvaluados}</dd></div>
+                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500">Sesgo</dt><dd className="tabular-nums">{datos.modelo.backtest.sesgoPct == null ? "—" : `${datos.modelo.backtest.sesgoPct >= 0 ? "+" : ""}${datos.modelo.backtest.sesgoPct.toFixed(1)}%`}</dd></div>
+                      <div className="flex justify-between gap-3 py-2.5"><dt className="text-slate-500">Ventana elegida</dt><dd>{datos.modelo.ventanaDias} días</dd></div>
                     </dl>
                   </>
                 )}
@@ -476,36 +476,36 @@ export default function PronosticoClient({ initialLocalId = "" }: { initialLocal
             </Panel>
 
             <Panel>
-              <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+              <div className="border-b border-slate-100 px-4 py-3">
                 <h2 className="font-semibold">Correlaciones observadas</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">r va de −1 a +1. Describe relación histórica; no demuestra causa.</p>
+                <p className="mt-0.5 text-sm text-slate-500">r va de −1 a +1. Describe relación histórica; no demuestra causa.</p>
               </div>
-              <div className="divide-y divide-slate-100 p-4 dark:divide-[#1c2521]">{datos.correlaciones.map((correlacion) => <CorrelacionFila key={correlacion.id} correlacion={correlacion} />)}</div>
+              <div className="divide-y divide-slate-100 p-4">{datos.correlaciones.map((correlacion) => <CorrelacionFila key={correlacion.id} correlacion={correlacion} />)}</div>
             </Panel>
           </div>
 
           <Panel>
-            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
               <div>
                 <h2 className="font-semibold">Efecto climático medido</h2>
-                <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">Compara contra el mismo día de semana y atenúa el factor cuando hay poca evidencia.</p>
+                <p className="mt-0.5 text-sm text-slate-500">Compara contra el mismo día de semana y atenúa el factor cuando hay poca evidencia.</p>
               </div>
               <CloudRain size={19} className="text-slate-500" aria-hidden />
             </div>
             {datos.sensibilidadClima.length === 0 ? (
-              <p className="p-4 text-sm text-slate-500 dark:text-[#94a19c]">Todavía no hay suficiente historia climática para este tipo de local.</p>
+              <p className="p-4 text-sm text-slate-500">Todavía no hay suficiente historia climática para este tipo de local.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[38rem] text-sm">
-                  <thead><tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]"><th className="px-4 py-3 font-semibold">Condición</th><th className="px-3 py-3 text-right font-semibold">Efecto observado</th><th className="px-3 py-3 text-right font-semibold">Factor aplicado</th><th className="px-3 py-3 text-right font-semibold">Confianza</th><th className="px-4 py-3 text-right font-semibold">Días</th></tr></thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+                  <thead><tr className="border-b border-slate-200 text-left text-xs text-slate-500"><th className="px-4 py-3 font-semibold">Condición</th><th className="px-3 py-3 text-right font-semibold">Efecto observado</th><th className="px-3 py-3 text-right font-semibold">Factor aplicado</th><th className="px-3 py-3 text-right font-semibold">Confianza</th><th className="px-4 py-3 text-right font-semibold">Días</th></tr></thead>
+                  <tbody className="divide-y divide-slate-100">
                     {datos.sensibilidadClima.map((sensibilidad) => (
                       <tr key={sensibilidad.condicion}>
                         <td className="px-4 py-3 font-semibold">{sensibilidad.condicion === "LLUVIA" ? "Lluvia ≥ 1 mm" : sensibilidad.condicion === "CALOR" ? "Calor ≥ 32°" : "Frío ≤ 14°"}</td>
-                        <td className={`px-3 py-3 text-right font-semibold tabular-nums ${sensibilidad.factor >= 1 ? "text-emerald-700 dark:text-[#4ee6b0]" : "text-rose-600 dark:text-rose-400"}`}>{pctFactor(sensibilidad.factor)}</td>
+                        <td className={`px-3 py-3 text-right font-semibold tabular-nums ${sensibilidad.factor >= 1 ? "text-emerald-700" : "text-rose-600"}`}>{pctFactor(sensibilidad.factor)}</td>
                         <td className="px-3 py-3 text-right tabular-nums">×{(1 + (sensibilidad.factor - 1) * sensibilidad.confianza).toFixed(2)}</td>
                         <td className="px-3 py-3 text-right tabular-nums">{Math.round(sensibilidad.confianza * 100)}%</td>
-                        <td className="px-4 py-3 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">{sensibilidad.dias}</td>
+                        <td className="px-4 py-3 text-right tabular-nums text-slate-500">{sensibilidad.dias}</td>
                       </tr>
                     ))}
                   </tbody>

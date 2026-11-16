@@ -43,6 +43,8 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const body = await readJsonBody<{
     comensales?: number | null;
     cliente?: string | null;
+    /** Un cliente de la libreta, o null para sacarlo. */
+    clienteId?: string | null;
     comentario?: string | null;
     mozoId?: string | null;
     mesaId?: string;
@@ -54,7 +56,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   }>(request);
   if (!body) return NextResponse.json({ error: "Datos inválidos" }, { status: 400 });
 
-  const venta = await db.venta.findUnique({ where: { id }, select: { estado: true, localId: true } });
+  const venta = await db.venta.findUnique({ where: { id }, select: { estado: true, localId: true, descuentoPct: true, descuentoMonto: true } });
   if (!venta) return NextResponse.json({ error: "Venta no encontrada" }, { status: 404 });
   if (!enLocal(ctx, venta.localId)) return fueraDeLocal();
   if (venta.estado !== "EN_CURSO") return NextResponse.json({ error: "La venta ya está cerrada" }, { status: 409 });
@@ -62,6 +64,20 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
   const data: Record<string, unknown> = {};
   if (body.comensales !== undefined) data.comensales = body.comensales && body.comensales > 0 ? Math.round(body.comensales) : null;
   if (body.cliente !== undefined) data.cliente = body.cliente?.trim().slice(0, 60) || null;
+  if (body.clienteId !== undefined) {
+    if (!body.clienteId) data.clienteId = null;
+    else {
+      const ficha = await db.cliente.findFirst({ where: { id: body.clienteId, localId: venta.localId, activo: true }, select: { id: true, nombre: true, descuentoPct: true } });
+      if (!ficha) return NextResponse.json({ error: "Ese cliente no es de este local" }, { status: 400 });
+      data.clienteId = ficha.id;
+      data.cliente = ficha.nombre.slice(0, 60);
+      // Su descuento propio, si la venta todavía no tiene otro.
+      if (ficha.descuentoPct && !venta.descuentoPct && !venta.descuentoMonto) {
+        data.descuentoPct = ficha.descuentoPct;
+        data.descuentoMotivo = `Cliente: ${ficha.nombre}`;
+      }
+    }
+  }
   if (body.comentario !== undefined) data.comentario = body.comentario?.trim().slice(0, 300) || null;
 
   if (body.mozoId !== undefined) {

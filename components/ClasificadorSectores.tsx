@@ -64,8 +64,8 @@ const COLOR: Record<string, string> = {
   HELADOS: "bg-sky-500",
   CAFETERIA: "bg-amber-500",
   CHOCOLATERIA: "bg-[#8b5a2b]",
-  PROMOCION: "bg-slate-400 dark:bg-[#7f908a]",
-  SIN_CLASIFICAR: "bg-rose-500 dark:bg-rose-400",
+  PROMOCION: "bg-slate-400",
+  SIN_CLASIFICAR: "bg-rose-500",
 };
 
 export const ETIQUETA: Record<string, string> = {
@@ -117,7 +117,7 @@ export function SectorChip({
         type="button"
         onClick={() => setAbierto(true)}
         title="Cambiar el sector de este producto"
-        className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-1.5 py-0.5 text-xs text-slate-500 transition-colors hover:border-slate-200 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#94a19c] dark:hover:border-[#29403b] dark:hover:text-[#f2f7f4] dark:focus-visible:ring-[#37e6b0]"
+        className="inline-flex items-center gap-1.5 rounded-full border border-transparent px-1.5 py-0.5 text-xs text-slate-500 transition-colors hover:border-slate-200 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
       >
         <span className={`h-2 w-2 shrink-0 rounded-full ${COLOR[actual] ?? COLOR.SIN_CLASIFICAR}`} aria-hidden />
         {ETIQUETA[actual] ?? actual}
@@ -135,8 +135,8 @@ export function SectorChip({
           onClick={() => asignar(s.clave)}
           className={`min-h-7 rounded-md px-2 text-xs font-semibold transition-colors disabled:opacity-40 ${
             actual === s.clave
-              ? "bg-emerald-700 text-white dark:bg-[#1d4e48] dark:text-[#37e6b0]"
-              : "border border-slate-200 text-slate-500 hover:text-slate-900 dark:border-[#29403b] dark:text-[#94a19c]"
+              ? "bg-emerald-700 text-white"
+              : "border border-slate-200 text-slate-500 hover:text-slate-900"
           }`}
         >
           {s.label}
@@ -145,7 +145,7 @@ export function SectorChip({
       <button
         type="button"
         onClick={() => setAbierto(false)}
-        className="min-h-7 px-1.5 text-xs text-slate-500 hover:text-slate-700 dark:text-[#7a8882]"
+        className="min-h-7 px-1.5 text-xs text-slate-500 hover:text-slate-700"
       >
         Cancelar
       </button>
@@ -253,7 +253,7 @@ export default function ClasificadorSectores({
       )}
 
       {datos && (
-        <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+        <p className="text-xs text-slate-500">
           {datos.encontrados === datos.total
             ? `${datos.total} productos`
             : `${datos.encontrados} de ${datos.total} productos`}
@@ -263,19 +263,19 @@ export default function ClasificadorSectores({
         </p>
       )}
 
-      {error && <p className="text-sm font-medium text-rose-600 dark:text-rose-400">{error}</p>}
+      {error && <p className="text-sm font-medium text-rose-600">{error}</p>}
 
       {!datos ? (
         <div
-          className="h-48 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]"
+          className="h-48 animate-pulse rounded-lg bg-slate-200/70"
           aria-label="Cargando productos"
         />
       ) : datos.filas.length === 0 ? (
-        <p className="py-6 text-center text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="py-6 text-center text-sm text-slate-500">
           Ningún producto coincide con lo buscado.
         </p>
       ) : (
-        <div className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+        <div className="divide-y divide-slate-100">
           {datos.filas.map((f) => (
             <div key={f.clave} className="flex flex-wrap items-center justify-between gap-3 py-2.5">
               <div className="min-w-0 flex-1">
@@ -284,7 +284,7 @@ export default function ClasificadorSectores({
                   {f.producto}
                   {f.origen === "manual" && (
                     <span
-                      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700 dark:bg-[#122620] dark:text-[#4ee6b0]"
+                      className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-emerald-50 px-1.5 py-0.5 text-[11px] font-semibold text-emerald-700"
                       title="Asignado a mano: gana sobre las reglas"
                     >
                       <Wand2 size={10} aria-hidden />
@@ -292,7 +292,7 @@ export default function ClasificadorSectores({
                     </span>
                   )}
                 </p>
-                <p className="text-xs text-slate-500 dark:text-[#7a8882]">
+                <p className="text-xs text-slate-500">
                   {f.venta > 0 && `Vendido ${plata(f.venta)}`}
                   {f.venta > 0 && f.compra > 0 && " · "}
                   {f.compra > 0 && `Comprado ${plata(f.compra)}`}
@@ -307,10 +307,10 @@ export default function ClasificadorSectores({
                     disabled={guardando === f.producto}
                     onClick={() => asignar(f.producto, s.clave)}
                     aria-pressed={f.sector === s.clave}
-                    className={`inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 disabled:opacity-40 dark:focus-visible:ring-[#37e6b0] ${
+                    className={`inline-flex min-h-8 items-center gap-1 rounded-md px-2.5 text-xs font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 disabled:opacity-40 ${
                       f.sector === s.clave
-                        ? "bg-emerald-700 text-white dark:bg-[#1d4e48] dark:text-[#37e6b0]"
-                        : "border border-slate-200 text-slate-500 hover:text-slate-900 dark:border-[#29403b] dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+                        ? "bg-emerald-700 text-white"
+                        : "border border-slate-200 text-slate-500 hover:text-slate-900"
                     }`}
                   >
                     {f.sector === s.clave && <Check size={11} aria-hidden />}
@@ -323,7 +323,7 @@ export default function ClasificadorSectores({
                     disabled={guardando === f.producto}
                     onClick={() => asignar(f.producto, "")}
                     title="Volver a lo que digan las reglas"
-                    className="min-h-8 rounded-md px-2 text-xs font-medium text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline disabled:opacity-40 dark:text-[#7a8882] dark:hover:text-[#f2f7f4]"
+                    className="min-h-8 rounded-md px-2 text-xs font-medium text-slate-500 underline-offset-2 transition-colors hover:text-slate-700 hover:underline disabled:opacity-40"
                   >
                     Deshacer
                   </button>

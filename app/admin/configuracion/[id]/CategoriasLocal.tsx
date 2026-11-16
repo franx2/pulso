@@ -68,7 +68,7 @@ export default function CategoriasLocal({ localId }: { localId: string }) {
   return (
     <Card>
       <SectionTitle>Categorías de empleado</SectionTitle>
-      <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="mb-4 text-sm text-slate-500">
         Puestos propios de esta sucursal: mozo, cocinero, cajero, repartidor… Los que borrés dejan
         a esos empleados sin categoría, no los desactivan.
       </p>
@@ -88,14 +88,14 @@ export default function CategoriasLocal({ localId }: { localId: string }) {
           {categorias.map((c) => (
             <span
               key={c.id}
-              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm dark:bg-[#18201d]"
+              className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 py-1 pl-3 pr-1.5 text-sm"
             >
               {c.nombre}
               <button
                 type="button"
                 onClick={() => eliminar(c)}
                 aria-label={`Eliminar ${c.nombre}`}
-                className="-my-1 -mr-1 grid h-7 w-7 place-items-center rounded-full text-slate-500 transition hover:bg-slate-200 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#94a19c] dark:hover:bg-[#26312d] dark:hover:text-red-300 dark:focus-visible:ring-[#4ee6b0]"
+                className="-my-1 -mr-1 grid h-7 w-7 place-items-center rounded-full text-slate-500 transition hover:bg-slate-200 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
               >
                 <Trash2 size={12} />
               </button>

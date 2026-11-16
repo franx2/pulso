@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { finDiaAR, hoyAR, inicioDiaAR } from "@/lib/fechaAR";
 import { totalesDeVenta } from "@/lib/ventas/calculos";
 import { cajaAbierta } from "@/lib/ventas/consultas";
 import { contextoVentas, noAutenticado } from "@/lib/ventas/sesion";
@@ -24,7 +25,8 @@ export async function GET(request: Request) {
     locales.find((l) => l.id === pedido)?.id ?? locales.find((l) => l.id === ctx.session.localId)?.id ?? locales[0]?.id ?? null;
   if (!localId) return NextResponse.json({ locales, localId: null, salones: [], mostrador: [], caja: null, permisos: ctx.permisos });
 
-  const [salones, enCurso, caja] = await Promise.all([
+  const hoy = hoyAR();
+  const [salones, enCurso, caja, mozos, reservas] = await Promise.all([
     db.salon.findMany({
       where: { localId },
       orderBy: { orden: "asc" },
@@ -57,6 +59,18 @@ export async function GET(request: Request) {
       },
     }),
     cajaAbierta(localId),
+    // Para elegir el camarero al abrir una mesa, como en Fudo.
+    db.empleado.findMany({
+      where: { activo: true, OR: [{ localId }, { asignaciones: { some: { localId } } }] },
+      select: { id: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
+    // Las reservas de hoy que todavía no llegaron: marcan la mesa en el plano.
+    db.reserva.findMany({
+      where: { localId, estado: { in: ["PENDIENTE", "CONFIRMADA"] }, fecha: { gte: inicioDiaAR(hoy), lte: finDiaAR(hoy) } },
+      orderBy: { fecha: "asc" },
+      select: { id: true, fecha: true, personas: true, nombre: true, telefono: true, comentario: true, clienteId: true, mesaId: true },
+    }),
   ]);
 
   const resumen = (v: (typeof enCurso)[number]) => ({
@@ -78,6 +92,9 @@ export async function GET(request: Request) {
     salones: salones.map((s) => ({ ...s, mesas: s.mesas.map((m) => ({ ...m, venta: porMesa.get(m.id) ?? null })) })),
     mostrador: enCurso.filter((v) => v.tipo !== "MESA").map(resumen),
     caja: caja && { id: caja.id, nombre: caja.nombre, abiertaEn: caja.abiertaEn.toISOString() },
+    mozos,
+    reservas: reservas.map((r) => ({ ...r, fecha: r.fecha.toISOString() })),
+    yo: ctx.empleadoId,
     permisos: ctx.permisos,
   });
 }

@@ -27,7 +27,7 @@ type Fila = {
 };
 
 const accion =
-  "inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#e0e7e3] dark:hover:bg-[#172724] dark:focus-visible:ring-[#37e6b0]";
+  "inline-flex min-h-11 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-slate-700 transition-colors hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950";
 
 export default function ReportesClient() {
   const [empleados, setEmpleados] = useState<Empleado[]>([]);
@@ -155,16 +155,16 @@ export default function ReportesClient() {
           {filas.map((f) => (
             <div
               key={f.empleadoId}
-              className="border-b border-slate-100 pb-3 last:border-0 last:pb-0 dark:border-[#26312d]"
+              className="border-b border-slate-100 pb-3 last:border-0 last:pb-0"
             >
               <div className="flex items-baseline justify-between gap-3">
                 <span className="font-semibold">{f.nombre}</span>
                 <span className="shrink-0 text-right">
-                  <span className="text-slate-600 dark:text-[#c1cbc6]">
+                  <span className="text-slate-600">
                     {f.horasTrabajadas.toFixed(2)} h
                   </span>
                   {f.montoAPagar != null && (
-                    <span className="ml-2 font-semibold text-emerald-700 dark:text-[#4ee6b0]">
+                    <span className="ml-2 font-semibold text-emerald-700">
                       ${f.montoAPagar.toFixed(2)}
                     </span>
                   )}
@@ -196,17 +196,17 @@ export default function ReportesClient() {
               </div>
             </div>
           ))}
-          <div className="flex items-center justify-between border-t border-slate-200 pt-2 font-bold dark:border-[#26312d]">
+          <div className="flex items-center justify-between border-t border-slate-200 pt-2 font-bold">
             <span>Total</span>
             <span>
               {totalHoras.toFixed(2)} h
               {totalExtra > 0 && (
-                <span className="ml-2 font-semibold text-emerald-700 dark:text-[#4ee6b0]">
+                <span className="ml-2 font-semibold text-emerald-700">
                   (+{totalExtra.toFixed(2)} extra)
                 </span>
               )}
               {hayMonto && (
-                <span className="ml-2 text-emerald-700 dark:text-[#4ee6b0]">
+                <span className="ml-2 text-emerald-700">
                   · ${totalMonto.toFixed(2)}
                 </span>
               )}

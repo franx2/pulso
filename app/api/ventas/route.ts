@@ -16,7 +16,7 @@ export async function POST(request: Request) {
   const prohibido = sinPermiso(ctx, "create_additions");
   if (prohibido) return prohibido;
 
-  const body = await readJsonBody<{ localId?: string; tipo?: string; mesaId?: string; comensales?: number; cliente?: string }>(request);
+  const body = await readJsonBody<{ localId?: string; tipo?: string; mesaId?: string; comensales?: number; cliente?: string; clienteId?: string; mozoId?: string; comentario?: string }>(request);
   const tipo = body?.tipo === "MESA" ? "MESA" : "MOSTRADOR";
   const local = await db.local.findUnique({ where: { id: body?.localId ?? "" }, select: { id: true } });
   if (!local) return NextResponse.json({ error: "Local no encontrado" }, { status: 400 });
@@ -32,7 +32,19 @@ export async function POST(request: Request) {
   }
 
   const comensales = Number.isInteger(body?.comensales) && body!.comensales! > 0 ? body!.comensales! : null;
-  const cliente = body?.cliente?.trim().slice(0, 60) || null;
+  const comentario = body?.comentario?.trim().slice(0, 300) || null;
+  // Un cliente de la libreta trae su nombre y su descuento propio.
+  const ficha = body?.clienteId
+    ? await db.cliente.findFirst({ where: { id: body.clienteId, localId: local.id, activo: true }, select: { id: true, nombre: true, descuentoPct: true } })
+    : null;
+  if (body?.clienteId && !ficha) return NextResponse.json({ error: "Ese cliente no es de este local" }, { status: 400 });
+  const cliente = ficha?.nombre.slice(0, 60) ?? (body?.cliente?.trim().slice(0, 60) || null);
+  let mozoId = tipo === "MESA" ? ctx.empleadoId : null;
+  if (body?.mozoId && body.mozoId !== mozoId) {
+    const p = sinPermiso(ctx, "assign_waiter");
+    if (p) return p;
+    mozoId = body.mozoId;
+  }
 
   for (let intento = 0; intento < 5; intento++) {
     const ultimo = await db.venta.findFirst({ where: { localId: local.id }, orderBy: { numero: "desc" }, select: { numero: true } });
@@ -45,9 +57,12 @@ export async function POST(request: Request) {
           mesaId,
           comensales,
           cliente,
+          comentario,
+          clienteId: ficha?.id ?? null,
+          ...(ficha?.descuentoPct ? { descuentoPct: ficha.descuentoPct, descuentoMotivo: `Cliente: ${ficha.nombre}` } : {}),
           abiertaPorId: ctx.empleadoId,
-          // Quien abre la mesa queda como mozo; se cambia después si hace falta.
-          mozoId: tipo === "MESA" ? ctx.empleadoId : null,
+          // Quien abre la mesa queda como mozo, salvo que elija otro.
+          mozoId,
         },
         select: { id: true },
       });

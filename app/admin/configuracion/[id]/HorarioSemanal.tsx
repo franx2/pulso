@@ -47,7 +47,7 @@ export default function HorarioSemanal({ localId }: { localId: string }) {
   return (
     <Card>
       <SectionTitle>Horario de atención</SectionTitle>
-      <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="mb-4 text-sm text-slate-500">
         Define los límites del diagrama de turnos semanal y a qué franja horaria se ajustan los
         turnos de cada día.
       </p>
@@ -56,9 +56,9 @@ export default function HorarioSemanal({ localId }: { localId: string }) {
           .slice()
           .sort((a, b) => a.diaSemana - b.diaSemana)
           .map((d) => (
-            <div key={d.diaSemana} className="flex flex-wrap items-center gap-3 border-b border-slate-100 py-2 last:border-0 dark:border-[#26312d]">
+            <div key={d.diaSemana} className="flex flex-wrap items-center gap-3 border-b border-slate-100 py-2 last:border-0">
               <span className="w-24 shrink-0 text-sm font-medium">{NOMBRE_DIA[d.diaSemana]}</span>
-              <label className="flex items-center gap-2 text-sm text-slate-500 dark:text-[#94a19c]">
+              <label className="flex items-center gap-2 text-sm text-slate-500">
                 <Checkbox
                   checked={d.cerrado}
                   onChange={(e) => actualizar(d.diaSemana, { cerrado: e.target.checked })}
@@ -91,7 +91,7 @@ export default function HorarioSemanal({ localId }: { localId: string }) {
       </Button>
       <div className="mt-2">
         <ErrorText>{error}</ErrorText>
-        {guardado && <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">Guardado.</p>}
+        {guardado && <p className="text-sm font-medium text-emerald-700">Guardado.</p>}
       </div>
     </Card>
   );

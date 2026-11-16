@@ -55,7 +55,7 @@ export default function Feriados() {
           Feriados
         </span>
       </SectionTitle>
-      <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="mb-4 text-sm text-slate-500">
         Calendario único para todo el negocio: cada sucursal paga su propio multiplicador sobre estos
         días (Ajustes → la sucursal → Cálculo de horas). Ya están cargados los feriados nacionales de
         fecha fija; los trasladables (Carnaval, Semana Santa, los que el gobierno mueve al lunes más
@@ -91,13 +91,13 @@ export default function Feriados() {
           {feriados.map((f) => (
             <div
               key={f.id}
-              className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm dark:border-[#26312d]"
+              className="flex items-center justify-between gap-2 rounded-lg border border-slate-200 px-3 py-2 text-sm"
             >
               <span>
                 <span className="font-medium">
                   {formatearFechaSql(f.fecha, { day: "2-digit", month: "long", year: "numeric" })}
                 </span>{" "}
-                <span className="text-slate-500 dark:text-[#94a19c]">· {f.nombre}</span>
+                <span className="text-slate-500">· {f.nombre}</span>
               </span>
               <IconButton label={`Quitar ${f.nombre}`} onClick={() => eliminar(f.id)}>
                 <Trash2 size={16} />

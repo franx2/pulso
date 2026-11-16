@@ -1,38 +1,101 @@
 @import "tailwindcss";
 
-/* Modo oscuro por clase `.dark` en <html> (toggle manual), no por media query. */
-@custom-variant dark (&:where(.dark, .dark *));
-
+/**
+ * Identidad Bianco & Nero: papel cálido, tinta casi negra, arena dorada y un
+ * verde salvia apagado. Sale de biancoynero.com, no de una paleta genérica.
+ *
+ * En vez de reescribir 1.400 clases, se redefinen las escalas que ya usa toda
+ * la app: `slate` pasa a ser la piedra cálida del local (los grises fríos
+ * azulados eran lo que más delataba una plantilla) y `emerald` pasa a ser la
+ * salvia, que sigue significando "bien / activo / a favor".
+ *
+ * Sólo modo claro: el equipo trabaja en el salón y en la caja, con luz.
+ */
 @theme inline {
-  --font-sans: var(--font-geist-sans);
-  --color-emerald-50: #ecfdf5;
-  --color-emerald-100: #d1fae5;
-  --color-emerald-200: #a7f3d0;
-  --color-emerald-300: #79e6bc;
-  --color-emerald-400: #52d3a7;
-  --color-emerald-500: #25b98c;
-  --color-emerald-600: #159a78;
-  --color-emerald-700: #0f766e;
-  --color-emerald-800: #115e59;
-  --color-emerald-900: #134e4a;
-  --color-emerald-950: #0b2927;
-  --color-pulse-accent: #37e6b0;
-  --color-pulse-ink: #17211e;
+  --font-sans: var(--font-roboto-condensed);
+
+  --color-slate-50: #f7f6f2;
+  --color-slate-100: #efede7;
+  --color-slate-200: #e3e0d8;
+  --color-slate-300: #cfcabf;
+  --color-slate-400: #a29c90;
+  --color-slate-500: #706b60;
+  --color-slate-600: #57524a;
+  --color-slate-700: #423e38;
+  --color-slate-800: #2d2a26;
+  --color-slate-900: #1e1b18;
+  --color-slate-950: #161311;
+
+  --color-emerald-50: #f1f4ee;
+  --color-emerald-100: #e2e9dd;
+  --color-emerald-200: #c6d3bf;
+  --color-emerald-300: #a5b99c;
+  --color-emerald-400: #89a27f;
+  --color-emerald-500: #74926b;
+  --color-emerald-600: #5e7a56;
+  --color-emerald-700: #4a6244;
+  --color-emerald-800: #3a4d36;
+  --color-emerald-900: #2e3d2b;
+  --color-emerald-950: #1a2418;
+
+  /* Arena: el dorado de las cajas de bombones. Acento, nunca texto chico. */
+  --color-arena-50: #faf7ef;
+  --color-arena-100: #f3ecdb;
+  --color-arena-200: #e9dfc2;
+  --color-arena-300: #d6c69b;
+  --color-arena-500: #a08f5c;
+  --color-arena-700: #6e6038;
+
+  --color-papel: #f5f3ee;
+  --color-tinta: #161311;
+
+  /* Esquinas de papelería, no de app de plantilla. */
+  --radius-md: 3px;
+  --radius-lg: 4px;
+  --radius-xl: 6px;
+  --radius-2xl: 10px;
+}
+
+html {
+  color-scheme: light;
 }
 
 html,
 body {
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-roboto-condensed), "Arial Narrow", Arial, sans-serif;
 }
 
 body {
-  background: #f6f8f5;
-  color: #17211e;
+  background: var(--color-papel);
+  color: var(--color-tinta);
+}
+
+/* Cifras en columnas: que los montos no bailen al cambiar. */
+.tabular-nums,
+table {
+  font-variant-numeric: tabular-nums;
 }
 
 ::selection {
-  background: #b7f7dd;
-  color: #17211e;
+  background: #e9dfc2;
+  color: #161311;
+}
+
+:focus-visible {
+  outline-color: #2d2a26;
+}
+
+input,
+textarea {
+  caret-color: #2d2a26;
+}
+
+a {
+  text-underline-offset: 3px;
+}
+
+* {
+  scrollbar-color: #cfcabf transparent;
 }
 
 .scrollbar-hidden {
@@ -44,41 +107,24 @@ body {
   display: none;
 }
 
-/* Pulso Operativo: fondo profundo, superficies teal y acento menta. */
-.dark {
-  color-scheme: dark;
-  background: #0b1412;
-}
-
-.dark body {
-  background: #0b1412;
-  color: #f2f7f4;
-}
-
-.dark ::selection {
-  background: #1d4e48;
-  color: #f2f7f4;
+/** Títulos al estilo de la marca: mayúsculas condensadas con aire. */
+.titulo-marca {
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
 }
 
 /**
  * Los colores de las series de los gráficos.
  *
- * Estaban escritos a mano adentro del SVG, y un `#0f766e` que en papel se lee
- * perfecto queda casi negro sobre el fondo `#0b1412`: en modo oscuro la línea
- * del período actual se perdía contra la grilla. Acá cambian con el tema.
- *
- * La serie actual es más saturada que el teal de la interfaz a propósito: con
- * `#0f766e` la separación contra el gris de referencia era ΔE 9,3, por debajo
- * del piso con el que dos líneas se distinguen de un vistazo.
+ * La serie actual va en tinta y la de referencia en arena oscura: se separan
+ * por luminosidad, que es lo que sobrevive a cualquier tipo de daltonismo.
  */
 :root {
-  --serie-actual: #159a78;
-  --serie-referencia: #64748b;
+  --serie-actual: #2d2a26;
+  --serie-referencia: #a08f5c;
   --serie-aviso: #b45309;
-  --serie-real: #475569;
-  /* La banda del intervalo: en claro el menta al 18% sobre blanco casi no
-     se veía, que es justo lo que el intervalo tiene que comunicar. */
-  --serie-banda: rgba(21, 154, 120, 0.16);
+  --serie-real: #57524a;
+  --serie-banda: rgba(45, 42, 38, 0.1);
   /* Categóricos de Ventas (reportes, cocinas, categorías), en orden fijo.
      Validados con el chequeo de daltonismo: azul, naranja, violeta, ocre,
      magenta, celeste, verde. Los valores se escriben al lado de cada barra,
@@ -90,21 +136,6 @@ body {
   --cat-5: #c2417a;
   --cat-6: #4fa3d9;
   --cat-7: #3f8a2e;
-}
-
-.dark {
-  --serie-actual: #37e6b0;
-  --serie-referencia: #94a19c;
-  --serie-aviso: #fcd34d;
-  --serie-real: #c1cbc6;
-  --serie-banda: rgba(55, 230, 176, 0.18);
-  --cat-1: #5b8ad6;
-  --cat-2: #d96a48;
-  --cat-3: #8579d8;
-  --cat-4: #b08516;
-  --cat-5: #c9578a;
-  --cat-6: #3f95c8;
-  --cat-7: #4c9a3c;
 }
 
 /* El panel del selector de período: baja apenas desde el botón que lo abrió. */
@@ -124,5 +155,22 @@ body {
 @keyframes velo {
   from {
     opacity: 0;
+  }
+}
+
+/* El panel de la mesa entra desde la derecha. */
+@keyframes deslizar {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
   }
 }

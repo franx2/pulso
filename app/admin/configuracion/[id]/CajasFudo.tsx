@@ -62,7 +62,7 @@ export default function CajasFudo({ localId }: { localId: string }) {
   return (
     <Card>
       <SectionTitle>Cajas de Fudo</SectionTitle>
-      <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+      <p className="mb-4 text-sm text-slate-500">
         En esta cuenta de Fudo cada caja es una persona, no un canal fijo. Vinculá acá qué
         empleado de Pulso es cada una: el arqueo de caja usa esto para calcular el efectivo
         esperado de esa persona, en vez de todo el efectivo del local durante su turno.
@@ -76,7 +76,7 @@ export default function CajasFudo({ localId }: { localId: string }) {
           {cajas.map((c) => (
             <li
               key={c.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3 text-sm dark:border-[#1c2521]"
+              className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-slate-100 p-3 text-sm"
             >
               <span className="flex items-center gap-2">
                 <Wallet size={14} />

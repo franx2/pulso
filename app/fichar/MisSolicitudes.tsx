@@ -119,20 +119,20 @@ export default function MisSolicitudes({ revision = 0 }: { revision?: number }) 
           {ausencias.slice(0, 4).map((a) => (
             <li key={a.id} className="flex flex-col gap-0.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate text-slate-600 dark:text-[#c1cbc6]">
+                <span className="min-w-0 truncate text-slate-600">
                   {ETIQUETA_AUSENCIA[a.tipo] ?? a.tipo} · {formatearFechaSql(a.desde)}
                 </span>
                 <Badge tone={TONO[a.estado]}>{a.estado.toLowerCase()}</Badge>
               </div>
               {a.estado === "RECHAZADA" && a.comentario && (
-                <p className="text-xs italic text-slate-500 dark:text-[#94a19c]">“{a.comentario}”</p>
+                <p className="text-xs italic text-slate-500">“{a.comentario}”</p>
               )}
             </li>
           ))}
           {correcciones.slice(0, 4).map((c) => (
             <li key={c.id} className="flex flex-col gap-0.5">
               <div className="flex items-center justify-between gap-2">
-                <span className="min-w-0 truncate text-slate-600 dark:text-[#c1cbc6]">
+                <span className="min-w-0 truncate text-slate-600">
                   {c.fechaHora
                     ? `${ETIQUETA_FICHAJE[c.tipoFichaje ?? ""] ?? "Fichaje"} · ${diaLocal(c.fechaHora)}`
                     : "Corrección"}
@@ -140,7 +140,7 @@ export default function MisSolicitudes({ revision = 0 }: { revision?: number }) 
                 <Badge tone={TONO[c.estado]}>{c.estado.toLowerCase()}</Badge>
               </div>
               {c.estado === "RECHAZADA" && c.comentario && (
-                <p className="text-xs italic text-slate-500 dark:text-[#94a19c]">“{c.comentario}”</p>
+                <p className="text-xs italic text-slate-500">“{c.comentario}”</p>
               )}
             </li>
           ))}
@@ -243,7 +243,7 @@ export function ModalCorreccion({
   return (
     <Modal title={titulo} onClose={onClose}>
       <form onSubmit={enviar} className="flex flex-col gap-3">
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           {fichaje
             ? "Tu encargado lo revisa y, si lo aprueba, se corrige solo."
             : "Si te olvidaste de fichar, pedí que lo agreguen. Tu encargado lo tiene que aprobar."}
@@ -262,8 +262,8 @@ export function ModalCorreccion({
                 key={valor}
                 className={`flex min-h-11 cursor-pointer items-center justify-center rounded-lg border px-3 text-center text-sm font-semibold transition-colors ${
                   accion === valor
-                    ? "border-emerald-700 bg-emerald-50 text-emerald-900 dark:border-[#37e6b0] dark:bg-[#0f2620] dark:text-[#cdfbea]"
-                    : "border-slate-200 text-slate-600 dark:border-[#29403b] dark:text-[#c1cbc6]"
+                    ? "border-emerald-700 bg-emerald-50 text-emerald-900"
+                    : "border-slate-200 text-slate-600"
                 }`}
               >
                 <input
@@ -386,7 +386,7 @@ function ModalAusencia({ onClose, onListo }: { onClose: () => void; onListo: () 
         </div>
         <div>
           <Label>Certificado (opcional)</Label>
-          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500 dark:border-[#26312d] dark:text-[#94a19c]">
+          <label className="flex cursor-pointer items-center justify-center gap-2 rounded-xl border border-dashed border-slate-300 px-3 py-4 text-sm text-slate-500">
             <Camera size={16} />
             {certificado ? "Foto lista — tocá para cambiarla" : "Sacar o elegir una foto"}
             <input type="file" accept="image/*" capture="environment" className="hidden" onChange={elegirFoto} />

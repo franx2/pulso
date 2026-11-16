@@ -45,7 +45,7 @@ No es un reloj fichador genérico de SaaS por asiento: el login es biometría na
 
 ## Brand Commitments
 
-Nombre del software: **Pulso Operativo**. Es una herramienta para vender a negocios gastronómicos; cada cliente mantiene su propia identidad y sus sucursales, como Jumbo o Las Cañas. La identidad usa teal operativo (`#0F766E`) como color principal, menta de actividad (`#37E6B0`), fondo claro `#F6F8F5`, tinta `#17211E` y superficie oscura `#0B1412`. El logotipo es una P compacta con un punto menta de estado.
+Nombre del software: **Pulso Operativo**. Es una herramienta para vender a negocios gastronómicos; cada cliente mantiene su propia identidad y sus sucursales, como Jumbo o Las Cañas. La identidad sale de la web de Bianco & Nero (biancoynero.com, decisión del dueño, 16/11/2026): papel `#F5F3EE`, tinta `#161311`, arena `#D6C69B` y salvia `#74926B`, tipografía Roboto Condensed con títulos en mayúsculas espaciadas, y sólo modo claro. El logo es un cuadrado partido en blanco y negro cruzado por una línea arena.
 
 ## Evidence on Hand
 

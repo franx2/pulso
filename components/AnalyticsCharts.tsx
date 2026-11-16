@@ -73,7 +73,7 @@ function Punto({
     <span
       aria-hidden
       className={`pointer-events-none absolute rounded-full ${
-        grande ? "h-2.5 w-2.5 ring-2 ring-white dark:ring-[#101c19]" : "h-1.5 w-1.5"
+        grande ? "h-2.5 w-2.5 ring-2 ring-white" : "h-1.5 w-1.5"
       }`}
       style={{ left: `${x}%`, top: `${y}%`, backgroundColor: color, transform: "translate(-50%, -50%)" }}
     />
@@ -82,7 +82,7 @@ function Punto({
 
 function Leyenda({ color, trazo, children }: { color: string; trazo?: "linea" | "banda" | "puntos"; children: string }) {
   return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#94a19c]">
+    <span className="inline-flex items-center gap-1.5 text-xs text-slate-500">
       <span
         className={`block w-5 ${trazo === "banda" ? "h-2" : trazo === "puntos" ? "h-0 border-t-2 border-dotted" : "h-0 border-t-2"}`}
         style={{ backgroundColor: trazo === "banda" ? color : undefined, borderColor: color }}
@@ -95,7 +95,7 @@ function Leyenda({ color, trazo, children }: { color: string; trazo?: "linea" | 
 
 function EjeY({ maximo, formato }: { maximo: number; formato: (valor: number) => string }) {
   return (
-    <div className="relative h-48 w-[4.25rem] shrink-0 text-right text-[11px] tabular-nums text-slate-500 md:h-56 dark:text-[#7a8882]">
+    <div className="relative h-48 w-[4.25rem] shrink-0 text-right text-[11px] tabular-nums text-slate-500 md:h-56">
       <span className="absolute right-2 top-0">{formato(maximo)}</span>
       <span className="absolute right-2 top-1/2 -translate-y-1/2">{formato(maximo / 2)}</span>
       <span className="absolute bottom-0 right-2">0</span>
@@ -114,7 +114,7 @@ function Rejilla() {
           y1={PAD_Y + fraccion * (HEIGHT - PAD_Y * 2)}
           y2={PAD_Y + fraccion * (HEIGHT - PAD_Y * 2)}
           vectorEffect="non-scaling-stroke"
-          className="stroke-slate-200 dark:stroke-[#26312d]"
+          className="stroke-slate-200"
         />
       ))}
     </>
@@ -170,7 +170,7 @@ export function ComparisonChart({
         <div className="min-w-0 flex-1">
           <div
             ref={contenedor}
-            className="relative h-48 touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 md:h-56 dark:focus-visible:ring-[#37e6b0]"
+            className="relative h-48 touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-slate-950 md:h-56"
             tabIndex={0}
             role="img"
             aria-label={`Serie de ${etiquetaActual} comparada con ${etiquetaReferencia}`}
@@ -216,7 +216,7 @@ export function ComparisonChart({
                   y1="0"
                   y2={HEIGHT}
                   vectorEffect="non-scaling-stroke"
-                  className="stroke-slate-300 dark:stroke-[#53615c]"
+                  className="stroke-slate-300"
                 />
               )}
             </svg>
@@ -235,24 +235,24 @@ export function ComparisonChart({
             )}
             {activo != null && puntoActivo && (
               <div
-                className={`pointer-events-none absolute top-2 z-10 min-w-36 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-[#29403b] dark:bg-[#101c19] ${activo > actual.length * 0.75 ? "-translate-x-full" : ""}`}
+                className={`pointer-events-none absolute top-2 z-10 min-w-36 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg ${activo > actual.length * 0.75 ? "-translate-x-full" : ""}`}
                 style={{ left: `${(activo / Math.max(actual.length - 1, 1)) * 100}%` }}
               >
-                <p className="font-semibold text-slate-800 dark:text-[#f2f7f4]">{fechaCorta(puntoActivo.fecha)}</p>
-                <p className="mt-1 tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                <p className="font-semibold text-slate-800">{fechaCorta(puntoActivo.fecha)}</p>
+                <p className="mt-1 tabular-nums text-emerald-700">
                   {puntoActivo.valor == null ? "Sin datos" : formato(puntoActivo.valor)}
                 </p>
                 {referenciaActiva && (
-                  <p className="mt-0.5 tabular-nums text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-0.5 tabular-nums text-slate-500">
                     Ref. {referenciaActiva.valor == null ? "sin datos" : formato(referenciaActiva.valor)}
                   </p>
                 )}
-                {puntoActivo.completo === false && <p className="mt-1 text-amber-700 dark:text-amber-300">Dato parcial</p>}
+                {puntoActivo.completo === false && <p className="mt-1 text-amber-700">Dato parcial</p>}
               </div>
             )}
           </div>
           {actual.length > 0 && (
-            <div className="mt-2 flex justify-between text-[11px] text-slate-500 dark:text-[#7a8882]">
+            <div className="mt-2 flex justify-between text-[11px] text-slate-500">
               <span>{fechaCorta(actual[0].fecha)}</span>
               <span>{fechaCorta(actual[Math.floor((actual.length - 1) / 2)].fecha)}</span>
               <span>{fechaCorta(actual[actual.length - 1].fecha)}</span>
@@ -320,7 +320,7 @@ export function ForecastChart({
         <div className="min-w-0 flex-1">
           <div
             ref={contenedor}
-            className="relative h-48 touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 md:h-56 dark:focus-visible:ring-[#37e6b0]"
+            className="relative h-48 touch-pan-y outline-none focus-visible:ring-2 focus-visible:ring-slate-950 md:h-56"
             tabIndex={0}
             role="img"
             aria-label="Tickets reales y pronosticados por día, con rango esperado"
@@ -374,7 +374,7 @@ export function ForecastChart({
                   x2={xDe(activo, combinados.length)}
                   y1="0"
                   y2={HEIGHT}
-                  className="stroke-slate-300 dark:stroke-[#53615c]"
+                  className="stroke-slate-300"
                   vectorEffect="non-scaling-stroke"
                 />
               )}
@@ -388,22 +388,22 @@ export function ForecastChart({
               />
             )}
             <span
-              className="pointer-events-none absolute top-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500 dark:bg-[#101c19]/90 dark:text-[#94a19c]"
+              className="pointer-events-none absolute top-1 rounded bg-white/90 px-1.5 py-0.5 text-[11px] font-semibold text-slate-500"
               style={{ left: `${fronteraPct}%`, transform: "translateX(-50%)" }}
             >
               Hoy
             </span>
             {activo != null && puntoActivo && (
               <div
-                className={`pointer-events-none absolute top-7 z-10 min-w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg dark:border-[#29403b] dark:bg-[#101c19] ${activo > combinados.length * 0.75 ? "-translate-x-full" : ""}`}
+                className={`pointer-events-none absolute top-7 z-10 min-w-40 rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs shadow-lg ${activo > combinados.length * 0.75 ? "-translate-x-full" : ""}`}
                 style={{ left: `${(activo / Math.max(combinados.length - 1, 1)) * 100}%` }}
               >
-                <p className="font-semibold text-slate-800 dark:text-[#f2f7f4]">{fechaCorta(puntoActivo.fecha)}</p>
-                <p className="mt-1 tabular-nums text-slate-700 dark:text-[#c1cbc6]">
+                <p className="font-semibold text-slate-800">{fechaCorta(puntoActivo.fecha)}</p>
+                <p className="mt-1 tabular-nums text-slate-700">
                   {puntoActivo.tipo === "real" ? "Real" : "Pronóstico"}: {formato(puntoActivo.valor)}
                 </p>
                 {puntoActivo.tipo === "pronostico" && (
-                  <p className="mt-0.5 tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                  <p className="mt-0.5 tabular-nums text-emerald-700">
                     Rango {formato(puntoActivo.minimo)}–{formato(puntoActivo.maximo)}
                   </p>
                 )}
@@ -411,7 +411,7 @@ export function ForecastChart({
             )}
           </div>
           {combinados.length > 0 && (
-            <div className="mt-2 grid grid-cols-3 text-[11px] text-slate-500 dark:text-[#7a8882]">
+            <div className="mt-2 grid grid-cols-3 text-[11px] text-slate-500">
               <span>{fechaCorta(combinados[0].fecha)}</span>
               <span className="text-center">{pronostico[0] ? fechaCorta(pronostico[0].fecha) : "Hoy"}</span>
               <span className="text-right">{fechaCorta(combinados[combinados.length - 1].fecha)}</span>

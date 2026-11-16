@@ -253,7 +253,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
       <div>
         <Link
           href="/admin/configuracion"
-          className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700 dark:text-[#94a19c]"
+          className="mb-2 inline-flex items-center gap-1 text-sm text-slate-500 hover:text-slate-700"
         >
           <ArrowLeft size={14} />
           Todas las sucursales
@@ -262,9 +262,9 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
       </div>
 
       {faltantes.length > 0 && (
-        <div className="flex flex-wrap items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm dark:border-amber-500/30 dark:bg-amber-500/10">
-          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-700 dark:text-amber-300" aria-hidden />
-          <p className="text-amber-900 dark:text-amber-100">
+        <div className="flex flex-wrap items-start gap-2 rounded-xl border border-amber-200 bg-amber-50/70 p-3 text-sm">
+          <AlertTriangle size={16} className="mt-0.5 shrink-0 text-amber-700" aria-hidden />
+          <p className="text-amber-900">
             Falta cargar{" "}
             {faltantes.map((t, i) => (
               <span key={t.key}>
@@ -283,10 +283,10 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
         </div>
       )}
 
-      <div className="scrollbar-hidden flex items-end gap-5 overflow-x-auto border-b border-slate-200 dark:border-[#26312d]">
+      <div className="scrollbar-hidden flex items-end gap-5 overflow-x-auto border-b border-slate-200">
         {GRUPOS.map((grupo) => (
           <div key={grupo} className="shrink-0">
-            <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500 dark:text-[#7a8882]">
+            <p className="px-1 pb-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
               {grupo}
             </p>
             <div className="flex gap-1">
@@ -298,10 +298,10 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                     type="button"
                     onClick={() => setTab(t.key)}
                     aria-current={tab === t.key ? "page" : undefined}
-                    className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 dark:focus-visible:ring-[#37e6b0] dark:focus-visible:ring-offset-[#0b1412] ${
+                    className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950 focus-visible:ring-offset-2 ${
                       tab === t.key
-                        ? "border-emerald-700 text-emerald-700 dark:border-[#37e6b0] dark:text-[#37e6b0]"
-                        : "border-transparent text-slate-500 hover:text-slate-800 dark:text-[#94a19c] dark:hover:text-[#f2f7f4]"
+                        ? "border-emerald-700 text-emerald-700"
+                        : "border-transparent text-slate-500 hover:text-slate-800"
                     }`}
                   >
                     {t.label}
@@ -332,7 +332,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
 
               <Card>
                 <SectionTitle>Ubicación</SectionTitle>
-                <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+                <p className="mb-4 text-sm text-slate-500">
                   Con una ubicación cargada, el personal sólo puede fichar dentro del radio
                   indicado. Dejá los campos vacíos para no exigir ubicación.
                 </p>
@@ -372,7 +372,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                   />
                   <span className="text-sm">
                     <span className="font-medium">Descontar el descanso de las horas trabajadas</span>
-                    <span className="mt-0.5 block text-slate-500 dark:text-[#94a19c]">
+                    <span className="mt-0.5 block text-slate-500">
                       Si está apagado, el descanso se registra para saber dónde está cada uno pero se
                       paga como tiempo trabajado.
                     </span>
@@ -388,7 +388,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                     value={toleranciaMin}
                     onChange={(e) => setToleranciaMin(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-1 text-xs text-slate-500">
                     Llegar dentro de estos minutos no cuenta como tardanza.
                   </p>
                 </div>
@@ -402,7 +402,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                     value={topeSemanalHoras}
                     onChange={(e) => setTopeSemanalHoras(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-1 text-xs text-slate-500">
                     Lo que exceda este total en la semana cuenta como hora extra. Se liquida la mayor
                     entre las extras diarias y este excedente, nunca las dos sumadas.
                   </p>
@@ -417,7 +417,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                     value={multiplicadorFeriado}
                     onChange={(e) => setMultiplicadorFeriado(e.target.value)}
                   />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-1 text-xs text-slate-500">
                     Con cuánto se multiplica el precio/hora en los días del calendario de feriados
                     (Ajustes → Feriados). 2 = paga doble.
                   </p>
@@ -438,7 +438,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                   />
                   <span className="text-sm">
                     <span className="font-medium">Verificar el rostro por cámara al fichar</span>
-                    <span className="mt-0.5 block text-slate-500 dark:text-[#94a19c]">
+                    <span className="mt-0.5 block text-slate-500">
                       Cada empleado registra su cara una vez desde su celular. Al fichar, la cámara
                       confirma que es la misma persona. Nunca bloquea el fichaje: si no coincide, se
                       registra igual y te aparece en Presencia para revisar.
@@ -458,13 +458,13 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                         value={rostroTolerancia}
                         onChange={(e) => setRostroTolerancia(e.target.value)}
                       />
-                      <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                      <p className="mt-1 text-xs text-slate-500">
                         0.55 es un buen punto de partida. Más bajo es más estricto y rechaza más
                         caras legítimas; si en la cocina hay vapor, gorros o poca luz, subilo a 0.60.
                       </p>
                     </div>
 
-                    <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800 dark:border-[#5a4a2f] dark:bg-[#241f14] dark:text-amber-200">
+                    <p className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-800">
                       El rostro es un dato biométrico sensible (Ley 25.326): cada empleado tiene que
                       dar su consentimiento explícito, que la app le pide y registra con fecha.
                       Consultá con tu contador o abogado antes de activarlo con el personal real.
@@ -478,7 +478,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
           {tab === "compras" && (
             <Card>
               <SectionTitle>Identidad en los remitos</SectionTitle>
-              <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+              <p className="mb-4 text-sm text-slate-500">
                 Los remitos del proveedor llegan por mail y se reparten entre las sucursales por
                 CUIT. Sin esto cargado, los de este local quedan en «sin asignar» y no entran en
                 ningún costo. El CUIT manda: la razón social sólo se usa cuando el remito no lo trae.
@@ -492,7 +492,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                     placeholder="30718808975"
                     inputMode="numeric"
                   />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-1 text-xs text-slate-500">
                     Con o sin guiones; se guarda sólo con números.
                   </p>
                 </div>
@@ -503,7 +503,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
                     onChange={(e) => setRazonSocialCompras(e.target.value)}
                     placeholder="CUMBRES Y PLACERES SAS"
                   />
-                  <p className="mt-1 text-xs text-slate-500 dark:text-[#94a19c]">
+                  <p className="mt-1 text-xs text-slate-500">
                     Como figura impresa en el remito, no como se llama el local acá.
                   </p>
                 </div>
@@ -517,7 +517,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
               {guardando ? "Guardando…" : "Guardar"}
             </Button>
             <ErrorText>{error}</ErrorText>
-            {guardado && <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">Guardado.</p>}
+            {guardado && <p className="text-sm font-medium text-emerald-700">Guardado.</p>}
           </div>
         </form>
       )}
@@ -534,14 +534,14 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
             >
               Integración con Fudo
             </SectionTitle>
-            <p className="mb-4 text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mb-4 text-sm text-slate-500">
               Con las credenciales de la cuenta de Fudo de esta sucursal, el mapa de calor de
               demanda (Turnos → Semana) se recalcula solo con los últimos 90 días de ventas — sin
               subir un Excel a mano. Cada sucursal es una cuenta de Fudo separada.
             </p>
 
             {local.fudoConfigurado && (
-              <p className="mb-4 text-sm text-slate-600 dark:text-[#c1cbc6]">
+              <p className="mb-4 text-sm text-slate-600">
                 Última sincronización:{" "}
                 {local.demandaSincronizadaEn
                   ? new Date(local.demandaSincronizadaEn).toLocaleString("es-AR")
@@ -585,7 +585,7 @@ export default function LocalDetalleClient({ localId }: { localId: string }) {
               </div>
               <ErrorText>{errorFudo}</ErrorText>
               {resultadoSync && (
-                <p className="text-sm font-medium text-emerald-700 dark:text-[#4ee6b0]">{resultadoSync}</p>
+                <p className="text-sm font-medium text-emerald-700">{resultadoSync}</p>
               )}
             </form>
           </Card>

@@ -52,11 +52,11 @@ type Respuesta = {
 
 
 const COLOR: Record<SectorClave, string> = {
-  HELADOS: "bg-sky-600 dark:bg-sky-400",
-  CAFETERIA: "bg-emerald-700 dark:bg-[#37e6b0]",
-  CHOCOLATERIA: "bg-amber-700 dark:bg-amber-400",
-  PROMOCION: "bg-slate-400 dark:bg-[#7f908a]",
-  SIN_CLASIFICAR: "bg-rose-500 dark:bg-rose-400",
+  HELADOS: "bg-sky-600",
+  CAFETERIA: "bg-emerald-700",
+  CHOCOLATERIA: "bg-amber-700",
+  PROMOCION: "bg-slate-400",
+  SIN_CLASIFICAR: "bg-rose-500",
 };
 
 
@@ -83,8 +83,8 @@ export default function SectoresClient() {
 
 
 
-  if (error) return <p className="text-sm text-slate-500 dark:text-[#94a19c]">{error}</p>;
-  if (!datos) return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70 dark:bg-[#172724]" aria-label="Clasificando productos" />;
+  if (error) return <p className="text-sm text-slate-500">{error}</p>;
+  if (!datos) return <div className="h-64 animate-pulse rounded-lg bg-slate-200/70" aria-label="Clasificando productos" />;
 
   const conVenta = datos.sectores.filter((s) => s.facturacion > 0);
   const promo = datos.sectores.find((s) => s.sector === "PROMOCION");
@@ -108,24 +108,24 @@ export default function SectoresClient() {
         }}
       />
 
-      <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
-        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 px-4 py-3">
           <div>
             <h2 className="font-semibold">Facturación por sector</h2>
-            <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="mt-0.5 text-sm text-slate-500">
               Las reglas clasifican por nombre de producto; lo que no saben leer se carga abajo.
             </p>
           </div>
           <div className="text-right">
             <p className="text-2xl font-semibold tabular-nums">{plata(datos.total)}</p>
-            <p className="text-xs text-slate-500 dark:text-[#94a19c]">
+            <p className="text-xs text-slate-500">
               {datos.cobertura.toFixed(1)}% atribuido a un sector real
             </p>
           </div>
         </div>
 
         <div className="px-4 py-4">
-          <div className="flex h-3 overflow-hidden rounded-full bg-slate-100 dark:bg-[#18201d]">
+          <div className="flex h-3 overflow-hidden rounded-full bg-slate-100">
             {conVenta.map((s) => (
               <div
                 key={s.sector}
@@ -137,12 +137,12 @@ export default function SectoresClient() {
           </div>
         </div>
 
-        <div className="border-t border-slate-100 dark:border-[#1c2521]">
+        <div className="border-t border-slate-100">
           {/* Celular: un bloque por sector con lo que decide (el margen) a la
               vista y el resto debajo. Siete columnas obligaban a deslizar de
               costado, y el margen —lo único que se mira— quedaba a la derecha,
               fuera de pantalla. */}
-          <ul className="divide-y divide-slate-100 md:hidden dark:divide-[#1c2521]">
+          <ul className="divide-y divide-slate-100 md:hidden">
             {conVenta.map((s) => {
               const abierto = desplegado === s.sector;
               const conMargen = s.margenPct != null && s.compra > 0;
@@ -152,7 +152,7 @@ export default function SectoresClient() {
                     type="button"
                     aria-expanded={abierto}
                     onClick={() => setDesplegado(abierto ? null : s.sector)}
-                    className="w-full px-4 pb-1 pt-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0]"
+                    className="w-full px-4 pb-1 pt-3 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-slate-950"
                   >
                     <span className="flex items-center justify-between gap-3">
                       <span className="flex min-w-0 items-center gap-2 font-medium">
@@ -168,8 +168,8 @@ export default function SectoresClient() {
                         className={`shrink-0 text-lg font-bold tabular-nums ${
                           conMargen
                             ? s.margenPct! >= 0
-                              ? "text-emerald-700 dark:text-[#4ee6b0]"
-                              : "text-rose-600 dark:text-rose-400"
+                              ? "text-emerald-700"
+                              : "text-rose-600"
                             : "text-slate-500"
                         }`}
                       >
@@ -178,32 +178,32 @@ export default function SectoresClient() {
                     </span>
                   </button>
                     <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 pb-3 pl-10 pr-4 text-sm">
-                      <dt className="text-slate-500 dark:text-[#94a19c]">Venta</dt>
+                      <dt className="text-slate-500">Venta</dt>
                       <dd className="text-right tabular-nums">{plata(s.facturacion)}</dd>
                       {s.compra > 0 ? (
                         <>
-                          <dt className="text-slate-500 dark:text-[#94a19c]">Venta comparable</dt>
+                          <dt className="text-slate-500">Venta comparable</dt>
                           <dd className="text-right tabular-nums">{plata(s.ventaComparable)}</dd>
-                          <dt className="text-slate-500 dark:text-[#94a19c]">Compra</dt>
+                          <dt className="text-slate-500">Compra</dt>
                           <dd className="text-right tabular-nums">{plata(s.compra)}</dd>
-                          <dt className="text-slate-500 dark:text-[#94a19c]">Costo</dt>
+                          <dt className="text-slate-500">Costo</dt>
                           <dd className="text-right tabular-nums">
                             {s.costoPct != null ? `${s.costoPct.toFixed(1)}%` : "—"}
                           </dd>
-                          <dt className="text-slate-500 dark:text-[#94a19c]">Margen</dt>
+                          <dt className="text-slate-500">Margen</dt>
                           <dd className="text-right tabular-nums">{plata(s.margen)}</dd>
                         </>
                       ) : (
                         <>
-                          <dt className="col-span-2 text-xs text-slate-500 dark:text-[#94a19c]">
+                          <dt className="col-span-2 text-xs text-slate-500">
                             Sin compras cargadas: no se puede medir el margen.
                           </dt>
                         </>
                       )}
                     </dl>
                   {abierto && (
-                    <div className="bg-slate-50/70 px-4 py-4 dark:bg-[#0d1614]">
-                      <p className="mb-3 text-sm text-slate-500 dark:text-[#94a19c]">
+                    <div className="bg-slate-50/70 px-4 py-4">
+                      <p className="mb-3 text-sm text-slate-500">
                         Todo lo que cae en {s.etiqueta.toLowerCase()}, de la venta y de la compra. Si algo no debería
                         estar acá, cambiale el sector y las cifras se recalculan.
                       </p>
@@ -213,17 +213,17 @@ export default function SectoresClient() {
                 </li>
               );
             })}
-            <li className="bg-slate-50 px-4 py-3 dark:bg-[#0d1614]">
+            <li className="bg-slate-50 px-4 py-3">
               <p className="font-semibold">Total</p>
               <dl className="mt-2 grid grid-cols-[1fr_auto] gap-x-4 gap-y-0.5 pl-6 text-sm">
-                <dt className="text-slate-500 dark:text-[#94a19c]">Venta</dt>
+                <dt className="text-slate-500">Venta</dt>
                 <dd className="text-right font-semibold tabular-nums">{plata(datos.total)}</dd>
-                <dt className="text-slate-500 dark:text-[#94a19c]">Venta comparable</dt>
+                <dt className="text-slate-500">Venta comparable</dt>
                 <dd className="text-right tabular-nums">{plata(datos.ventaComparable)}</dd>
-                <dt className="text-slate-500 dark:text-[#94a19c]">Compra</dt>
+                <dt className="text-slate-500">Compra</dt>
                 <dd className="text-right tabular-nums">{plata(datos.totalCompra)}</dd>
-                <dt className="text-slate-500 dark:text-[#94a19c]">Margen</dt>
-                <dd className="text-right font-semibold tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                <dt className="text-slate-500">Margen</dt>
+                <dd className="text-right font-semibold tabular-nums text-emerald-700">
                   {datos.ventaComparable > 0
                     ? `${plata(datos.ventaComparable - datos.totalCompra)} · ${(((datos.ventaComparable - datos.totalCompra) / datos.ventaComparable) * 100).toFixed(1)}%`
                     : "—"}
@@ -235,7 +235,7 @@ export default function SectoresClient() {
           <div className="hidden overflow-x-auto md:block">
           <table className="w-full min-w-[38rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs text-slate-500 dark:border-[#29403b] dark:text-[#94a19c]">
+              <tr className="border-b border-slate-200 text-left text-xs text-slate-500">
                 <th className="px-4 py-2.5 font-semibold">Sector</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Venta</th>
                 <th className="px-3 py-2.5 text-right font-semibold">Venta comparable</th>
@@ -245,18 +245,18 @@ export default function SectoresClient() {
                 <th className="px-4 py-2.5 text-right font-semibold">Margen %</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+            <tbody className="divide-y divide-slate-100">
               {conVenta.map((s) => (
                 <Fragment key={s.sector}>
                 <tr
-                  className="cursor-pointer transition-colors hover:bg-slate-50 dark:hover:bg-[#172724]"
+                  className="cursor-pointer transition-colors hover:bg-slate-50"
                   onClick={() => setDesplegado(desplegado === s.sector ? null : s.sector)}
                 >
                   <td className="px-4 py-2.5">
                     <button
                       type="button"
                       aria-expanded={desplegado === s.sector}
-                      className="inline-flex items-center gap-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:focus-visible:ring-[#37e6b0]"
+                      className="inline-flex items-center gap-2 font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
                     >
                       {desplegado === s.sector ? (
                         <ChevronDown size={15} className="shrink-0 text-slate-500" aria-hidden />
@@ -268,13 +268,13 @@ export default function SectoresClient() {
                     </button>
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">{plata(s.facturacion)}</td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">
                     {s.compra > 0 ? plata(s.ventaComparable) : "—"}
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">
                     {s.compra > 0 ? plata(s.compra) : "—"}
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-500">
                     {s.costoPct != null && s.compra > 0 ? `${s.costoPct.toFixed(1)}%` : "—"}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums">
@@ -284,8 +284,8 @@ export default function SectoresClient() {
                     className={`px-4 py-2.5 text-right font-semibold tabular-nums ${
                       s.margenPct != null && s.compra > 0
                         ? s.margenPct >= 0
-                          ? "text-emerald-700 dark:text-[#4ee6b0]"
-                          : "text-rose-600 dark:text-rose-400"
+                          ? "text-emerald-700"
+                          : "text-rose-600"
                         : "text-slate-500"
                     }`}
                   >
@@ -294,8 +294,8 @@ export default function SectoresClient() {
                 </tr>
                 {desplegado === s.sector && (
                   <tr>
-                    <td colSpan={7} className="bg-slate-50/70 px-4 py-4 dark:bg-[#0d1614]">
-                      <p className="mb-3 text-sm text-slate-500 dark:text-[#94a19c]">
+                    <td colSpan={7} className="bg-slate-50/70 px-4 py-4">
+                      <p className="mb-3 text-sm text-slate-500">
                         Todo lo que cae en {s.etiqueta.toLowerCase()}, de la venta y de la compra.
                         Si algo no debería estar acá, cambiale el sector y las cifras de arriba se
                         recalculan.
@@ -309,7 +309,7 @@ export default function SectoresClient() {
                 )}
                 </Fragment>
               ))}
-              <tr className="border-t-2 border-slate-200 font-semibold dark:border-[#29403b]">
+              <tr className="border-t-2 border-slate-200 font-semibold">
                 <td className="px-4 py-2.5">Total</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.total)}</td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.ventaComparable)}</td>
@@ -318,7 +318,7 @@ export default function SectoresClient() {
                   {datos.ventaComparable > 0 ? `${((datos.totalCompra / datos.ventaComparable) * 100).toFixed(1)}%` : "—"}
                 </td>
                 <td className="px-3 py-2.5 text-right tabular-nums">{plata(datos.ventaComparable - datos.totalCompra)}</td>
-                <td className="px-4 py-2.5 text-right tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+                <td className="px-4 py-2.5 text-right tabular-nums text-emerald-700">
                   {datos.ventaComparable > 0
                     ? `${(((datos.ventaComparable - datos.totalCompra) / datos.ventaComparable) * 100).toFixed(1)}%`
                     : "—"}
@@ -328,27 +328,27 @@ export default function SectoresClient() {
           </table>
           </div>
           {datos.localesConMargen.length > 0 && (
-            <p className="px-4 py-2.5 text-xs text-slate-500 dark:text-[#94a19c]">
+            <p className="px-4 py-2.5 text-xs text-slate-500">
               El margen se calcula sólo sobre {datos.localesConMargen.join(", ")}, que {datos.localesConMargen.length === 1 ? "es el único local" : "son los únicos locales"} con remitos
               cargados. La columna Venta es de todos los locales y sirve para el mix; la
               comparable es la que se mide contra las compras.
             </p>
           )}
           {datos.compraSinClasificar > 0 && (
-            <p className="px-4 py-2.5 text-xs text-amber-700 dark:text-amber-300">
+            <p className="px-4 py-2.5 text-xs text-amber-700">
               {plata(datos.compraSinClasificar)} de compras sin clasificar —insumos varios y
               packaging— están en el total pero no en ningún sector, así que los márgenes por
               sector salen algo optimistas.
             </p>
           )}
           {datos.totalCompra === 0 && (
-            <p className="px-4 py-2.5 text-xs text-slate-500 dark:text-[#94a19c]">
+            <p className="px-4 py-2.5 text-xs text-slate-500">
               Sin remitos cargados para este local y período: hay mix de venta, pero no margen.
             </p>
           )}
         </div>
 
-        <div className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-[#1c2521] dark:border-[#1c2521]">
+        <div className="divide-y divide-slate-100 border-t border-slate-100">
           {conVenta.map((s) => (
             <div key={s.sector} className="px-4 py-2">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -356,12 +356,12 @@ export default function SectoresClient() {
                   <span className={`h-2.5 w-2.5 rounded-full ${COLOR[s.sector]}`} aria-hidden />
                   {s.etiqueta}
                 </span>
-                <span className="text-xs text-slate-500 dark:text-[#94a19c]">
+                <span className="text-xs text-slate-500">
                   {s.productos} productos
                 </span>
               </div>
               {datos.ejemplos[s.sector] && (
-                <p className="mt-1 truncate text-xs text-slate-500 dark:text-[#7a8882]">
+                <p className="mt-1 truncate text-xs text-slate-500">
                   {datos.ejemplos[s.sector]!.slice(0, 4).map((e) => e.producto).join(" · ")}
                 </p>
               )}
@@ -370,50 +370,50 @@ export default function SectoresClient() {
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">Promociones</h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 text-sm text-slate-500">
             Fudo las guarda como un producto único, sin decir qué llevan adentro. Las que están en
             la carta se reparten entre sectores; el resto queda sin atribuir.
           </p>
         </div>
-        <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0 dark:divide-[#1c2521]">
+        <div className="grid divide-y divide-slate-100 sm:grid-cols-3 sm:divide-x sm:divide-y-0">
           <div className="px-4 py-3">
-            <p className="text-xs text-slate-500 dark:text-[#94a19c]">Repartidas</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-700 dark:text-[#4ee6b0]">
+            <p className="text-xs text-slate-500">Repartidas</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-emerald-700">
               {plata(datos.promosRepartidas)}
             </p>
           </div>
           <div className="px-4 py-3">
-            <p className="text-xs text-slate-500 dark:text-[#94a19c]">De eso, por hipótesis</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-amber-700 dark:text-amber-300">
+            <p className="text-xs text-slate-500">De eso, por hipótesis</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-amber-700">
               {plata(datos.promosSupuestas)}
             </p>
-            <p className="text-xs text-slate-500 dark:text-[#7a8882]">la promo deja elegir opciones de sectores distintos</p>
+            <p className="text-xs text-slate-500">la promo deja elegir opciones de sectores distintos</p>
           </div>
           <div className="px-4 py-3">
-            <p className="text-xs text-slate-500 dark:text-[#94a19c]">Sin definir</p>
-            <p className="mt-1 text-xl font-semibold tabular-nums text-rose-600 dark:text-rose-400">
+            <p className="text-xs text-slate-500">Sin definir</p>
+            <p className="mt-1 text-xl font-semibold tabular-nums text-rose-600">
               {plata(promo?.facturacion ?? 0)}
             </p>
-            <p className="text-xs text-slate-500 dark:text-[#7a8882]">
+            <p className="text-xs text-slate-500">
               {datos.promosSinDefinir.length} promos que no están en la carta cargada
             </p>
           </div>
         </div>
 
         {datos.promosSinDefinir.length > 0 && (
-          <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-3 dark:border-amber-500/30 dark:bg-amber-500/10">
-            <p className="inline-flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-200">
+          <div className="border-t border-amber-200 bg-amber-50/60 px-4 py-3">
+            <p className="inline-flex items-center gap-2 text-sm font-semibold text-amber-900">
               <AlertTriangle size={15} aria-hidden />
               Falta la composición de estas
             </p>
             <div className="mt-1.5 flex flex-col gap-1">
               {datos.promosSinDefinir.slice(0, 8).map((p) => (
                 <div key={p.producto} className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="truncate text-amber-900 dark:text-amber-200/90">{p.producto}</span>
-                  <span className="shrink-0 tabular-nums text-amber-800 dark:text-amber-300/80">
+                  <span className="truncate text-amber-900">{p.producto}</span>
+                  <span className="shrink-0 tabular-nums text-amber-800">
                     {plata(p.facturacion)}
                   </span>
                 </div>
@@ -422,7 +422,7 @@ export default function SectoresClient() {
           </div>
         )}
 
-        <div className="divide-y divide-slate-100 border-t border-slate-100 dark:divide-[#1c2521] dark:border-[#1c2521]">
+        <div className="divide-y divide-slate-100 border-t border-slate-100">
           {datos.promosDefinidas.map((p) => (
             <div key={p.nombre} className="px-4 py-2.5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
@@ -430,36 +430,36 @@ export default function SectoresClient() {
                   {p.nombre}
                   {p.base === "supuesto" && (
                     <span
-                      className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800 dark:bg-amber-500/20 dark:text-amber-300"
+                      className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-xs font-semibold text-amber-800"
                       title="La promo deja elegir entre opciones de sectores distintos: el reparto es una hipótesis"
                     >
                       supuesto
                     </span>
                   )}
                 </span>
-                <span className="text-xs tabular-nums text-slate-500 dark:text-[#94a19c]">
+                <span className="text-xs tabular-nums text-slate-500">
                   {Object.entries(p.reparto)
                     .map(([s, v]) => `${s.slice(0, 4).toLowerCase()} ${Math.round((v ?? 0) * 100)}%`)
                     .join(" · ")}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 dark:text-[#7a8882]">{p.contenido}</p>
+              <p className="text-xs text-slate-500">{p.contenido}</p>
             </div>
           ))}
         </div>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white dark:border-[#29403b] dark:bg-[#101c19]">
-        <div className="border-b border-slate-100 px-4 py-3 dark:border-[#1c2521]">
+      <section className="rounded-lg border border-slate-200 bg-white">
+        <div className="border-b border-slate-100 px-4 py-3">
           <h2 className="font-semibold">
             Todos los productos y su sector
             {sinClas && sinClas.facturacion > 0 && (
-              <span className="ml-2 text-sm font-normal text-rose-600 dark:text-rose-400">
+              <span className="ml-2 text-sm font-normal text-rose-600">
                 {plata(sinClas.facturacion)} sin clasificar · {sinClas.porcentaje.toFixed(1)}% de la venta
               </span>
             )}
           </h2>
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 text-sm text-slate-500">
             Lo que se vende en Fudo y lo que se compra por remito, en una sola lista. Lo que
             asignes queda guardado y se aplica a todos los locales y períodos, de los dos lados:
             el mismo nombre corrige la venta y la compra.

@@ -85,7 +85,7 @@ export default function ProductosPanel({
       <Card>
         <SectionTitle>Productos</SectionTitle>
         <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
-          <span className="text-rose-600 dark:text-rose-400">No pudimos cargar los productos. Revisá la conexión.</span>
+          <span className="text-rose-600">No pudimos cargar los productos. Revisá la conexión.</span>
           <Button type="button" variant="ghost" onClick={() => setIntento((v) => v + 1)}>
             Reintentar
           </Button>
@@ -97,7 +97,7 @@ export default function ProductosPanel({
     return (
       <Card>
         <SectionTitle>Productos</SectionTitle>
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           No hay ventas de productos sincronizadas en este período y alcance.
         </p>
       </Card>
@@ -111,7 +111,7 @@ export default function ProductosPanel({
     <Card className="flex flex-col gap-4">
       <SectionTitle
         action={
-          <span className="text-xs text-slate-500 dark:text-[#7a8882]">
+          <span className="text-xs text-slate-500">
             {datos.totalProductos} productos con venta
           </span>
         }
@@ -125,25 +125,25 @@ export default function ProductosPanel({
 
       {vista === "precios" ? (
         datos.preciosDispares.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="text-sm text-slate-500">
             Ningún producto que se venda en más de una sucursal tiene una diferencia de precio
             mayor al 10%.
           </p>
         ) : (
           <div className="flex flex-col gap-3">
-            <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+            <p className="text-sm text-slate-500">
               Mismo producto, precio promedio distinto según la sucursal. O la lista de precios
               quedó desactualizada en algún local, o se está cobrando distinto.
             </p>
             {datos.preciosDispares.map((p) => (
-              <div key={p.nombre} className="rounded-lg border border-slate-100 p-3 dark:border-[#1c2521]">
+              <div key={p.nombre} className="rounded-lg border border-slate-100 p-3">
                 <div className="flex flex-wrap items-baseline justify-between gap-2">
                   <span className="font-semibold">{p.nombre}</span>
                   <Badge tone={p.difPct >= 30 ? "rose" : "amber"}>
                     {p.difPct.toFixed(0)}% de diferencia
                   </Badge>
                 </div>
-                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500 dark:text-[#94a19c]">
+                <div className="mt-1.5 flex flex-wrap gap-x-4 gap-y-1 text-sm text-slate-500">
                   {p.locales
                     .slice()
                     .sort((a, b) => b.precioPromedio - a.precioPromedio)
@@ -161,7 +161,7 @@ export default function ProductosPanel({
         <div className="overflow-x-auto">
           <table className="w-full min-w-[34rem] text-sm">
             <thead>
-              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500 dark:border-[#26312d] dark:text-[#7a8882]">
+              <tr className="border-b border-slate-200 text-left text-xs uppercase text-slate-500">
                 <th className="w-2/5 py-2 pr-3 font-semibold">Producto</th>
                 <th className="py-2 pr-3 text-right font-semibold">Unidades</th>
                 <th className="py-2 pr-3 text-right font-semibold">Facturación</th>
@@ -171,17 +171,17 @@ export default function ProductosPanel({
             </thead>
             <tbody>
               {lista.map((p) => (
-                <tr key={p.nombre} className="border-b border-slate-100 last:border-0 dark:border-[#1c2521]">
+                <tr key={p.nombre} className="border-b border-slate-100 last:border-0">
                   <td className="py-2 pr-3">
                     <span className="font-medium">{p.nombre}</span>
                     {p.categoria && (
-                      <span className="ml-1.5 text-xs text-slate-500 dark:text-[#7a8882]">{etiquetaCategoria(p.categoria)}</span>
+                      <span className="ml-1.5 text-xs text-slate-500">{etiquetaCategoria(p.categoria)}</span>
                     )}
                   </td>
                   <td className="py-2 pr-3 text-right tabular-nums">{unidades(p.cantidad)}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{plata(p.facturacion)}</td>
                   <td className="py-2 pr-3 text-right tabular-nums">{plata(p.precioPromedio)}</td>
-                  <td className="py-2 text-right tabular-nums text-slate-500 dark:text-[#94a19c]">
+                  <td className="py-2 text-right tabular-nums text-slate-500">
                     {p.locales.length}
                   </td>
                 </tr>
@@ -189,7 +189,7 @@ export default function ProductosPanel({
             </tbody>
           </table>
           {vista === "menos" && (
-            <p className="mt-2 text-xs text-slate-500 dark:text-[#7a8882]">
+            <p className="mt-2 text-xs text-slate-500">
               Son los que menos salieron entre los que se vendieron al menos una vez. Un producto
               con cero ventas no aparece: Fudo no reporta lo que nunca se vendió.
             </p>
@@ -198,21 +198,21 @@ export default function ProductosPanel({
       )}
 
       {vista !== "precios" && datos.desparejos.length > 0 && (
-        <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-3 dark:border-[#1c2521]">
-          <p className="text-xs font-semibold uppercase text-slate-500 dark:text-[#7a8882]">
+        <div className="flex flex-col gap-1.5 border-t border-slate-100 pt-3">
+          <p className="text-xs font-semibold uppercase text-slate-500">
             Se venden en un solo local
           </p>
-          <p className="text-xs text-slate-500 dark:text-[#7a8882]">
+          <p className="text-xs text-slate-500">
             Puede ser carta distinta a propósito, o un producto que en las otras sucursales no se
             está ofreciendo.
           </p>
           {datos.desparejos.slice(0, 6).map((d) => (
             <div key={`${d.nombre}-${d.local}`} className="flex items-baseline justify-between gap-2 text-sm">
-              <span className="truncate text-slate-600 dark:text-[#c1cbc6]">
+              <span className="truncate text-slate-600">
                 {d.nombre}
-                <span className="ml-1.5 text-xs text-slate-500 dark:text-[#7a8882]">sólo {d.local}</span>
+                <span className="ml-1.5 text-xs text-slate-500">sólo {d.local}</span>
               </span>
-              <span className="shrink-0 tabular-nums text-slate-500 dark:text-[#94a19c]">
+              <span className="shrink-0 tabular-nums text-slate-500">
                 {plata(d.facturacion)}
               </span>
             </div>

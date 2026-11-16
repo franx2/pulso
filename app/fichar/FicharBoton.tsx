@@ -268,7 +268,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
   if (cargando) {
     return (
       <div className="flex items-center justify-center py-16" aria-label="Cargando tu jornada">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-700 dark:border-[#29403b] dark:border-t-[#37e6b0]" />
+        <div className="h-6 w-6 animate-spin rounded-full border-2 border-slate-300 border-t-emerald-700" />
       </div>
     );
   }
@@ -276,7 +276,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
   if (errorCarga) {
     return (
       <div className="flex flex-col items-center gap-4 py-12 text-center">
-        <p className="max-w-xs text-sm text-slate-600 dark:text-[#c1cbc6]">No pudimos cargar tu fichaje. Revisá la conexión y probá de nuevo.</p>
+        <p className="max-w-xs text-sm text-slate-600">No pudimos cargar tu fichaje. Revisá la conexión y probá de nuevo.</p>
         <Button type="button" onClick={cargarInicial}>
           <RotateCw size={16} aria-hidden />
           Reintentar
@@ -293,10 +293,10 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
   // Entrar es la acción primaria (teal); salir, tinta: no es un error, es el
   // final del día. El ámbar queda para el estado de descanso.
   const estilo = enDescanso
-    ? "bg-amber-700 text-white hover:bg-amber-800 dark:bg-amber-400 dark:text-[#241703] dark:hover:bg-amber-300"
+    ? "bg-amber-700 text-white hover:bg-amber-800"
     : trabajando
-      ? "bg-[#17211e] text-white hover:bg-black dark:bg-[#f2f7f4] dark:text-[#0b1412] dark:hover:bg-white"
-      : "bg-[#0f766e] text-white hover:bg-[#115e59] dark:bg-[#37e6b0] dark:text-[#062419] dark:hover:bg-[#72efc1]";
+      ? "bg-[#1E1B18] text-white hover:bg-black"
+      : "bg-[#4A6244] text-white hover:bg-[#3A4D36]";
   const texto = enDescanso ? "Volver del descanso" : trabajando ? "Marcar salida" : "Marcar entrada";
   const Icono = enDescanso ? Play : trabajando ? LogOut : LogIn;
 
@@ -322,28 +322,28 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
   return (
     <div className="mx-auto flex w-full max-w-sm flex-col gap-5">
       <header className="text-center">
-        <p className="text-sm text-slate-500 dark:text-[#94a19c]">
+        <p className="text-sm text-slate-500">
           {ahora.toLocaleDateString("es-AR", { weekday: "long", day: "numeric", month: "long" })}
           {local && ` · ${local}`}
         </p>
-        <p className="mt-0.5 text-xl font-bold text-slate-950 dark:text-[#f2f7f4]">Hola, {nombreEmpleado.split(" ")[0]}</p>
+        <p className="mt-0.5 text-xl font-bold text-slate-950">Hola, {nombreEmpleado.split(" ")[0]}</p>
         {turnoHoy && (
-          <p className="mt-0.5 text-sm text-slate-500 dark:text-[#94a19c]">
+          <p className="mt-0.5 text-sm text-slate-500">
             Turno de hoy {turnoHoy.horaInicio}–{turnoHoy.horaFin}
           </p>
         )}
       </header>
 
       <section aria-label="Fichar" className="flex flex-col items-center gap-4">
-        <p className="flex items-center gap-2 text-sm font-medium text-slate-700 dark:text-[#c1cbc6]">
+        <p className="flex items-center gap-2 text-sm font-medium text-slate-700">
           {(trabajando || enDescanso) && (
             <span className="relative flex h-2.5 w-2.5" aria-hidden>
               <span
                 className={`absolute inline-flex h-full w-full rounded-full opacity-60 motion-safe:animate-ping ${
-                  enDescanso ? "bg-amber-500" : "bg-[#37e6b0]"
+                  enDescanso ? "bg-amber-500" : "bg-[#D6C69B]"
                 }`}
               />
-              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${enDescanso ? "bg-amber-500" : "bg-[#37e6b0]"}`} />
+              <span className={`relative inline-flex h-2.5 w-2.5 rounded-full ${enDescanso ? "bg-amber-500" : "bg-[#D6C69B]"}`} />
             </span>
           )}
           {estadoTexto}
@@ -353,7 +353,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
           type="button"
           onClick={() => marcar()}
           disabled={marcando}
-          className={`flex h-48 w-48 flex-col items-center justify-center gap-2 rounded-full text-lg font-bold shadow-[0_16px_32px_-14px_rgba(15,23,42,0.55)] transition-[transform,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-emerald-600/40 focus-visible:ring-offset-4 focus-visible:ring-offset-[#f6f8f5] active:scale-[0.97] disabled:cursor-wait disabled:opacity-70 dark:focus-visible:ring-[#37e6b0]/50 dark:focus-visible:ring-offset-[#0b1412] ${estilo}`}
+          className={`flex h-48 w-48 flex-col items-center justify-center gap-2 rounded-full text-lg font-bold shadow-[0_16px_32px_-14px_rgba(15,23,42,0.55)] transition-[transform,background-color] duration-150 ease-out focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-slate-950/40 focus-visible:ring-offset-4 focus-visible:ring-offset-[#F5F3EE] active:scale-[0.97] disabled:cursor-wait disabled:opacity-70 ${estilo}`}
         >
           <Icono size={32} aria-hidden />
           <span className="px-4 text-center leading-tight">{marcando ? paso || "Marcando…" : texto}</span>
@@ -361,8 +361,8 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
 
         {fichajesHoy.length > 0 && (
         <p className="text-center tabular-nums">
-          <span className="text-3xl font-bold text-slate-950 dark:text-[#f2f7f4]">{duracion(jornada.horasTrabajadas)}</span>
-          <span className="ml-1.5 text-sm text-slate-500 dark:text-[#94a19c]">trabajadas hoy</span>
+          <span className="text-3xl font-bold text-slate-950">{duracion(jornada.horasTrabajadas)}</span>
+          <span className="ml-1.5 text-sm text-slate-500">trabajadas hoy</span>
         </p>
         )}
 
@@ -375,21 +375,21 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
 
         <div className="w-full space-y-2" aria-live="polite">
           {exito && (
-            <p className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-900 dark:border-[#1d4e48] dark:bg-[#0f2620] dark:text-[#cdfbea]">
+            <p className="flex items-start gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2.5 text-sm font-medium text-emerald-900">
               <CheckCircle2 size={17} className="mt-0.5 shrink-0" aria-hidden />
               {exito}
             </p>
           )}
           {aviso && (
-            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900 dark:border-[#5a4a2f] dark:bg-[#241f14] dark:text-amber-200">
+            <p className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5 text-sm text-amber-900">
               {aviso}
             </p>
           )}
           <ErrorText>{error}</ErrorText>
           {ayudaUbicacion && (
-            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700 dark:border-[#29403b] dark:bg-[#101c19] dark:text-[#c1cbc6]">
+            <div className="rounded-lg border border-slate-200 bg-white px-3 py-3 text-sm text-slate-700">
               <p className="flex items-start gap-2">
-                <LocateFixed size={17} className="mt-0.5 shrink-0 text-emerald-700 dark:text-[#37e6b0]" aria-hidden />
+                <LocateFixed size={17} className="mt-0.5 shrink-0 text-emerald-700" aria-hidden />
                 {ayudaUbicacion}
               </p>
               <Button variant="ghost" className="mt-3 w-full" onClick={() => marcar()} disabled={marcando}>
@@ -400,7 +400,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
           )}
         </div>
 
-        <p className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-[#7a8882]">
+        <p className="flex items-center gap-1.5 text-xs text-slate-500">
           <MapPin size={13} aria-hidden />
           Tu ubicación sólo se usa para confirmar que estás en el local
         </p>
@@ -436,14 +436,14 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
       <Card>
         <SectionTitle>{diaEnVivo === hoy ? "Hoy" : "Tu turno de anoche"}</SectionTitle>
         {fichajesHoy.length === 0 ? (
-          <p className="text-sm text-slate-500 dark:text-[#94a19c]">Cuando marques, tus fichajes aparecen acá.</p>
+          <p className="text-sm text-slate-500">Cuando marques, tus fichajes aparecen acá.</p>
         ) : (
-          <ol className="divide-y divide-slate-100 dark:divide-[#1c2521]">
+          <ol className="divide-y divide-slate-100">
             {fichajesHoy.map((f) => {
               const IconoFila = ICONO[f.tipo];
               return (
                 <li key={f.id} className="flex items-center gap-3 py-1.5">
-                  <IconoFila size={16} className="shrink-0 text-slate-500 dark:text-[#94a19c]" aria-hidden />
+                  <IconoFila size={16} className="shrink-0 text-slate-500" aria-hidden />
                   <span className="min-w-0 flex-1 text-sm">
                     {ETIQUETA[f.tipo]}
                     {f.corregido && (
@@ -457,7 +457,7 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
                     type="button"
                     onClick={() => setCorrigiendo(f)}
                     aria-label={`Corregir ${ETIQUETA[f.tipo].toLowerCase()} de las ${hora(f.timestamp)}`}
-                    className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 dark:text-[#94a19c] dark:hover:bg-[#172724] dark:hover:text-[#f2f7f4]"
+                    className="-mr-2 flex h-11 w-11 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-950"
                   >
                     <PencilLine size={16} aria-hidden />
                   </button>
@@ -477,14 +477,14 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
               const futuro = d.dia > hoy;
               return (
                 <li key={d.dia} className="grid grid-cols-[3.5rem_minmax(0,1fr)_5.5rem] items-center gap-3 text-sm">
-                  <span className={esHoy ? "font-semibold" : "text-slate-500 dark:text-[#94a19c]"}>{diaCorto(d.dia)}</span>
-                  <span className="h-2 overflow-hidden rounded-full bg-slate-100 dark:bg-[#18201d]" aria-hidden>
+                  <span className={esHoy ? "font-semibold" : "text-slate-500"}>{diaCorto(d.dia)}</span>
+                  <span className="h-2 overflow-hidden rounded-full bg-slate-100" aria-hidden>
                     <span
-                      className={`block h-full rounded-full ${esHoy ? "bg-[#37e6b0]" : "bg-[#0f766e] dark:bg-[#2aa996]"}`}
+                      className={`block h-full rounded-full ${esHoy ? "bg-[#D6C69B]" : "bg-[#4A6244]"}`}
                       style={{ width: `${(d.horas / maximo) * 100}%` }}
                     />
                   </span>
-                  <span className={`text-right tabular-nums ${d.horas > 0 ? "" : "text-slate-400 dark:text-[#5f6d67]"}`}>
+                  <span className={`text-right tabular-nums ${d.horas > 0 ? "" : "text-slate-400"}`}>
                     {futuro ? "" : d.horas > 0 ? duracion(d.horas) : "—"}
                   </span>
                 </li>
@@ -502,11 +502,11 @@ export default function FicharBoton({ nombreEmpleado, turnos }: { nombreEmpleado
           <ul className="flex flex-col gap-2 text-sm">
             {turnos.map((t) => (
               <li key={t.id} className="flex items-center justify-between">
-                <span className="flex items-center gap-1.5 text-slate-600 dark:text-[#c1cbc6]">
+                <span className="flex items-center gap-1.5 text-slate-600">
                   <Clock size={14} aria-hidden />
                   {formatearFechaSql(t.fecha, { weekday: "short", day: "2-digit", month: "2-digit" })}
                 </span>
-                <span className="tabular-nums text-slate-500 dark:text-[#94a19c]">
+                <span className="tabular-nums text-slate-500">
                   {t.horaInicio}–{t.horaFin}
                 </span>
               </li>
