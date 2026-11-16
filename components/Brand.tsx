@@ -1,16 +1,18 @@
 import Link from "next/link";
 
 /**
- * La marca: un cuadrado partido en blanco y negro —el bianco e nero de la
- * casa— y el nombre en mayúsculas condensadas con aire, como en la web.
+ * El símbolo de siempre —la P compacta con su punto de estado— en los colores
+ * de Bianco & Nero: tinta, papel y arena.
  */
-export function Marca({ size = 34 }: { size?: number }) {
+function Marca() {
   return (
-    <svg width={size} height={size} viewBox="0 0 34 34" aria-hidden className="shrink-0">
-      <rect x="0.75" y="0.75" width="32.5" height="32.5" fill="#FDFDFC" stroke="#161311" strokeWidth="1.5" />
-      <path d="M0 0H17V34H0Z" fill="#161311" />
-      <rect x="6" y="15.25" width="22" height="3.5" fill="#D6C69B" />
-    </svg>
+    <span
+      aria-hidden
+      className="relative grid h-9 w-9 shrink-0 place-items-center rounded-[8px] bg-slate-950 text-base font-black leading-none text-[#FDFDFC] shadow-[0_3px_10px_rgba(22,19,17,0.2)]"
+    >
+      P
+      <span className="absolute bottom-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-arena-300" />
+    </span>
   );
 }
 
