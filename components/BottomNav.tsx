@@ -46,7 +46,7 @@ export const ITEMS: Item[] = [
   { key: "presencia", href: "/admin/presencia", Icon: Activity, label: "Presencia", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "turnos", href: "/admin/turnos", Icon: CalendarDays, label: "Turnos", minimo: "ENCARGADO", grupo: "Operación" },
   { key: "arqueos", href: "/admin/arqueos", Icon: Wallet, label: "Arqueos", minimo: "ENCARGADO", grupo: "Operación" },
-  { key: "dashboard", href: "/admin/dashboard", Icon: LayoutDashboard, label: "Comando", minimo: "ADMIN", grupo: "Análisis" },
+  { key: "dashboard", href: "/admin/dashboard", Icon: LayoutDashboard, label: "Dashboard", minimo: "ADMIN", grupo: "Análisis" },
   { key: "pronostico", href: "/admin/pronostico", Icon: Brain, label: "Pronóstico", minimo: "ADMIN", grupo: "Análisis" },
   { key: "compras", href: "/admin/compras", Icon: Truck, label: "Compras", minimo: "ADMIN", grupo: "Análisis" },
   { key: "sectores", href: "/admin/sectores", Icon: PieChart, label: "Sectores", minimo: "ADMIN", grupo: "Análisis" },

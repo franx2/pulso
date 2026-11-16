@@ -624,7 +624,7 @@ export default function DashboardClient({ inicial = {} }: { inicial?: EstadoInic
           </div>
         }
       >
-        Centro de comando
+        Dashboard
       </PageTitle>
 
       <BarraContexto
