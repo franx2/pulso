@@ -66,7 +66,7 @@ export default function PedidoClient({ id }: { id: string }) {
     | { tipo: "anular"; item: Item }
     | { tipo: "comentario"; item: Item }
     | { tipo: "opciones" }
-    | { tipo: "cerrada"; vuelto: number }
+    | { tipo: "cerrada"; vuelto: number; factura: string | null }
     | null
   >(null);
 
@@ -464,7 +464,7 @@ export default function PedidoClient({ id }: { id: string }) {
           onClose={() => setModal(null)}
           onCobrado={async (r) => {
             await cargar();
-            setModal(r.cerrada ? { tipo: "cerrada", vuelto: r.vuelto } : null);
+            setModal(r.cerrada ? { tipo: "cerrada", vuelto: r.vuelto, factura: r.factura } : null);
             if (!r.cerrada) setAviso("Pago registrado");
           }}
         />
@@ -475,6 +475,7 @@ export default function PedidoClient({ id }: { id: string }) {
             <CheckCircle2 size={40} className="text-emerald-600 dark:text-[#37e6b0]" aria-hidden />
             <p className="text-lg font-semibold">{plata(venta.total)} cobrados</p>
             {modal.vuelto > 0 && <p className="text-2xl font-bold tabular-nums">Vuelto: {plata(modal.vuelto)}</p>}
+            {modal.factura && <p className="text-sm text-slate-600 dark:text-[#c1cbc6]">{modal.factura}</p>}
             <div className="mt-2 grid w-full grid-cols-2 gap-2">
               <Button variant="ghost" onClick={() => imprimir(`/ventas/${id}/imprimir?tipo=ticket`)}>
                 <Printer size={16} aria-hidden />
@@ -583,12 +584,15 @@ function ModalCobrar({
   medios: Medio[];
   permisos: Record<string, boolean>;
   onClose: () => void;
-  onCobrado: (r: { cerrada: boolean; vuelto: number }) => void;
+  onCobrado: (r: { cerrada: boolean; vuelto: number; factura: string | null }) => void;
 }) {
   const porDefecto = medios.find((m) => m.tipo === "EFECTIVO") ?? medios[0];
   const [lineas, setLineas] = useState<LineaPago[]>([{ medioId: porDefecto?.id ?? "", monto: String(Math.round(venta.falta)), propina: "" }]);
   const [cobrando, setCobrando] = useState(false);
   const [error, setError] = useState("");
+  const [facturaA, setFacturaA] = useState(false);
+  const [cuit, setCuit] = useState("");
+  const [condicion, setCondicion] = useState<1 | 6>(1);
 
   const n = aNumero;
   const tipoDe = new Map(medios.map((m) => [m.id, m.tipo]));
@@ -610,8 +614,9 @@ function ModalCobrar({
       const r = await pedir(`/api/ventas/${venta.id}/cobrar`, "POST", {
         cerrar,
         pagos: lineas.map((l) => ({ medioPagoId: l.medioId, monto: n(l.monto), propina: n(l.propina) })),
+        ...(cerrar && facturaA ? { facturaA: { cuit, condicion } } : {}),
       });
-      onCobrado({ cerrada: r.cerrada, vuelto: r.vuelto });
+      onCobrado({ cerrada: r.cerrada, vuelto: r.vuelto, factura: textoFactura(r.factura) });
     } catch (e) {
       setError(e instanceof Error ? e.message : "No se pudo cobrar");
       setCobrando(false);
@@ -679,12 +684,38 @@ function ModalCobrar({
           <p className="text-sm text-rose-700 dark:text-rose-300">Con tarjeta, QR o transferencia no puede haber vuelto: bajá el monto.</p>
         )}
 
+        {venta.factura.habilitada && (
+          <div className="flex flex-col gap-2">
+            <label className="flex items-center gap-2 text-sm">
+              <input type="checkbox" checked={facturaA} onChange={(e) => setFacturaA(e.target.checked)} className="h-4 w-4 accent-emerald-600" />
+              El cliente pide Factura A
+            </label>
+            {facturaA && (
+              <div className="flex flex-wrap items-end gap-2">
+                <div className="min-w-40 flex-1">
+                  <Label>CUIT del cliente</Label>
+                  <Input inputMode="numeric" value={cuit} onChange={(e) => setCuit(e.target.value)} placeholder="30-12345678-9" autoComplete="off" />
+                </div>
+                <SelectorSegmentado
+                  label="Condición frente al IVA"
+                  opciones={[
+                    { clave: 1, label: "Resp. inscripto" },
+                    { clave: 6, label: "Monotributo" },
+                  ]}
+                  valor={condicion}
+                  onChange={setCondicion}
+                />
+              </div>
+            )}
+          </div>
+        )}
+
         <ErrorText>{error}</ErrorText>
         <div className="grid grid-cols-2 gap-2">
           <Button variant="ghost" onClick={() => cobrar(false)} disabled={cobrando || saldo.pagado <= venta.pagado}>
             Pago parcial
           </Button>
-          <Button onClick={() => cobrar(true)} disabled={cobrando || !puedeCerrar}>
+          <Button onClick={() => cobrar(true)} disabled={cobrando || !puedeCerrar || (facturaA && !cuit.trim())}>
             <CheckCircle2 size={16} aria-hidden />
             {cobrando ? "Cobrando…" : "Cobrar y cerrar"}
           </Button>
@@ -914,4 +945,11 @@ function ModalOpciones({
       </div>
     </Modal>
   );
+}
+
+/** Lo que se le dice al cajero sobre la factura recién pedida. */
+function textoFactura(f: { cae: string | null; numero: number | null; error: string | null } | null): string | null {
+  if (!f) return null;
+  if (f.cae) return `Factura emitida: N° ${f.numero} · CAE ${f.cae}`;
+  return "ARCA no respondió: la factura quedó pendiente y se reintenta sola.";
 }

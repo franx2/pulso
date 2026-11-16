@@ -1,12 +1,14 @@
 import { notFound } from "next/navigation";
+import QRCode from "qrcode";
+import { TIPO_CBTE, urlQrArca } from "@/lib/arca";
 import { requireEmpleado } from "@/lib/session";
 import { ventaCompleta } from "@/lib/ventas/consultas";
 import AutoImprimir from "./AutoImprimir";
 
 /**
  * Lo que sale por la impresora térmica (80 mm): la comanda de cada cocina,
- * la precuenta para la mesa o el ticket de la venta cerrada. Ninguno es un
- * comprobante fiscal, y lo dicen.
+ * la precuenta para la mesa o el ticket de la venta cerrada. El ticket es
+ * factura (con CAE y QR) sólo si ARCA la autorizó; si no, dice que no vale.
  */
 export default async function ImprimirPage({
   params,
@@ -57,10 +59,63 @@ export default async function ImprimirPage({
     ));
   } else {
     const items = venta.items.filter((i) => !i.anulado);
+    const facturas = venta.factura.comprobantes.filter((c) => c.tipo === TIPO_CBTE.FACTURA_A || c.tipo === TIPO_CBTE.FACTURA_B);
+    const factura = tipo === "ticket" ? (facturas.find((c) => c.cae) ?? null) : null;
+    const pendiente = tipo === "ticket" && !factura && facturas.length > 0;
+    const esA = factura?.tipo === TIPO_CBTE.FACTURA_A;
+    // En la Factura A los precios van sin IVA: el IVA se discrimina abajo.
+    const precio = (n: number) => (esA ? plata2(n / 1.21) : plata(n));
+    const emisor = venta.factura.emisor;
+    const qr =
+      factura?.cae && factura.numero && factura.emitidoEn && emisor.cuit
+        ? await QRCode.toString(
+            urlQrArca({
+              fecha: new Date(factura.emitidoEn),
+              cuit: emisor.cuit,
+              ptoVta: factura.puntoVenta,
+              tipo: factura.tipo,
+              numero: factura.numero,
+              total: factura.total,
+              docTipo: factura.docTipo,
+              docNro: factura.docNro,
+              cae: factura.cae,
+            }),
+            { type: "svg", margin: 0, errorCorrectionLevel: "M" }
+          )
+        : null;
     cuerpo = (
       <section className="hoja">
-        <p className="centro grande">{venta.local.nombre}</p>
-        <p className="centro">{tipo === "ticket" ? "TICKET" : "PRECUENTA"}</p>
+        {factura ? (
+          <>
+            <p className="centro grande">{emisor.razonSocial ?? venta.local.nombre}</p>
+            <p className="centro">CUIT {formatoCuit(emisor.cuit ?? "")}</p>
+            <p className="centro">IVA Responsable Inscripto</p>
+            {(emisor.datos ?? "").split("\n").filter(Boolean).map((linea) => (
+              <p key={linea} className="centro">
+                {linea}
+              </p>
+            ))}
+            <hr />
+            <p className="centro grande">
+              FACTURA {esA ? "A" : "B"} <span className="chico">(cód. {String(factura.tipo).padStart(3, "0")})</span>
+            </p>
+            <p className="centro">
+              N° {String(factura.puntoVenta).padStart(4, "0")}-{String(factura.numero).padStart(8, "0")}
+            </p>
+            <p className="centro">{fechaHora(factura.emitidoEn!)}</p>
+            {esA ? (
+              <p className="centro">
+                Cliente CUIT {formatoCuit(factura.docNro)} · {factura.condicionIvaReceptor === 6 ? "Monotributo" : "IVA Resp. Inscripto"}
+              </p>
+            ) : (
+              <p className="centro">A consumidor final</p>
+            )}
+            {!factura.produccion && <p className="centro grande">PRUEBA · SIN VALIDEZ FISCAL</p>}
+            <hr />
+          </>
+        ) : null}
+        <p className={factura ? "centro" : "centro grande"}>{venta.local.nombre}</p>
+        {!factura && <p className="centro">{tipo === "ticket" ? "TICKET" : "PRECUENTA"}</p>}
         <p className="centro">
           {donde} · #{venta.numero}
         </p>
@@ -71,7 +126,7 @@ export default async function ImprimirPage({
             <span>
               {i.cantidad} {i.nombre}
             </span>
-            <span>{plata(i.precio * i.cantidad)}</span>
+            <span>{precio(i.precio * i.cantidad)}</span>
           </div>
         ))}
         <hr />
@@ -79,18 +134,39 @@ export default async function ImprimirPage({
           <>
             <div className="fila">
               <span>Subtotal</span>
-              <span>{plata(venta.subtotal)}</span>
+              <span>{precio(venta.subtotal)}</span>
             </div>
             <div className="fila">
               <span>Descuento</span>
-              <span>-{plata(venta.descuento)}</span>
+              <span>-{precio(venta.descuento)}</span>
+            </div>
+          </>
+        )}
+        {esA && factura && (
+          <>
+            <div className="fila">
+              <span>Neto gravado</span>
+              <span>{plata2(factura.neto)}</span>
+            </div>
+            <div className="fila">
+              <span>IVA 21%</span>
+              <span>{plata2(factura.iva)}</span>
             </div>
           </>
         )}
         <div className="fila grande">
           <span>TOTAL</span>
-          <span>{plata(venta.total)}</span>
+          <span>{factura ? plata2(factura.total) : plata(venta.total)}</span>
         </div>
+        {factura && !esA && (
+          <>
+            <p className="chico">Régimen de Transparencia Fiscal al Consumidor (Ley 27.743)</p>
+            <div className="fila">
+              <span>IVA contenido</span>
+              <span>{plata2(factura.iva)}</span>
+            </div>
+          </>
+        )}
         {tipo === "ticket" &&
           venta.pagos
             .filter((p) => !p.anulado)
@@ -101,7 +177,19 @@ export default async function ImprimirPage({
               </div>
             ))}
         <hr />
-        <p className="centro">NO VÁLIDO COMO FACTURA</p>
+        {factura ? (
+          <>
+            <p>CAE: {factura.cae}</p>
+            <p>Vto. CAE: {factura.caeVence?.split("-").reverse().join("/")}</p>
+            {qr && <div className="qr" dangerouslySetInnerHTML={{ __html: qr }} />}
+            <p className="centro chico">Comprobante autorizado por ARCA</p>
+          </>
+        ) : (
+          <>
+            <p className="centro">NO VÁLIDO COMO FACTURA</p>
+            {pendiente && <p className="centro chico">Factura pendiente de ARCA: se reintenta sola</p>}
+          </>
+        )}
         <p className="centro">¡Gracias por su visita!</p>
       </section>
     );
@@ -118,6 +206,9 @@ export default async function ImprimirPage({
         .ticket .grande { font-size: 16px; font-weight: 700; }
         .ticket .centro { text-align: center; }
         .ticket .nota { padding-left: 10px; font-style: italic; }
+        .ticket .chico { font-size: 11px; font-weight: 400; }
+        .ticket .qr { width: 32mm; margin: 6px auto; }
+        .ticket .qr svg { width: 100%; height: auto; display: block; }
         .ticket .item { margin: 4px 0; }
         .ticket .fila { display: flex; justify-content: space-between; gap: 8px; }
         .ticket .hoja + .hoja { break-before: page; margin-top: 12px; border-top: 2px solid #000; padding-top: 8px; }
@@ -128,3 +219,15 @@ export default async function ImprimirPage({
     </main>
   );
 }
+
+const plata2 = (n: number) => `$${n.toLocaleString("es-AR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatoCuit = (c: string) => c.replace(/\D/g, "").replace(/^(\d{2})(\d{8})(\d)$/, "$1-$2-$3");
+const fechaHora = (iso: string) =>
+  new Date(iso).toLocaleString("es-AR", {
+    timeZone: "America/Argentina/Buenos_Aires",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });

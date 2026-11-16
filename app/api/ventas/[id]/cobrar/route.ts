@@ -1,8 +1,9 @@
-import { NextResponse } from "next/server";
+import { after, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
 import { saldoDeVenta, totalesDeVenta } from "@/lib/ventas/calculos";
 import { cajaAbierta } from "@/lib/ventas/consultas";
+import { facturarVenta, reintentarPendientes, validarReceptor } from "@/lib/ventas/facturacion";
 import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 type PagoPedido = { medioPagoId?: string; monto?: number; propina?: number };
@@ -22,7 +23,9 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
   if (prohibido) return prohibido;
 
   const { id } = await params;
-  const body = await readJsonBody<{ pagos?: PagoPedido[]; cerrar?: boolean }>(request);
+  const body = await readJsonBody<{ pagos?: PagoPedido[]; cerrar?: boolean; facturaA?: unknown }>(request);
+  const receptor = validarReceptor(body?.facturaA);
+  if (typeof receptor === "string") return NextResponse.json({ error: receptor }, { status: 400 });
   const pedidos = (body?.pagos ?? []).filter((p) => Number(p.monto) > 0 || Number(p.propina) > 0);
   if (pedidos.some((p) => Number(p.monto) < 0 || Number(p.propina ?? 0) < 0)) {
     return NextResponse.json({ error: "Los montos no pueden ser negativos" }, { status: 400 });
@@ -98,5 +101,14 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       : []),
   ]);
 
-  return NextResponse.json({ ok: true, vuelto: saldo.vuelto, cerrada: Boolean(body?.cerrar) });
+  // La factura sale después de cerrar: si ARCA falla, la venta ya está cerrada y el comprobante queda pendiente.
+  const factura = body?.cerrar ? await facturarVenta(id, receptor) : null;
+  if (body?.cerrar) after(() => reintentarPendientes(venta.localId));
+
+  return NextResponse.json({
+    ok: true,
+    vuelto: saldo.vuelto,
+    cerrada: Boolean(body?.cerrar),
+    factura: factura && { cae: factura.cae, numero: factura.numero, error: factura.error },
+  });
 }

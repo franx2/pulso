@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { alertaCertificado } from "@/lib/arca";
 import { diaDeFechaSql } from "@/lib/fechaAR";
 import { resolverRango } from "@/lib/periodo";
 import { requireAdminApi } from "@/lib/session";
@@ -147,7 +148,7 @@ export async function GET(request: Request) {
 
   const [locales, filas, productos] = await Promise.all([
     db.local.findMany({
-      select: { id: true, nombre: true, fudoApiKey: true, resumenSincronizadoEn: true },
+      select: { id: true, nombre: true, fudoApiKey: true, resumenSincronizadoEn: true, arcaCertificado: true },
       orderBy: { nombre: "asc" },
     }),
     db.resumenDiario.findMany({ where: { fecha: { gte: inicioPrevio } }, orderBy: { fecha: "asc" } }),
@@ -258,7 +259,11 @@ export async function GET(request: Request) {
       },
     },
     locales: porLocal,
-    alertas: [...armarAlertas(porLocal, dias), ...alertasDePrecio(productos, locales)],
+    alertas: [
+      ...locales.map((l) => alertaCertificado(l)).filter((a) => a !== null),
+      ...armarAlertas(porLocal, dias),
+      ...alertasDePrecio(productos, locales),
+    ],
     // Las alertas de personal viven en su propia tabla porque alguien las
     // resuelve, a diferencia de las comerciales, que son una lectura del
     // período y desaparecen solas cuando el número vuelve a su lugar. Van en

@@ -1,7 +1,11 @@
 import { PrismaClient } from "@prisma/client";
 
-const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
+// El certificado y la clave de ARCA nunca salen en una respuesta: quedan
+// fuera de toda consulta salvo que se pidan explícitamente con `select`.
+const crear = () => new PrismaClient({ omit: { local: { arcaCertificado: true, arcaClave: true, arcaToken: true, arcaSign: true } } });
 
-export const db = globalForPrisma.prisma ?? new PrismaClient();
+const globalForPrisma = globalThis as unknown as { prisma?: ReturnType<typeof crear> };
+
+export const db = globalForPrisma.prisma ?? crear();
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;

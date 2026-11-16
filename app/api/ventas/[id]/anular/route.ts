@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { readJsonBody } from "@/lib/http";
+import { anularFacturaDeVenta } from "@/lib/ventas/facturacion";
 import { contextoVentas, noAutenticado, sinPermiso } from "@/lib/ventas/sesion";
 
 /** Anular una venta entera: sale de la caja y deja de sumar, con motivo y autor. */
@@ -25,5 +26,7 @@ export async function POST(request: Request, { params }: { params: Promise<{ id:
       data: { estado: "ANULADA", anuladaPorId: ctx.empleadoId, anuladaEn: new Date(), motivoAnulacion: motivo.slice(0, 200) },
     }),
   ]);
+  // Una factura emitida no se borra: se anula con nota de crédito. Si falla queda pendiente y se reintenta.
+  await anularFacturaDeVenta(id);
   return NextResponse.json({ ok: true });
 }

@@ -48,3 +48,6 @@ next-env.d.ts
 
 # capturas de revisión: tienen datos reales de ventas y el repo es público
 .impeccable/review/
+
+# certificados y claves de ARCA: nunca al repo (es público)
+/.arca/
